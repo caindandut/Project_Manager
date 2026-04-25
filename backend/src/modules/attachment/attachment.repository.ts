@@ -1,8 +1,18 @@
 import { BaseRepository } from '../../common/base/BaseRepository';
 import { prisma } from '../../config';
 import { Attachment, Prisma } from '@prisma/client';
-import path from 'path';
-import fs from 'fs';
+
+export type AttachmentWithUploader = Prisma.AttachmentGetPayload<{
+  include: {
+    uploadedBy: {
+      select: {
+        id: true;
+        name: true;
+        avatar: true;
+      };
+    };
+  };
+}>;
 
 export class AttachmentRepository extends BaseRepository<
   Attachment,
@@ -19,15 +29,30 @@ export class AttachmentRepository extends BaseRepository<
     });
   }
 
+  async findByIdWithUploader(id: number): Promise<AttachmentWithUploader | null> {
+    return prisma.attachment.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        uploadedBy: {
+          select: {
+            id: true,
+            name: true,
+            avatar: true,
+          },
+        },
+      },
+    });
+  }
+
   async findByTaskId(
     taskId: number,
     options?: {
       page?: number;
       limit?: number;
       cursor?: string;
-    }
+    },
   ) {
-    const where: any = { taskId, deletedAt: null };
+    const where: Prisma.AttachmentWhereInput = { taskId, deletedAt: null };
     let skip: number | undefined;
     let take: number | undefined;
     let cursor: { id: number } | undefined;
@@ -44,7 +69,15 @@ export class AttachmentRepository extends BaseRepository<
     const [data, total] = await Promise.all([
       prisma.attachment.findMany({
         where,
-        include: { uploadedBy: true },
+        include: {
+          uploadedBy: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+            },
+          },
+        },
         orderBy: { createdAt: 'desc' },
         skip,
         take,

@@ -2,7 +2,8 @@ import { Router } from 'express';
 import multer from 'multer';
 import { attachmentController } from './attachment.controller';
 import { authMiddleware } from '../../common/middlewares/auth.middleware';
-import { requireOwnerOrMember } from '../../common/middlewares/rbac.middleware';
+import { requireTaskRole } from '../task/task-rbac.middleware';
+import { requireAttachmentRole } from './attachment-rbac.middleware';
 
 const router = Router();
 
@@ -19,37 +20,30 @@ router.use(authMiddleware);
 
 // Get attachments for a task
 router.get(
-  '/:workspaceId/tasks/:taskId/attachments',
-  requireOwnerOrMember,
+  '/tasks/:taskId/attachments',
+  requireTaskRole('GUEST'),
   attachmentController.getByTask
 );
 
 // Upload attachment to task
 router.post(
-  '/:workspaceId/tasks/:taskId/attachments',
-  requireOwnerOrMember,
+  '/tasks/:taskId/attachments',
+  requireTaskRole('GUEST'),
   upload.single('file'),
   attachmentController.upload
 );
 
-// Get attachment by ID
+// Get attachment by ID / download attachment
 router.get(
-  '/:workspaceId/tasks/:taskId/attachments/:attachmentId',
-  requireOwnerOrMember,
-  attachmentController.getById
-);
-
-// Download attachment
-router.get(
-  '/:workspaceId/tasks/:taskId/attachments/:attachmentId/download',
-  requireOwnerOrMember,
+  '/attachments/:attachmentId',
+  requireAttachmentRole('GUEST'),
   attachmentController.download
 );
 
 // Delete attachment
 router.delete(
-  '/:workspaceId/tasks/:taskId/attachments/:attachmentId',
-  requireOwnerOrMember,
+  '/attachments/:attachmentId',
+  requireAttachmentRole('GUEST'),
   attachmentController.delete
 );
 

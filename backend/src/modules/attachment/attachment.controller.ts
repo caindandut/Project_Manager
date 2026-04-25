@@ -5,7 +5,6 @@ import { AuthenticatedRequest } from '../../types/interfaces';
 import { success } from '../../common/utils/apiResponse';
 import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
-import path from 'path';
 import fs from 'fs';
 
 export class AttachmentController extends BaseController {
@@ -55,9 +54,8 @@ export class AttachmentController extends BaseController {
       const taskId = parseInt(req.params.taskId, 10);
       const page = parseInt(req.query.page as string, 10) || undefined;
       const limit = parseInt(req.query.limit as string, 10) || 20;
-      const cursor = req.query.cursor as string;
 
-      const result = await attachmentService.getByTask(taskId, { page, limit, cursor });
+      const result = await attachmentService.getByTask(taskId, { page, limit });
       res.json(success(result.data, result.meta));
     });
   };
@@ -78,6 +76,20 @@ export class AttachmentController extends BaseController {
   download = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
       const attachmentId = parseInt(req.params.attachmentId, 10);
+      const download = String(req.query.download || 'false').toLowerCase() === 'true';
+
+      if (!download) {
+        const result = await attachmentService.getById(attachmentId);
+        res.json(success(result));
+        return;
+      }
+
+      const attachment = await attachmentService.getById(attachmentId);
+      if (/^https?:\/\//i.test(attachment.fileUrl)) {
+        res.redirect(302, attachment.fileUrl);
+        return;
+      }
+
       const { path: filePath, filename } = await attachmentService.getDownloadPath(attachmentId);
 
       if (!fs.existsSync(filePath)) {

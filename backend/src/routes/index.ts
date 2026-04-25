@@ -26,7 +26,7 @@ router.use('/', taskRoutes);
 router.use('/', commentRoutes);
 
 // Attachment routes (nested under tasks)
-router.use('/workspaces', attachmentRoutes);
+router.use('/', attachmentRoutes);
 
 // Notification routes
 router.use('/notifications', notificationRoutes);

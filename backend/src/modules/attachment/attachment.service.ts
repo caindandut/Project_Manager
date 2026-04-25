@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
-import { attachmentRepository } from './attachment.repository';
+import { Attachment } from '@prisma/client';
+import { attachmentRepository, AttachmentWithUploader } from './attachment.repository';
 import { BaseService } from '../../common/base/BaseService';
 import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
@@ -20,14 +21,32 @@ export interface UploadAttachmentInput {
   };
 }
 
+interface AttachmentResponse {
+  id: number;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  mimeType: string;
+  taskId: number;
+  uploadedById: number;
+  createdAt: Date;
+  uploadedBy?: {
+    id: number;
+    name: string | null;
+    avatar: string | null;
+  };
+}
+
+type AttachmentServiceResponse = AttachmentResponse | { message: string };
+
 export class AttachmentService extends BaseService<
-  unknown,
+  AttachmentServiceResponse,
   UploadAttachmentInput,
   unknown
 > {
   private readonly UPLOAD_DIR = config.UPLOAD_DIR || path.join(process.cwd(), 'uploads');
 
-  async upload(data: UploadAttachmentInput) {
+  async upload(data: UploadAttachmentInput): Promise<AttachmentResponse> {
     const { file, taskId, uploadedById } = data;
 
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype as (typeof ALLOWED_MIME_TYPES)[number])) {
@@ -64,15 +83,23 @@ export class AttachmentService extends BaseService<
       mimeType: file.mimetype,
       task: { connect: { id: data.taskId } },
       uploadedBy: { connect: { id: data.uploadedById } },
-    } as any);
+    });
+    const fullAttachment = await attachmentRepository.findByIdWithUploader(attachment.id);
+
+    if (!fullAttachment) {
+      throw ApiError.notFound(
+        ErrorCode.ATTACHMENT_NOT_FOUND,
+        'Attachment not found',
+      );
+    }
 
     logger.info(`Attachment uploaded: ${attachment.id} for task ${taskId}`);
 
-    return this.formatAttachment(attachment);
+    return this.formatAttachment(fullAttachment);
   }
 
-  async getById(id: number) {
-    const attachment = await attachmentRepository.findById(id);
+  async getById(id: number): Promise<AttachmentResponse> {
+    const attachment = await attachmentRepository.findByIdWithUploader(id);
     if (!attachment) {
       throw ApiError.notFound(
         ErrorCode.ATTACHMENT_NOT_FOUND,
@@ -86,21 +113,18 @@ export class AttachmentService extends BaseService<
   async getByTask(
     taskId: number,
     options?: { page?: number; limit?: number; cursor?: string },
-  ) {
+  ): Promise<{ data: AttachmentResponse[]; meta: PaginationMeta }> {
     const result = await attachmentRepository.findByTaskId(taskId, options);
+    const page = options?.page || 1;
+    const limit = options?.limit || 20;
 
     return {
-      data: result.data.map((a: any) => this.formatAttachment(a, a.uploadedBy)),
-      meta: {
-        ...(options?.cursor ? { cursor: options.cursor } : {}),
-        limit: options?.limit || 20,
-        hasMore: result.data.length === (options?.limit || 20),
-        total: result.total,
-      },
+      data: result.data.map((attachment) => this.formatAttachment(attachment)),
+      meta: this.buildPaginationMeta(result.total, page, limit),
     };
   }
 
-  async delete(id: number, userId: number) {
+  async delete(id: number, userId: number): Promise<{ message: string }> {
     const attachment = await attachmentRepository.findById(id);
     if (!attachment) {
       throw ApiError.notFound(
@@ -116,8 +140,8 @@ export class AttachmentService extends BaseService<
       );
     }
 
-    const filePath = path.join(process.cwd(), attachment.fileUrl);
-    if (fs.existsSync(filePath)) {
+    const filePath = this.getLocalPathFromUrl(attachment.fileUrl);
+    if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }
 
@@ -136,13 +160,25 @@ export class AttachmentService extends BaseService<
       );
     }
 
+    const filePath = this.getLocalPathFromUrl(attachment.fileUrl);
+    if (!filePath) {
+      throw ApiError.badRequest(
+        ErrorCode.ATTACHMENT_UPLOAD_FAILED,
+        'Attachment uses remote storage and cannot be downloaded from local disk',
+      );
+    }
+
     return {
-      path: path.join(process.cwd(), attachment.fileUrl),
+      path: filePath,
       filename: attachment.fileName,
     };
   }
 
-  private formatAttachment(attachment: any, uploader?: any) {
+  private formatAttachment(
+    attachment: Attachment | AttachmentWithUploader,
+  ): AttachmentResponse {
+    const uploader = 'uploadedBy' in attachment ? attachment.uploadedBy : undefined;
+
     return {
       id: attachment.id,
       fileName: attachment.fileName,
@@ -162,15 +198,26 @@ export class AttachmentService extends BaseService<
     };
   }
 
-  getAll(_options?: ListOptions): Promise<{ data: unknown[]; meta?: PaginationMeta }> {
+  private getLocalPathFromUrl(fileUrl: string): string | null {
+    if (/^https?:\/\//i.test(fileUrl)) {
+      return null;
+    }
+
+    const relativePath = fileUrl.startsWith('/') ? fileUrl.slice(1) : fileUrl;
+    return path.join(process.cwd(), relativePath);
+  }
+
+  getAll(
+    _options?: ListOptions,
+  ): Promise<{ data: AttachmentServiceResponse[]; meta?: PaginationMeta }> {
     throw ApiError.notFound(ErrorCode.NOT_IMPLEMENTED, 'Not implemented');
   }
 
-  create(_data: UploadAttachmentInput): Promise<unknown> {
+  create(_data: UploadAttachmentInput): Promise<AttachmentServiceResponse> {
     throw ApiError.notFound(ErrorCode.NOT_IMPLEMENTED, 'Not implemented');
   }
 
-  update(_id: number, _data: unknown, ..._args: unknown[]): Promise<unknown> {
+  update(_id: number, _data: unknown, ..._args: unknown[]): Promise<AttachmentServiceResponse> {
     throw ApiError.notFound(ErrorCode.NOT_IMPLEMENTED, 'Not implemented');
   }
 }
