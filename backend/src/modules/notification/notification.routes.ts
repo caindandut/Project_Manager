@@ -10,20 +10,14 @@ router.use(authMiddleware);
 // Get all notifications for current user
 router.get('/', notificationController.getAll);
 
-// Get unread count
-router.get('/unread-count', notificationController.getUnreadCount);
-
 // Mark all as read
-router.post('/mark-all-read', notificationController.markAllAsRead);
+router.patch('/', notificationController.markAllAsRead);
 
 // Clear all notifications
-router.delete('/clear-all', notificationController.clearAll);
-
-// Get notification by ID
-router.get('/:id', notificationController.getAll);
+router.delete('/', notificationController.clearAll);
 
 // Mark notification as read
-router.post('/:id/read', notificationController.markAsRead);
+router.patch('/:id', notificationController.markAsRead);
 
 // Delete notification
 router.delete('/:id', notificationController.delete);

@@ -18,30 +18,21 @@ export class NotificationController extends BaseController {
         throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
       }
 
-      const page = parseInt(req.query.page as string, 10) || undefined;
       const limit = parseInt(req.query.limit as string, 10) || 20;
       const cursor = req.query.cursor as string;
-      const unreadOnly = req.query.unreadOnly === 'true';
+      const isRead =
+        typeof req.query.isRead === 'string'
+          ? String(req.query.isRead).toLowerCase() === 'true'
+          : undefined;
+      const type = typeof req.query.type === 'string' ? req.query.type : undefined;
 
       const result = await notificationService.getAllForUser(authReq.user.id, {
-        page,
         limit,
         cursor,
-        unreadOnly,
+        isRead,
+        type,
       });
       res.json(success(result.data, result.meta));
-    });
-  };
-
-  getUnreadCount = async (req: Request, res: Response): Promise<void> => {
-    await this.tryCatch(res, async () => {
-      const authReq = req as AuthenticatedRequest;
-      if (!authReq.user) {
-        throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
-      }
-
-      const result = await notificationService.getUnreadCount(authReq.user.id);
-      res.json(success(result));
     });
   };
 
@@ -65,7 +56,8 @@ export class NotificationController extends BaseController {
         throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
       }
 
-      const result = await notificationService.markAllAsRead(authReq.user.id);
+      const type = typeof req.query.type === 'string' ? req.query.type : undefined;
+      const result = await notificationService.markAllAsRead(authReq.user.id, type);
       res.json(success(result));
     });
   };
@@ -90,7 +82,8 @@ export class NotificationController extends BaseController {
         throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
       }
 
-      const result = await notificationService.clearAll(authReq.user.id);
+      const type = typeof req.query.type === 'string' ? req.query.type : undefined;
+      const result = await notificationService.clearAll(authReq.user.id, type);
       res.json(success(result));
     });
   };

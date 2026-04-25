@@ -2,6 +2,17 @@ import { BaseRepository } from '../../common/base/BaseRepository';
 import { prisma } from '../../config';
 import { Notification, Prisma } from '@prisma/client';
 
+export type NotificationWithTask = Prisma.NotificationGetPayload<{
+  include: {
+    task: {
+      select: {
+        id: true;
+        title: true;
+      };
+    };
+  };
+}>;
+
 export class NotificationRepository extends BaseRepository<
   Notification,
   Prisma.NotificationCreateInput,
@@ -17,37 +28,61 @@ export class NotificationRepository extends BaseRepository<
     });
   }
 
+  async findByIdForUser(
+    id: number,
+    userId: number,
+  ): Promise<NotificationWithTask | null> {
+    return prisma.notification.findFirst({
+      where: { id, userId, deletedAt: null },
+      include: {
+        task: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+    });
+  }
+
   async findByUserId(
     userId: number,
     options?: {
-      page?: number;
       limit?: number;
       cursor?: string;
-      unreadOnly?: boolean;
-    }
+      isRead?: boolean;
+      type?: string;
+    },
   ) {
-    const where: any = { userId, deletedAt: null };
-    if (options?.unreadOnly) {
-      where.isRead = false;
+    const where: Prisma.NotificationWhereInput = { userId, deletedAt: null };
+    if (typeof options?.isRead === 'boolean') {
+      where.isRead = options.isRead;
+    }
+    if (options?.type) {
+      where.type = options.type;
     }
 
-    let skip: number | undefined;
-    let take: number | undefined;
+    let skip = 0;
+    let take = options?.limit || 20;
     let cursor: { id: number } | undefined;
 
     if (options?.cursor) {
       cursor = { id: parseInt(options.cursor, 10) };
-      take = options.limit || 20;
       skip = 1;
-    } else {
-      skip = options?.page ? (options.page - 1) * (options.limit || 20) : 0;
-      take = options?.limit || 20;
     }
 
     const [data, total, unreadCount] = await Promise.all([
       prisma.notification.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        include: {
+          task: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+        },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip,
         take,
         cursor,
@@ -72,9 +107,9 @@ export class NotificationRepository extends BaseRepository<
     });
   }
 
-  async markAllAsRead(userId: number): Promise<number> {
+  async markAllAsRead(userId: number, type?: string): Promise<number> {
     const result = await prisma.notification.updateMany({
-      where: { userId, isRead: false, deletedAt: null },
+      where: { userId, isRead: false, deletedAt: null, ...(type ? { type } : {}) },
       data: { isRead: true },
     });
     return result.count;
@@ -87,9 +122,9 @@ export class NotificationRepository extends BaseRepository<
     });
   }
 
-  async softDeleteAll(userId: number): Promise<number> {
+  async softDeleteAll(userId: number, type?: string): Promise<number> {
     const result = await prisma.notification.updateMany({
-      where: { userId, deletedAt: null },
+      where: { userId, deletedAt: null, ...(type ? { type } : {}) },
       data: { deletedAt: new Date() },
     });
     return result.count;
