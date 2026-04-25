@@ -224,8 +224,8 @@ export const validationRules = {
     body('description')
       .optional()
       .trim()
-      .isLength({ max: 10000 })
-      .withMessage('Description must be at most 10000 characters'),
+      .isLength({ max: 5000 })
+      .withMessage('Description must be at most 5000 characters'),
     body('type')
       .optional()
       .isIn(['TASK', 'SUB_TASK'])
@@ -244,7 +244,7 @@ export const validationRules = {
       .withMessage('Due date must be a valid ISO 8601 date'),
     body('estimatedHours')
       .optional()
-      .isFloat({ min: 0 })
+      .isFloat({ min: 0.01 })
       .withMessage('Estimated hours must be a positive number'),
     body('assigneeId')
       .optional()
@@ -258,6 +258,11 @@ export const validationRules = {
       .trim()
       .isLength({ min: 1, max: 255 })
       .withMessage('Task title must be at most 255 characters'),
+    body('description')
+      .optional()
+      .trim()
+      .isLength({ max: 5000 })
+      .withMessage('Description must be at most 5000 characters'),
     body('status')
       .optional()
       .isIn(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'])
@@ -272,8 +277,25 @@ export const validationRules = {
       .withMessage('Due date must be a valid ISO 8601 date'),
     body('estimatedHours')
       .optional()
-      .isFloat({ min: 0 })
+      .isFloat({ min: 0.01 })
       .withMessage('Estimated hours must be a positive number'),
+    body('assigneeId')
+      .optional({ nullable: true })
+      .isInt({ min: 1 })
+      .withMessage('Assignee ID must be a positive integer'),
+    body('order')
+      .optional()
+      .isInt({ min: 0 })
+      .withMessage('Order must be a non-negative integer'),
+  ],
+
+  updateTaskStatus: [
+    body('status')
+      .isIn(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'])
+      .withMessage('Invalid status'),
+  ],
+
+  assignTask: [
     body('assigneeId')
       .optional({ nullable: true })
       .isInt({ min: 1 })
@@ -282,8 +304,13 @@ export const validationRules = {
 
   timeLog: [
     body('hours')
-      .isFloat({ min: 0, max: 24 })
+      .isFloat({ min: 0.01, max: 24 })
       .withMessage('Hours must be between 0 and 24'),
+    body('note')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('Note must be at most 500 characters'),
   ],
 
   // Comment validations

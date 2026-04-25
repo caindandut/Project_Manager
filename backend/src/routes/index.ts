@@ -19,8 +19,8 @@ router.use('/workspaces', workspaceRoutes);
 // Project routes (nested under workspaces)
 router.use('/workspaces', projectRoutes);
 
-// Task routes (nested under workspaces)
-router.use('/workspaces', taskRoutes);
+// Task routes
+router.use('/', taskRoutes);
 
 // Comment routes (nested under tasks)
 router.use('/workspaces', commentRoutes);
