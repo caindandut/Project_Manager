@@ -1,0 +1,364 @@
+// ============================================================
+// PM Tool (Jira Mini) - Prisma Schema
+// Database: MySQL 8
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum TaskType {
+  TASK
+  SUB_TASK
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOWEST
+  LOW
+  MEDIUM
+  HIGH
+  HIGHEST
+}
+
+enum WorkspaceRole {
+  OWNER
+  MEMBER
+  GUEST
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+// ============================================================
+// MODELS
+// ============================================================
+
+// ------------------------------------------------------------
+// User
+// ------------------------------------------------------------
+model User {
+  id        Int        @id @default(autoincrement())
+  email     String     @unique @db.VarChar(255)
+  name      String     @db.VarChar(100)
+  password  String?    @map("password") @db.VarChar(255)
+  googleId  String?    @unique @map("google_id") @db.VarChar(255)
+  avatar    String?    @db.VarChar(500)
+  bio       String?    @db.Text
+
+  refreshTokens RefreshToken[]
+  resetTokens   ResetToken[]
+  memberships   WorkspaceMember[]
+  ownedProjects Project[]         @relation("ProjectOwner")
+  assignedTasks Task[]            @relation("TaskAssignee")
+  comments      Comment[]
+  activities    ActivityLog[]  @relation("ActivityLogUser")
+  uploadedAttachments Attachment[] @relation("AttachmentUploader")
+  invitations Invitation[] @relation("InvitationInviter")
+  notifications Notification[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt        @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  @@index([deletedAt], name: "idx_user_deleted")
+  @@index([googleId], name: "idx_user_google_id")
+  @@map("users")
+}
+
+// ------------------------------------------------------------
+// ResetToken
+// ------------------------------------------------------------
+model ResetToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @map("token") @db.VarChar(64)
+  expiresAt DateTime @map("expires_at") @db.DateTime
+
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([token], name: "idx_reset_token")
+  @@index([userId], name: "idx_reset_token_user")
+  @@map("reset_tokens")
+}
+
+// ------------------------------------------------------------
+// RefreshToken
+// ------------------------------------------------------------
+model RefreshToken {
+  id        Int       @id @default(autoincrement())
+  token     String    @unique @db.VarChar(500)
+  expiresAt DateTime  @map("expires_at")
+
+  userId Int      @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@index([expiresAt], name: "idx_refresh_token_expires")
+  @@map("refresh_tokens")
+}
+
+// ------------------------------------------------------------
+// Workspace
+// ------------------------------------------------------------
+model Workspace {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  logo        String?   @db.VarChar(500)
+
+  members WorkspaceMember[]
+  invitations Invitation[]
+  projects Project[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt        @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  @@index([deletedAt], name: "idx_workspace_deleted")
+  @@map("workspaces")
+}
+
+// ------------------------------------------------------------
+// WorkspaceMember
+// ------------------------------------------------------------
+model WorkspaceMember {
+  id       Int           @id @default(autoincrement())
+  role     WorkspaceRole @default(MEMBER) @map("role")
+  joinedAt DateTime      @default(now())   @map("joined_at")
+
+  userId      Int      @map("user_id")
+  workspaceId Int      @map("workspace_id")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt        @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  @@unique([userId, workspaceId], name: "uq_workspace_member_user_workspace")
+  @@index([deletedAt], name: "idx_workspace_member_deleted")
+  @@index([workspaceId], name: "idx_workspace_member_workspace")
+  @@map("workspace_members")
+}
+
+// ------------------------------------------------------------
+// Invitation
+// ------------------------------------------------------------
+model Invitation {
+  id  Int  @id @default(autoincrement())
+  email     String  @db.VarChar(255)
+  role      WorkspaceRole @default(MEMBER) @map("role")
+  status    InvitationStatus @default(PENDING) @map("status")
+  token     String  @unique @db.VarChar(64)
+  expiresAt DateTime @map("expires_at") @db.DateTime
+
+  workspaceId Int @map("workspace_id")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  invitedById Int  @map("invited_by_id")
+  invitedBy   User   @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  @@index([workspaceId], name: "idx_invitation_workspace")
+  @@index([email], name: "idx_invitation_email")
+  @@index([token], name: "idx_invitation_token")
+  @@index([deletedAt], name: "idx_invitation_deleted")
+  @@map("invitations")
+}
+
+// ------------------------------------------------------------
+// Project
+// ------------------------------------------------------------
+model Project {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  description String?   @db.Text
+  key         String    @db.VarChar(10)
+  color       String?   @db.VarChar(7)
+
+  workspaceId Int      @map("workspace_id")
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  ownerId Int   @map("owner_id")
+  owner   User  @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Restrict, onUpdate: Restrict)
+
+  tasks Task[]   @relation("ProjectTasks")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt        @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  @@unique([workspaceId, key], name: "uq_project_workspace_key")
+  @@index([deletedAt], name: "idx_project_deleted")
+  @@index([workspaceId], name: "idx_project_workspace")
+  @@index([ownerId], name: "idx_project_owner")
+  @@map("projects")
+}
+
+// ------------------------------------------------------------
+// Task
+// ------------------------------------------------------------
+model Task {
+  id              Int          @id @default(autoincrement())
+  title           String       @db.VarChar(255)
+  description     String?      @db.Text
+  type            TaskType     @default(TASK)       @map("type")
+  status          TaskStatus   @default(TODO)       @map("status")
+  priority        TaskPriority @default(MEDIUM)     @map("priority")
+  dueDate         DateTime?    @map("due_date")    @db.DateTime
+  estimatedHours  Float?       @map("estimated_hours")
+  loggedHours     Float        @default(0)         @map("logged_hours")
+  order           Int          @default(0)
+
+  projectId Int     @map("project_id")
+  project   Project @relation("ProjectTasks", fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  assigneeId Int?    @map("assignee_id")
+  assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull, onUpdate: SetNull)
+
+  parentId Int?   @map("parent_id")
+  parent   Task?  @relation("TaskSubTasks", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: SetNull)
+  subTasks Task[]  @relation("TaskSubTasks")
+
+  comments    Comment[]
+  attachments Attachment[]
+  activities  ActivityLog[]
+  notifications Notification[]
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt        @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  @@index([projectId, status], name: "idx_task_project_status")
+  @@index([assigneeId], name: "idx_task_assignee")
+  @@index([parentId], name: "idx_task_parent")
+  @@index([deletedAt], name: "idx_task_deleted")
+  @@index([dueDate], name: "idx_task_due_date")
+  @@map("tasks")
+}
+
+// ------------------------------------------------------------
+// Comment
+// ------------------------------------------------------------
+model Comment {
+  id      Int     @id @default(autoincrement())
+  content String  @db.Text
+
+  userId Int  @map("user_id")
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  taskId Int   @map("task_id")
+  task   Task  @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt        @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  @@index([deletedAt], name: "idx_comment_deleted")
+  @@index([userId], name: "idx_comment_user")
+  @@index([taskId], name: "idx_comment_task")
+  @@map("comments")
+}
+
+// ------------------------------------------------------------
+// Attachment
+// ------------------------------------------------------------
+model Attachment {
+  id        Int    @id @default(autoincrement())
+  fileName  String @map("file_name") @db.VarChar(255)
+  fileUrl   String @map("file_url")  @db.VarChar(500)
+  fileSize  Int    @map("file_size")
+  mimeType  String @map("mime_type") @db.VarChar(100)
+
+  taskId Int  @map("task_id")
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  uploadedById Int  @map("uploaded_by_id")
+  uploadedBy  User  @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt        @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  @@index([deletedAt], name: "idx_attachment_deleted")
+  @@index([taskId], name: "idx_attachment_task")
+  @@index([uploadedById], name: "idx_attachment_uploader")
+  @@map("attachments")
+}
+
+// ------------------------------------------------------------
+// ActivityLog
+// ------------------------------------------------------------
+model ActivityLog {
+  id         Int     @id @default(autoincrement())
+  action     String  @db.VarChar(50)
+  entityType String  @map("entity_type") @db.VarChar(50)
+  entityId   Int     @map("entity_id")
+  metadata   Json?   @db.Json
+
+  userId Int   @map("user_id")
+  user   User  @relation("ActivityLogUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  taskId Int?  @map("task_id")
+  task   Task? @relation(fields: [taskId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId], name: "idx_activity_user")
+  @@index([entityType, entityId], name: "idx_activity_entity")
+  @@index([taskId], name: "idx_activity_task")
+  @@map("activity_logs")
+}
+
+// ------------------------------------------------------------
+// Notification
+// ------------------------------------------------------------
+model Notification {
+  id      Int     @id @default(autoincrement())
+  type    String  @db.VarChar(50)
+  title   String  @db.VarChar(255)
+  message String  @db.Text
+  isRead  Boolean @default(false) @map("is_read")
+
+  userId Int   @map("user_id")
+  user   User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  taskId Int?   @map("task_id")
+  task   Task?  @relation(fields: [taskId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+  deletedAt DateTime?                  @map("deleted_at")
+
+  @@index([userId, isRead], name: "idx_notification_user_read")
+  @@index([deletedAt], name: "idx_notification_deleted")
+  @@index([taskId], name: "idx_notification_task")
+  @@map("notifications")
+}
