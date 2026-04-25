@@ -317,15 +317,15 @@ export const validationRules = {
   createComment: [
     body('content')
       .trim()
-      .isLength({ min: 1, max: 10000 })
-      .withMessage('Comment content is required and must be at most 10000 characters'),
+      .isLength({ min: 1, max: 5000 })
+      .withMessage('Comment content is required and must be at most 5000 characters'),
   ],
 
   updateComment: [
     body('content')
       .trim()
-      .isLength({ min: 1, max: 10000 })
-      .withMessage('Comment content must be at most 10000 characters'),
+      .isLength({ min: 1, max: 5000 })
+      .withMessage('Comment content must be at most 5000 characters'),
   ],
 
   // Notification validations

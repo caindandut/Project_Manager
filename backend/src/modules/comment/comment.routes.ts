@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import { commentController } from './comment.controller';
 import { authMiddleware } from '../../common/middlewares/auth.middleware';
-import { requireOwnerOrMember } from '../../common/middlewares/rbac.middleware';
 import { validate, validationRules } from '../../common/middlewares/validation.middleware';
+import { requireTaskRole } from '../task/task-rbac.middleware';
 
 const router = Router();
 
@@ -11,38 +11,29 @@ router.use(authMiddleware);
 
 // Get comments for a task
 router.get(
-  '/:workspaceId/tasks/:taskId/comments',
-  requireOwnerOrMember,
+  '/tasks/:taskId/comments',
+  requireTaskRole('GUEST'),
   commentController.getAllByTask
 );
 
 // Create comment on task
 router.post(
-  '/:workspaceId/tasks/:taskId/comments',
-  requireOwnerOrMember,
+  '/tasks/:taskId/comments',
+  requireTaskRole('GUEST'),
   validate(validationRules.createComment),
   commentController.create
 );
 
-// Get comment by ID
-router.get(
-  '/:workspaceId/tasks/:taskId/comments/:commentId',
-  requireOwnerOrMember,
-  commentController.getById
-);
-
 // Update comment
 router.patch(
-  '/:workspaceId/tasks/:taskId/comments/:commentId',
-  requireOwnerOrMember,
+  '/comments/:commentId',
   validate(validationRules.updateComment),
   commentController.update
 );
 
 // Delete comment
 router.delete(
-  '/:workspaceId/tasks/:taskId/comments/:commentId',
-  requireOwnerOrMember,
+  '/comments/:commentId',
   commentController.delete
 );
 

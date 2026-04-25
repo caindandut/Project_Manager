@@ -2,6 +2,19 @@ import { BaseRepository } from '../../common/base/BaseRepository';
 import { prisma } from '../../config';
 import { Comment, Prisma } from '@prisma/client';
 
+export type CommentWithUser = Prisma.CommentGetPayload<{
+  include: {
+    user: {
+      select: {
+        id: true;
+        name: true;
+        email: true;
+        avatar: true;
+      };
+    };
+  };
+}>;
+
 export class CommentRepository extends BaseRepository<
   Comment,
   Prisma.CommentCreateInput,
@@ -17,10 +30,19 @@ export class CommentRepository extends BaseRepository<
     });
   }
 
-  async findByIdWithUser(id: number) {
-    return prisma.comment.findUnique({
-      where: { id },
-      include: { user: true },
+  async findByIdWithUser(id: number): Promise<CommentWithUser | null> {
+    return prisma.comment.findFirst({
+      where: { id, deletedAt: null },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            avatar: true,
+          },
+        },
+      },
     });
   }
 
@@ -30,9 +52,9 @@ export class CommentRepository extends BaseRepository<
       page?: number;
       limit?: number;
       cursor?: string;
-    }
+    },
   ) {
-    const where: any = { taskId, deletedAt: null };
+    const where: Prisma.CommentWhereInput = { taskId, deletedAt: null };
     let skip: number | undefined;
     let take: number | undefined;
     let cursor: { id: number } | undefined;
@@ -49,8 +71,17 @@ export class CommentRepository extends BaseRepository<
     const [data, total] = await Promise.all([
       prisma.comment.findMany({
         where,
-        include: { user: true },
-        orderBy: { createdAt: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              avatar: true,
+            },
+          },
+        },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         skip,
         take,
         cursor,

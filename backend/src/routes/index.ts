@@ -23,7 +23,7 @@ router.use('/workspaces', projectRoutes);
 router.use('/', taskRoutes);
 
 // Comment routes (nested under tasks)
-router.use('/workspaces', commentRoutes);
+router.use('/', commentRoutes);
 
 // Attachment routes (nested under tasks)
 router.use('/workspaces', attachmentRoutes);
