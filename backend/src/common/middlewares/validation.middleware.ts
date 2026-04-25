@@ -170,19 +170,19 @@ export const validationRules = {
   createProject: [
     body('name')
       .trim()
-      .isLength({ min: 1, max: 100 })
-      .withMessage('Project name is required and must be at most 100 characters'),
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Project name must be between 2 and 100 characters'),
     body('key')
       .trim()
-      .isLength({ min: 1, max: 10 })
-      .withMessage('Project key is required and must be at most 10 characters')
+      .isLength({ min: 2, max: 10 })
+      .withMessage('Project key must be between 2 and 10 characters')
       .matches(/^[A-Z]+$/)
       .withMessage('Project key must contain only uppercase letters'),
     body('description')
       .optional()
       .trim()
-      .isLength({ max: 2000 })
-      .withMessage('Description must be at most 2000 characters'),
+      .isLength({ max: 500 })
+      .withMessage('Description must be at most 500 characters'),
     body('color')
       .optional()
       .trim()
@@ -194,15 +194,20 @@ export const validationRules = {
     body('name')
       .optional()
       .trim()
-      .isLength({ min: 1, max: 100 })
-      .withMessage('Project name must be at most 100 characters'),
+      .isLength({ min: 2, max: 100 })
+      .withMessage('Project name must be between 2 and 100 characters'),
     body('key')
       .optional()
       .trim()
-      .isLength({ min: 1, max: 10 })
-      .withMessage('Project key must be at most 10 characters')
+      .isLength({ min: 2, max: 10 })
+      .withMessage('Project key must be between 2 and 10 characters')
       .matches(/^[A-Z]+$/)
       .withMessage('Project key must contain only uppercase letters'),
+    body('description')
+      .optional()
+      .trim()
+      .isLength({ max: 500 })
+      .withMessage('Description must be at most 500 characters'),
     body('color')
       .optional()
       .trim()

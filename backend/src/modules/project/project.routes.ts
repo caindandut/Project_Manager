@@ -2,9 +2,9 @@ import { Router } from 'express';
 import { projectController } from './project.controller';
 import { authMiddleware } from '../../common/middlewares/auth.middleware';
 import {
+  requireGuest,
   requireOwner,
   requireMember,
-  requireOwnerOrMember,
 } from '../../common/middlewares/rbac.middleware';
 import { validate, validationRules } from '../../common/middlewares/validation.middleware';
 
@@ -16,21 +16,21 @@ router.use(authMiddleware);
 // Get all projects in workspace
 router.get(
   '/:workspaceId/projects',
-  requireOwnerOrMember,
+  requireGuest,
   projectController.getAll
 );
 
 // Get project by ID
 router.get(
   '/:workspaceId/projects/:projectId',
-  requireOwnerOrMember,
+  requireGuest,
   projectController.getById
 );
 
 // Create project (Owner or Member)
 router.post(
   '/:workspaceId/projects',
-  requireOwnerOrMember,
+  requireMember,
   validate(validationRules.createProject),
   projectController.create
 );
@@ -38,7 +38,7 @@ router.post(
 // Update project (Owner or Member)
 router.patch(
   '/:workspaceId/projects/:projectId',
-  requireOwnerOrMember,
+  requireMember,
   validate(validationRules.updateProject),
   projectController.update
 );

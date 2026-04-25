@@ -1,4 +1,5 @@
-import { projectRepository } from './project.repository';
+import { Prisma, Project } from '@prisma/client';
+import { projectRepository, ProjectListItem, ProjectWithOwner } from './project.repository';
 import { BaseService } from '../../common/base/BaseService';
 import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
@@ -19,6 +20,12 @@ export interface UpdateProjectInput {
   key?: string;
   description?: string;
   color?: string;
+}
+
+interface ProjectListOptions {
+  page?: number;
+  limit?: number;
+  sort?: Prisma.ProjectOrderByWithRelationInput[];
 }
 
 export class ProjectService extends BaseService<
@@ -47,74 +54,52 @@ export class ProjectService extends BaseService<
       owner: { connect: { id: data.ownerId } },
     });
 
-    logger.info(
-      `Project created: ${project.id} in workspace ${data.workspaceId}`,
-    );
+    const created = await projectRepository.findByIdWithDetails(project.id, data.workspaceId);
+    if (!created) {
+      throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
+    }
 
-    return this.formatProject(project);
+    logger.info(`Project created: ${project.id} in workspace ${data.workspaceId}`);
+    return {
+      ...this.formatProject(created),
+      owner: this.formatOwner(created),
+      taskCount: 0,
+    };
   }
 
-  async getById(id: number) {
-    const project = await projectRepository.findByIdWithDetails(id);
-    if (!project) {
-      throw ApiError.notFound(
-        ErrorCode.PROJECT_NOT_FOUND,
-        'Project not found',
-      );
-    }
+  async getByIdInWorkspace(projectId: number, workspaceId: number) {
+    const project = await this.findProjectWithDetailsOrThrow(projectId, workspaceId);
+    const [stats, recentTasks] = await Promise.all([
+      projectRepository.getStats(project.id),
+      projectRepository.getRecentTasks(project.id),
+    ]);
 
     return {
       ...this.formatProject(project),
-      workspace: {
-        id: project.workspace.id,
-        name: project.workspace.name,
-      },
-      owner: {
-        id: project.owner.id,
-        name: project.owner.name,
-        email: project.owner.email,
-        avatar: project.owner.avatar,
-      },
-      taskCount: (project as any)._count?.tasks || 0,
+      owner: this.formatOwner(project),
+      stats,
+      recentTasks,
     };
   }
 
-  async getAllInWorkspace(
-    workspaceId: number,
-    options?: { page?: number; limit?: number },
-  ) {
-    const result = await projectRepository.findAllInWorkspace(
-      workspaceId,
-      options,
-    );
+  async getAllInWorkspace(workspaceId: number, options?: ProjectListOptions) {
+    const result = await projectRepository.findAllInWorkspace(workspaceId, options);
 
     return {
-        data: result.data.map((p: any) => ({
-        ...this.formatProject(p),
-        taskCount: (p as any)._count?.tasks || 0,
-      })),
-      meta: this.buildPaginationMeta(
-        result.total,
-        options?.page,
-        options?.limit,
-      ),
+      data: result.data.map((project) => this.formatProjectListItem(project)),
+      meta: this.buildPaginationMeta(result.total, options?.page, options?.limit),
     };
   }
 
-  async update(id: number, data: UpdateProjectInput) {
-    const project = await projectRepository.findById(id);
-    if (!project) {
-      throw ApiError.notFound(
-        ErrorCode.PROJECT_NOT_FOUND,
-        'Project not found',
-      );
-    }
+  async updateInWorkspace(
+    projectId: number,
+    workspaceId: number,
+    data: UpdateProjectInput,
+  ) {
+    const project = await this.findProjectOrThrow(projectId, workspaceId);
 
     if (data.key && data.key !== project.key) {
-      const existing = await projectRepository.findByWorkspaceAndKey(
-        project.workspaceId,
-        data.key,
-      );
+      const existing = await projectRepository.findByWorkspaceAndKey(workspaceId, data.key);
       if (existing) {
         throw ApiError.conflict(
           ErrorCode.PROJECT_KEY_EXISTS,
@@ -123,42 +108,117 @@ export class ProjectService extends BaseService<
       }
     }
 
-    const updated = await projectRepository.update(id, data as any);
-    return this.formatProject(updated);
+    const updated = await projectRepository.update(project.id, data);
+    return {
+      id: updated.id,
+      name: updated.name,
+      key: updated.key,
+      color: updated.color,
+      updatedAt: updated.updatedAt,
+    };
   }
 
-  async delete(id: number) {
-    const project = await projectRepository.findById(id);
-    if (!project) {
-      throw ApiError.notFound(
-        ErrorCode.PROJECT_NOT_FOUND,
-        'Project not found',
-      );
-    }
+  async deleteInWorkspace(projectId: number, workspaceId: number) {
+    const project = await this.findProjectOrThrow(projectId, workspaceId);
+    await projectRepository.softDelete(project.id);
 
-    await projectRepository.softDelete(id);
-    logger.info(`Project deleted: ${id}`);
-
+    logger.info(`Project deleted: ${project.id}`);
     return { message: 'Project deleted successfully' };
   }
 
-  private formatProject(project: any) {
+  async getById(id: number): Promise<unknown> {
+    const project = await projectRepository.findById(id);
+    if (!project) {
+      throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
+    }
+
+    return this.formatProject(project);
+  }
+
+  async update(id: number, data: UpdateProjectInput): Promise<unknown> {
+    const project = await projectRepository.findById(id);
+    if (!project) {
+      throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
+    }
+
+    const updated = await projectRepository.update(id, data);
+    return this.formatProject(updated);
+  }
+
+  async delete(id: number): Promise<unknown> {
+    const project = await projectRepository.findById(id);
+    if (!project) {
+      throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
+    }
+
+    await projectRepository.softDelete(id);
+    return { message: 'Project deleted successfully' };
+  }
+
+  getAll(_options?: ListOptions): Promise<{ data: unknown[]; meta?: PaginationMeta }> {
+    throw ApiError.notFound(ErrorCode.NOT_IMPLEMENTED, 'Not implemented');
+  }
+
+  private async findProjectOrThrow(
+    projectId: number,
+    workspaceId: number,
+  ): Promise<Project> {
+    const project = await projectRepository.findByIdInWorkspace(projectId, workspaceId);
+    if (!project) {
+      throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
+    }
+
+    return project;
+  }
+
+  private async findProjectWithDetailsOrThrow(
+    projectId: number,
+    workspaceId: number,
+  ): Promise<ProjectWithOwner> {
+    const project = await projectRepository.findByIdWithDetails(projectId, workspaceId);
+    if (!project) {
+      throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
+    }
+
+    return project;
+  }
+
+  private formatProject(project: Project) {
     return {
       id: project.id,
       name: project.name,
-      key: project.key,
       description: project.description,
+      key: project.key,
       color: project.color,
       workspaceId: project.workspaceId,
-      ownerId: project.ownerId,
       createdAt: project.createdAt,
       updatedAt: project.updatedAt,
     };
   }
 
-  // Base interface stubs
-  getAll(_options?: ListOptions): Promise<{ data: unknown[]; meta?: PaginationMeta }> {
-    throw ApiError.notFound(ErrorCode.NOT_IMPLEMENTED, 'Not implemented');
+  private formatProjectListItem(project: ProjectListItem) {
+    return {
+      id: project.id,
+      name: project.name,
+      key: project.key,
+      color: project.color,
+      owner: {
+        id: project.owner.id,
+        name: project.owner.name,
+      },
+      taskCount: project._count.tasks,
+      completedTaskCount: project.completedTaskCount,
+      createdAt: project.createdAt,
+    };
+  }
+
+  private formatOwner(project: ProjectWithOwner) {
+    return {
+      id: project.owner.id,
+      name: project.owner.name,
+      email: project.owner.email,
+      avatar: project.owner.avatar,
+    };
   }
 }
 
