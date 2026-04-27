@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { Bell, Gear, Menu, Search, Settings, X } from "lucide-react"
+import { Menu, Search, Settings, X } from "lucide-react"
 import { useState } from "react"
 
 import NotificationBell from "@/components/NotificationBell"
@@ -10,19 +10,18 @@ import { Input } from "@/components/ui/input"
 
 interface AppHeaderProps {
   onMenuClick?: () => void
-  isSidebarOpen?: boolean
 }
 
-export default function AppHeader({ onMenuClick, isSidebarOpen }: AppHeaderProps) {
+export default function AppHeader({ onMenuClick }: AppHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 flex h-14 w-full items-center gap-4 border-b bg-background px-4">
+    <header className="sticky top-0 z-50 flex h-14 w-full items-center gap-4 border-b bg-white px-4 shadow-sm">
       {/* Mobile menu button */}
       <Button
         variant="ghost"
         size="sm"
-        className="lg:hidden"
+        className="lg:hidden text-[#5E6C84] hover:bg-[#EBECF0] hover:text-[#172B4D]"
         onClick={onMenuClick}
         aria-label="Toggle menu"
       >
@@ -38,13 +37,13 @@ export default function AppHeader({ onMenuClick, isSidebarOpen }: AppHeaderProps
         isSearchOpen ? "flex" : "hidden md:flex"
       )}>
         <div className="relative w-full max-w-xl">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#5E6C84]" />
           <Input
             type="search"
-            placeholder="Tìm kiếm công việc, dự án..."
-            className="h-9 w-full pl-10 bg-muted/50 border-0 focus:bg-background"
+            placeholder="Tìm kiếm công việc..."
+            className="h-9 w-full pl-10 bg-[#F4F5F7] border-0 rounded text-sm focus:bg-white focus:ring-2 focus:ring-[#0052CC]/20"
           />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-5 items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs text-muted-foreground">
+          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline-flex h-5 items-center gap-1 rounded border border-[#DFE1E6] bg-[#F4F5F7] px-1.5 font-mono text-xs text-[#5E6C84]">
             <span className="text-xs">/</span>
           </kbd>
         </div>
@@ -54,7 +53,7 @@ export default function AppHeader({ onMenuClick, isSidebarOpen }: AppHeaderProps
       <Button
         variant="ghost"
         size="sm"
-        className="md:hidden"
+        className="md:hidden text-[#5E6C84] hover:bg-[#EBECF0] hover:text-[#172B4D]"
         onClick={() => setIsSearchOpen(!isSearchOpen)}
         aria-label="Toggle search"
       >
@@ -69,16 +68,13 @@ export default function AppHeader({ onMenuClick, isSidebarOpen }: AppHeaderProps
       <div className="ml-auto flex items-center gap-1">
         <NotificationBell unreadCount={0} />
         
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 w-9 p-0"
-          asChild
+        <Link
+          to="/settings"
+          className="flex h-9 w-9 items-center justify-center rounded-md text-[#5E6C84] hover:bg-[#EBECF0] hover:text-[#172B4D] transition-colors"
+          aria-label="Cài đặt"
         >
-          <Link to="/settings" aria-label="Cài đặt">
-            <Gear className="h-4 w-4" />
-          </Link>
-        </Button>
+          <Settings className="h-4 w-4" />
+        </Link>
         
         <UserDropdown />
       </div>

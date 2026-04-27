@@ -6,8 +6,10 @@ import { Toaster } from 'sonner';
 import AppLayout from '@/components/AppLayout';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkspacesQuery } from '@/hooks/useWorkspaces';
 import GoogleCallbackPage from '@/pages/GoogleCallback';
 import LoginPage from '@/pages/Login';
+import CreateWorkspacePage from '@/pages/CreateWorkspacePage';
 import OnboardingProfilePage from '@/pages/OnboardingProfile';
 import OnboardingWorkspacePage from '@/pages/OnboardingWorkspace';
 import { ProjectCalendarPage, ProjectGanttPage, ProjectKanbanPage, ProjectListPage } from '@/pages/ProjectViews';
@@ -18,9 +20,11 @@ import WorkspaceDashboard from '@/pages/WorkspaceDashboard';
 import WorkspaceSettingsPage from '@/pages/WorkspaceSettings';
 import WorkspacesPage from '@/pages/Workspaces';
 import MyTasksPage from '@/pages/MyTasks';
+import CreateProjectPage from '@/pages/CreateProjectPage';
 
 function RootRedirect() {
   const { isAuthenticated, isBootstrappingAuth } = useAuth();
+  const workspacesQuery = useWorkspacesQuery(1, 1);
 
   if (isBootstrappingAuth) {
     return (
@@ -33,7 +37,17 @@ function RootRedirect() {
     );
   }
 
-  return <Navigate to={isAuthenticated ? '/workspaces' : '/login'} replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If authenticated and workspaces loaded, redirect to first workspace
+  if (workspacesQuery.isSuccess && workspacesQuery.data?.data.length) {
+    return <Navigate to={`/workspaces/${workspacesQuery.data.data[0].slug}`} replace />;
+  }
+
+  // If authenticated but no workspaces yet, show workspaces page
+  return <Navigate to="/workspaces" replace />;
 }
 
 function App() {
@@ -58,11 +72,13 @@ function App() {
           <Route element={<AppLayout />}>
             {/* Root workspaces */}
             <Route path="/workspaces" element={<WorkspacesPage />} />
+            <Route path="/workspaces/create" element={<CreateWorkspacePage />} />
             
             {/* Workspace routes */}
             <Route path="/workspaces/:workspaceId" element={<WorkspaceDashboard />} />
             <Route path="/workspaces/:workspaceId/my-tasks" element={<MyTasksPage />} />
             <Route path="/workspaces/:workspaceId/projects" element={<WorkspacesPage />} />
+            <Route path="/workspaces/:workspaceId/projects/new" element={<CreateProjectPage />} />
             <Route path="/workspaces/:workspaceId/members" element={<WorkspacesPage />} />
             <Route path="/workspaces/:workspaceId/calendar" element={<WorkspacesPage />} />
             <Route path="/workspaces/:workspaceId/settings" element={<WorkspaceSettingsPage />} />

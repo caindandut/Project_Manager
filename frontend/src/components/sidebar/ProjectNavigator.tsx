@@ -1,36 +1,37 @@
 import { useState } from "react"
-import { Link, useLocation, useParams } from "react-router-dom"
+import { Link, useLocation } from "react-router-dom"
 import {
   Calendar,
   ChevronDown,
   ChevronRight,
-  Circle,
   Folder,
-  FolderKanban,
   Home,
   LayoutDashboard,
   LayoutGrid,
   List,
+  Plus,
+  Settings,
   TrendingUp,
 } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { useWorkspacesQuery } from "@/hooks/useWorkspaces"
 import { useProjectsQuery } from "@/hooks/useProjects"
 import { cn } from "@/lib/utils"
+
+interface ProjectNavigatorProps {
+  workspaceId: string | number
+  isCollapsed?: boolean
+}
 
 interface SidebarItemProps {
   icon: React.ComponentType<{ className?: string }>
   label: string
   href: string
   isActive?: boolean
-  isCollapsed?: boolean
   indent?: boolean
+  isCollapsed?: boolean
+  children?: React.ReactNode
+  onClick?: () => void
 }
 
 export function SidebarItem({
@@ -38,34 +39,79 @@ export function SidebarItem({
   label,
   href,
   isActive,
-  isCollapsed,
   indent,
+  isCollapsed,
+  children,
+  onClick,
 }: SidebarItemProps) {
-  const content = (
-    <Link
-      to={href}
-      className={cn(
-        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-[#172B4D] hover:bg-[#EBECF0]",
-        indent && "ml-6",
-        isCollapsed && "justify-center px-2"
-      )}
-    >
-      <Icon className={cn("h-4 w-4 shrink-0", isCollapsed && "h-5 w-5")} />
-      {!isCollapsed && <span className="truncate">{label}</span>}
-    </Link>
-  )
+  const [expanded, setExpanded] = useState(false)
+  const hasChildren = !!children
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (hasChildren) {
+      e.preventDefault()
+      setExpanded(!expanded)
+      onClick?.()
+    }
+  }
 
   if (isCollapsed) {
     return (
-      <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="right" className="font-normal">
-          {label}
-        </TooltipContent>
-      </Tooltip>
+      <Link
+        to={hasChildren ? "#" : href}
+        onClick={handleClick}
+        className={cn(
+          "flex items-center justify-center rounded-md py-2 transition-colors cursor-pointer",
+          isActive
+            ? "bg-[#DEEBFF] text-[#0052CC]"
+            : "text-[#172B4D] hover:bg-[#EBECF0]"
+        )}
+        title={label}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+      </Link>
+    )
+  }
+
+  const content = (
+    <Link
+      to={hasChildren ? "#" : href}
+      onClick={handleClick}
+      className={cn(
+        "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
+        isActive
+          ? "bg-[#DEEBFF] text-[#0052CC]"
+          : "text-[#172B4D] hover:bg-[#EBECF0]",
+        indent && "ml-5",
+        hasChildren && "justify-between"
+      )}
+    >
+      <div className="flex items-center gap-2.5">
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="truncate">{label}</span>
+      </div>
+      {hasChildren && (
+        <span className="ml-auto">
+          {expanded ? (
+            <ChevronDown className="h-4 w-4 text-[#5E6C84]" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-[#5E6C84]" />
+          )}
+        </span>
+      )}
+    </Link>
+  )
+
+  if (hasChildren) {
+    return (
+      <div>
+        {content}
+        {expanded && (
+          <div className="mt-1 space-y-0.5">
+            {children}
+          </div>
+        )}
+      </div>
     )
   }
 
@@ -80,320 +126,244 @@ interface ProjectViewItemProps {
   isCollapsed?: boolean
 }
 
-function ProjectViewItem({ label, href, icon: Icon, isActive, isCollapsed }: ProjectViewItemProps) {
-  const content = (
-    <Link
-      to={href}
-      className={cn(
-        "flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground",
-        isCollapsed && "justify-center px-2"
-      )}
-    >
-      <Icon className="h-3.5 w-3.5 shrink-0" />
-      {!isCollapsed && <span className="truncate">{label}</span>}
-    </Link>
-  )
-
+export function ProjectViewItem({ label, href, icon: Icon, isActive, isCollapsed }: ProjectViewItemProps) {
   if (isCollapsed) {
     return (
-      <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="right" className="font-normal">
-          {label}
-        </TooltipContent>
-      </Tooltip>
-    )
-  }
-
-  return content
-}
-
-interface WorkspaceItemProps {
-  workspace: {
-    id: number
-    name: string
-    slug?: string
-  }
-  isActive: boolean
-  isCollapsed: boolean
-  isExpanded: boolean
-  onToggle: () => void
-}
-
-function WorkspaceItem({ workspace, isActive, isCollapsed, isExpanded, onToggle }: WorkspaceItemProps) {
-  const location = useLocation()
-  const basePath = `/workspaces/${workspace.id}`
-  const projectsQuery = useProjectsQuery(workspace.id)
-  const projects = projectsQuery.data?.data ?? []
-
-  const [expandedProjects, setExpandedProjects] = useState<Set<number>>(() => new Set())
-
-  const toggleProject = (id: number) => {
-    setExpandedProjects((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
-  }
-
-  if (isCollapsed) {
-    return (
-      <Tooltip delayDuration={0}>
-        <TooltipTrigger asChild>
-          <Link
-            to={basePath}
-            className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-md text-xs font-bold transition-colors",
-              isActive
-                ? "bg-primary text-primary-foreground"
-                : "bg-[#DFE1E6] text-[#172B4D] hover:bg-[#EBECF0]"
-            )}
-          >
-            {getInitials(workspace.name)}
-          </Link>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="font-normal">
-          {workspace.name}
-        </TooltipContent>
-      </Tooltip>
+      <Link
+        to={href}
+        className={cn(
+          "flex items-center justify-center rounded-md py-1.5 transition-colors",
+          isActive
+            ? "bg-[#DEEBFF] text-[#0052CC]"
+            : "text-[#5E6C84] hover:bg-[#EBECF0]"
+        )}
+        title={label}
+      >
+        <Icon className="h-3.5 w-3.5 shrink-0" />
+      </Link>
     )
   }
 
   return (
-    <div className="space-y-0.5">
-      <div className="flex items-center gap-2">
+    <Link
+      to={href}
+      className={cn(
+        "flex items-center gap-2 rounded-md py-1.5 text-sm transition-colors",
+        "px-3 ml-4 border-l border-[#DFE1E6] pl-4",
+        isActive
+          ? "bg-[#DEEBFF] text-[#0052CC] font-medium"
+          : "text-[#5E6C84] hover:text-[#172B4D] hover:bg-[#EBECF0]"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      <span className="truncate">{label}</span>
+    </Link>
+  )
+}
+
+interface ProjectItemProps {
+  project: {
+    id: number
+    name: string
+    key?: string
+  }
+  workspaceId: string | number
+  isActive: boolean
+  isCollapsed?: boolean
+  defaultExpanded?: boolean
+}
+
+export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defaultExpanded = false }: ProjectItemProps) {
+  const location = useLocation()
+  const projectPath = `/workspaces/${workspaceId}/projects/${project.id}`
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded)
+
+  const viewItems = [
+    { label: "Tổng quan", href: `${projectPath}/overview`, icon: LayoutDashboard },
+    { label: "Bảng", href: `${projectPath}/kanban`, icon: LayoutGrid },
+    { label: "Danh sách", href: `${projectPath}/list`, icon: List },
+    { label: "Lịch", href: `${projectPath}/calendar`, icon: Calendar },
+    { label: "Gantt", href: `${projectPath}/gantt`, icon: TrendingUp },
+  ]
+
+  if (isCollapsed) {
+    return (
+      <div className="space-y-1">
         <Link
-          to={basePath}
+          to={projectPath}
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-md text-xs font-bold transition-colors shrink-0",
+            "flex items-center justify-center rounded-md py-2 transition-colors",
             isActive
-              ? "bg-primary text-primary-foreground"
-              : "bg-[#DFE1E6] text-[#172B4D] hover:bg-[#EBECF0]"
+              ? "bg-[#EBECF0] text-[#172B4D]"
+              : "text-[#5E6C84] hover:bg-[#EBECF0]"
           )}
+          title={project.name}
         >
-          {getInitials(workspace.name)}
+          <Folder className="h-4 w-4 shrink-0" />
         </Link>
-        <Link
-          to={basePath}
-          className={cn(
-            "flex-1 truncate text-sm font-medium transition-colors",
-            isActive ? "text-primary" : "text-[#172B4D] hover:text-[#172B4D]",
-            !isActive && "text-muted-foreground"
-          )}
-        >
-          {workspace.name}
-        </Link>
-        <button
-          onClick={onToggle}
-          className="p-1 rounded hover:bg-[#EBECF0] transition-colors"
-        >
-          {isExpanded ? (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          )}
-        </button>
+        {isExpanded && (
+          <div className="space-y-0.5">
+            {viewItems.map((item) => (
+              <ProjectViewItem
+                key={item.href}
+                label={item.label}
+                href={item.href}
+                icon={item.icon}
+                isActive={location.pathname === item.href}
+                isCollapsed={true}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div
+        className={cn(
+          "flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors",
+          isActive || isExpanded
+            ? "bg-[#EBECF0] text-[#172B4D]"
+            : "text-[#5E6C84] hover:bg-[#EBECF0] hover:text-[#172B4D]"
+        )}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        {isExpanded ? (
+          <ChevronDown className="h-4 w-4 shrink-0" />
+        ) : (
+          <ChevronRight className="h-4 w-4 shrink-0" />
+        )}
+        <Folder className="h-4 w-4 shrink-0" />
+        <span className="flex-1 truncate font-medium">{project.name}</span>
       </div>
 
-      {isExpanded && !isCollapsed && (
-        <div className="ml-6 space-y-0.5 mt-1">
-          <SidebarItem
-            icon={Home}
-            label="Trang chủ"
-            href={basePath}
-            isActive={location.pathname === basePath}
-          />
-          <SidebarItem
-            icon={LayoutDashboard}
-            label="Công việc của tôi"
-            href={`${basePath}/my-tasks`}
-            isActive={location.pathname === `${basePath}/my-tasks`}
-          />
-          <div className="space-y-0.5">
-            <SidebarItem
-              icon={Folder}
-              label="Dự án"
-              href={`${basePath}/projects`}
-              isActive={location.pathname.startsWith(`${basePath}/projects`)}
-              indent={false}
+      {isExpanded && (
+        <div className="mt-1 space-y-0.5">
+          {viewItems.map((item) => (
+            <ProjectViewItem
+              key={item.href}
+              label={item.label}
+              href={item.href}
+              icon={item.icon}
+              isActive={location.pathname === item.href}
             />
-            
-            {/* Projects list */}
-            {projectsQuery.isLoading ? (
-              <div className="ml-4 space-y-1">
-                {[1, 2].map((i) => (
-                  <Skeleton key={i} className="h-8 w-full" />
-                ))}
-              </div>
-            ) : (
-              <div className="ml-4 space-y-0.5">
-                {projects.map((project) => {
-                  const projectPath = `${basePath}/projects/${project.id}`
-                  const isProjectActive = location.pathname.startsWith(projectPath)
-                  const isProjectExpanded = expandedProjects.has(project.id)
-
-                  return (
-                    <div key={project.id}>
-                      <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => toggleProject(project.id)}
-                          className="flex-1 flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-[#EBECF0]"
-                        >
-                          <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className={cn(
-                            "truncate flex-1 text-left",
-                            isProjectActive ? "text-primary font-medium" : "text-foreground"
-                          )}>
-                            {project.name}
-                          </span>
-                        </button>
-                        <button
-                          onClick={() => toggleProject(project.id)}
-                          className="p-0.5 rounded hover:bg-[#EBECF0]"
-                        >
-                          {isProjectExpanded ? (
-                            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                          ) : (
-                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                          )}
-                        </button>
-                      </div>
-
-                      {isProjectExpanded && (
-                        <div className="ml-4 mt-0.5 space-y-0.5 border-l border-border pl-2">
-                          <ProjectViewItem
-                            label="Danh sách"
-                            href={`${projectPath}/list`}
-                            icon={List}
-                            isActive={location.pathname === `${projectPath}/list`}
-                          />
-                          <ProjectViewItem
-                            label="Kanban"
-                            href={`${projectPath}/kanban`}
-                            icon={LayoutGrid}
-                            isActive={location.pathname === `${projectPath}/kanban`}
-                          />
-                          <ProjectViewItem
-                            label="Gantt"
-                            href={`${projectPath}/gantt`}
-                            icon={TrendingUp}
-                            isActive={location.pathname === `${projectPath}/gantt`}
-                          />
-                          <ProjectViewItem
-                            label="Lịch"
-                            href={`${projectPath}/calendar`}
-                            icon={Calendar}
-                            isActive={location.pathname === `${projectPath}/calendar`}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </div>
+          ))}
         </div>
       )}
     </div>
   )
 }
 
-interface ProjectNavigatorProps {
-  isCollapsed: boolean
-}
-
-export function ProjectNavigator({ isCollapsed }: ProjectNavigatorProps) {
-  const params = useParams()
+export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorProps) {
   const location = useLocation()
-  const workspaceId = Number(params.workspaceId || "0")
+  const projectsQuery = useProjectsQuery(workspaceId)
+  const projects = projectsQuery.data?.data ?? []
 
-  const workspacesQuery = useWorkspacesQuery(1, 20)
-
-  const [expandedWorkspaces, setExpandedWorkspaces] = useState<Set<number>>(() => {
-    const initial = new Set<number>()
-    if (workspaceId > 0) {
-      initial.add(workspaceId)
-    }
-    return initial
-  })
-
-  const toggleWorkspace = (id: number) => {
-    setExpandedWorkspaces((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }
+  const basePath = `/workspaces/${workspaceId}`
+  const isInProject = location.pathname.includes("/projects/")
 
   if (isCollapsed) {
     return (
-      <div className="space-y-2">
-        {workspacesQuery.data?.data.map((ws) => (
-          <WorkspaceItem
-            key={ws.id}
-            workspace={ws}
-            isActive={ws.id === workspaceId}
-            isCollapsed={isCollapsed}
-            isExpanded={expandedWorkspaces.has(ws.id)}
-            onToggle={() => toggleWorkspace(ws.id)}
-          />
-        ))}
-      </div>
+      <nav className="space-y-1 px-1">
+        {/* Home */}
+        <SidebarItem
+          icon={Home}
+          label="Trang chủ"
+          href={basePath}
+          isActive={location.pathname === basePath && !isInProject}
+          isCollapsed={true}
+        />
+
+        {/* Projects folder icon */}
+        <div className="flex items-center justify-center py-2">
+          <Folder className="h-4 w-4 text-[#5E6C84]" />
+        </div>
+      </nav>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* Section Header */}
-      <div className="flex items-center gap-2 px-3">
-        <FolderKanban className="h-4 w-4 text-[#172B4D]" />
-        <span className="text-xs font-semibold uppercase tracking-wider text-[#172B4D]">
-          Dự án
-        </span>
-      </div>
+    <nav className="space-y-1">
+      {/* Home */}
+      <SidebarItem
+        icon={Home}
+        label="Trang chủ"
+        href={basePath}
+        isActive={location.pathname === basePath && !isInProject}
+      />
 
-      {/* Workspace List */}
-      <div className="space-y-3">
-        {workspacesQuery.isLoading ? (
-          <div className="space-y-2 px-2">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-10 w-full" />
+      {/* Projects section */}
+      <div className="pt-2">
+        <div className="px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Folder className="h-4 w-4 text-[#5E6C84]" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-[#5E6C84]">
+              Dự án
+            </span>
+          </div>
+          <Link
+            to={`/workspaces/${workspaceId}/projects/new`}
+            className="flex items-center justify-center rounded-md p-1 text-[#5E6C84] hover:bg-[#EBECF0] hover:text-[#0052CC] transition-colors"
+            title="Tạo dự án"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        {projectsQuery.isLoading ? (
+          <div className="px-2 space-y-1">
+            {[1, 2].map((i) => (
+              <Skeleton key={i} className="h-9 w-full rounded-md" />
             ))}
           </div>
+        ) : projects.length === 0 ? (
+          <div className="px-3 py-4 text-center">
+            <p className="text-xs text-[#5E6C84] mb-2">Chưa có dự án nào</p>
+            <Link
+              to={`/workspaces/${workspaceId}/projects/new`}
+              className="inline-flex items-center gap-1 text-xs text-[#0052CC] hover:underline"
+            >
+              <Plus className="h-3 w-3" />
+              Tạo dự án mới
+            </Link>
+          </div>
         ) : (
-          workspacesQuery.data?.data.map((ws) => (
-            <WorkspaceItem
-              key={ws.id}
-              workspace={ws}
-              isActive={ws.id === workspaceId}
-              isCollapsed={isCollapsed}
-              isExpanded={expandedWorkspaces.has(ws.id)}
-              onToggle={() => toggleWorkspace(ws.id)}
-            />
-          ))
+          <div className="space-y-0.5">
+            {projects.map((project) => {
+              const isActive = location.pathname.includes(`/projects/${project.id}`)
+              return (
+                <ProjectItem
+                  key={project.id}
+                  project={project}
+                  workspaceId={workspaceId}
+                  isActive={isActive}
+                  defaultExpanded={isActive}
+                />
+              )
+            })}
+          </div>
         )}
       </div>
-    </div>
+
+      {/* Settings section - Only show when expanded */}
+      <div className="pt-2 border-t border-[#EBECF0] mt-2">
+        <div className="px-3 py-2 flex items-center gap-2">
+          <Settings className="h-4 w-4 text-[#5E6C84]" />
+          <Link
+            to={`/workspaces/${workspaceId}/settings`}
+            className={cn(
+              "flex-1 text-xs font-semibold uppercase tracking-wide transition-colors",
+              location.pathname.includes("/settings")
+                ? "text-[#0052CC]"
+                : "text-[#5E6C84] hover:text-[#172B4D]"
+            )}
+          >
+            Cài đặt
+          </Link>
+        </div>
+      </div>
+    </nav>
   )
 }

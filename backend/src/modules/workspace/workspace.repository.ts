@@ -36,6 +36,14 @@ export class WorkspaceRepository extends BaseRepository<
     });
   }
 
+  private async findByIdOrSlug(workspaceId: string): Promise<Workspace | null> {
+    const isNumeric = /^\d+$/.test(workspaceId);
+    if (isNumeric) {
+      return this.findById(Number(workspaceId));
+    }
+    return this.findBySlug(workspaceId);
+  }
+
   async findAllForUser(
     userId: number,
     options?: { page?: number; limit?: number },
@@ -81,8 +89,16 @@ export class WorkspaceRepository extends BaseRepository<
     data: { name: string; description?: string; logo?: string },
     ownerId: number,
   ): Promise<Workspace> {
-    // Generate slug from name
-    const slug = this.generateSlug(data.name);
+    // Generate unique slug from name
+    let baseSlug = this.generateSlug(data.name);
+    let slug = baseSlug;
+    let counter = 1;
+
+    // Check if slug exists and generate unique one
+    while (await this.isSlugTaken(slug)) {
+      slug = `${baseSlug}-${counter}`;
+      counter++;
+    }
 
     return prisma.workspace.create({
       data: {
@@ -135,7 +151,7 @@ export class WorkspaceRepository extends BaseRepository<
   async addMember(
     workspaceId: number,
     userId: number,
-    role: WorkspaceRole.MEMBER | WorkspaceRole.GUEST = WorkspaceRole.MEMBER,
+    role: WorkspaceRole.ADMIN | WorkspaceRole.MEMBER | WorkspaceRole.GUEST = WorkspaceRole.MEMBER,
   ): Promise<WorkspaceMemberWithUser> {
     return prisma.workspaceMember.create({
       data: { workspaceId, userId, role },
@@ -149,7 +165,7 @@ export class WorkspaceRepository extends BaseRepository<
 
   async updateMemberRole(
     memberId: number,
-    role: WorkspaceRole.MEMBER | WorkspaceRole.GUEST,
+    role: WorkspaceRole.ADMIN | WorkspaceRole.MEMBER | WorkspaceRole.GUEST,
   ): Promise<WorkspaceMember> {
     return prisma.workspaceMember.update({
       where: { id: memberId },

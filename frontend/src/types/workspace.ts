@@ -1,10 +1,11 @@
 import type { PaginatedMeta } from "@/types/api"
 
-export type WorkspaceRole = "OWNER" | "MEMBER" | "GUEST"
+export type WorkspaceRole = "OWNER" | "ADMIN" | "MEMBER" | "GUEST"
 
 export interface WorkspaceListItem {
   id: number
   name: string
+  slug: string
   description: string | null
   logo: string | null
   role: WorkspaceRole
@@ -18,17 +19,33 @@ export interface WorkspaceStats {
   memberCount: number
   projectCount: number
   taskCount: number
+  todoCount?: number
+  inProgressCount?: number
+  doneCount?: number
+}
+
+export interface RecentTask {
+  id: number
+  title: string
+  status: string
+  assignee?: {
+    name: string | null
+    email: string
+  } | null
+  updatedAt?: string
 }
 
 export interface WorkspaceDetail {
   id: number
   name: string
+  slug: string
   description: string | null
   logo: string | null
   role: WorkspaceRole
   createdAt: string
   updatedAt: string
   stats: WorkspaceStats
+  recentTasks?: RecentTask[]
 }
 
 export interface WorkspaceMemberUser {
@@ -48,6 +65,12 @@ export interface WorkspaceMember {
 export interface CreateWorkspacePayload {
   name: string
   description?: string
+}
+
+export interface UpdateWorkspacePayload {
+  name?: string
+  description?: string
+  logo?: string
 }
 
 export interface InviteWorkspaceMemberPayload {

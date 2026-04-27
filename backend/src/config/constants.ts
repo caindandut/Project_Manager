@@ -57,7 +57,8 @@ export const RATE_LIMIT = {
 } as const;
 
 export const WORKSPACE_ROLES_HIERARCHY = {
-  OWNER: 3,
+  OWNER: 4,
+  ADMIN: 3,
   MEMBER: 2,
   GUEST: 1,
 } as const;
@@ -75,6 +76,29 @@ export const ALLOWED_SORT_FIELDS = {
 
 export const ROLE_PERMISSIONS = {
   OWNER: ['*'],
+  ADMIN: [
+    'workspace:read',
+    'workspace:update',
+    'project:create',
+    'project:read',
+    'project:update',
+    'project:delete',
+    'task:create',
+    'task:read',
+    'task:update',
+    'task:delete',
+    'comment:create',
+    'comment:read',
+    'comment:update',
+    'comment:delete',
+    'attachment:create',
+    'attachment:read',
+    'attachment:delete',
+    'member:read',
+    'member:invite',
+    'member:update',
+    'member:remove',
+  ],
   MEMBER: [
     'workspace:read',
     'workspace:update',

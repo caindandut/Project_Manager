@@ -3,27 +3,30 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   cancelWorkspaceInvitation,
   createWorkspace,
+  deleteWorkspace,
   getWorkspaceDetail,
   getWorkspaceMembers,
   getWorkspacePendingInvitations,
   getWorkspaces,
   inviteWorkspaceMember,
   removeWorkspaceMember,
+  updateWorkspace,
   updateWorkspaceMemberRole,
 } from "@/lib/workspace-api"
 import type {
   CreateWorkspacePayload,
   InviteWorkspaceMemberPayload,
+  UpdateWorkspacePayload,
   UpdateWorkspaceMemberRolePayload,
   WorkspaceRole,
 } from "@/types/workspace"
 
 export const workspaceQueryKeys = {
   list: (page: number, limit: number) => ["workspaces", page, limit] as const,
-  detail: (workspaceId: number) => ["workspace", workspaceId] as const,
-  members: (workspaceId: number, page: number, limit: number, role?: WorkspaceRole) =>
-    ["workspace-members", workspaceId, page, limit, role ?? "ALL"] as const,
-  invitations: (workspaceId: number) => ["workspace-invitations", workspaceId] as const,
+  detail: (workspaceId: string | number) => ["workspace", String(workspaceId)] as const,
+  members: (workspaceId: string | number, page: number, limit: number, role?: WorkspaceRole) =>
+    ["workspace-members", String(workspaceId), page, limit, role ?? "ALL"] as const,
+  invitations: (workspaceId: string | number) => ["workspace-invitations", String(workspaceId)] as const,
 }
 
 export const useWorkspacesQuery = (page: number, limit: number) =>
@@ -32,15 +35,15 @@ export const useWorkspacesQuery = (page: number, limit: number) =>
     queryFn: () => getWorkspaces(page, limit),
   })
 
-export const useWorkspaceDetailQuery = (workspaceId: number) =>
+export const useWorkspaceDetailQuery = (workspaceId: string | number) =>
   useQuery({
     queryKey: workspaceQueryKeys.detail(workspaceId),
     queryFn: () => getWorkspaceDetail(workspaceId),
-    enabled: workspaceId > 0,
+    enabled: Boolean(workspaceId),
   })
 
 export const useWorkspaceMembersQuery = (
-  workspaceId: number,
+  workspaceId: string | number,
   page: number,
   limit: number,
   role?: WorkspaceRole,
@@ -48,17 +51,28 @@ export const useWorkspaceMembersQuery = (
   useQuery({
     queryKey: workspaceQueryKeys.members(workspaceId, page, limit, role),
     queryFn: () => getWorkspaceMembers({ workspaceId, page, limit, role }),
-    enabled: workspaceId > 0,
+    enabled: Boolean(workspaceId),
   })
 
-export const useWorkspacePendingInvitationsQuery = (workspaceId: number) =>
+export const useWorkspacePendingInvitationsQuery = (workspaceId: string | number) =>
   useQuery({
     queryKey: workspaceQueryKeys.invitations(workspaceId),
     queryFn: () => getWorkspacePendingInvitations(workspaceId),
-    enabled: workspaceId > 0,
+    enabled: Boolean(workspaceId),
   })
 
-export const useCancelWorkspaceInvitationMutation = (workspaceId: number) => {
+export const useUpdateWorkspaceMutation = (workspaceId: string | number) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (payload: UpdateWorkspacePayload) => updateWorkspace(workspaceId, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: workspaceQueryKeys.detail(workspaceId) })
+    },
+  })
+}
+
+export const useCancelWorkspaceInvitationMutation = (workspaceId: string | number) => {
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -88,7 +102,7 @@ export const useCreateWorkspaceMutation = (page: number, limit: number) => {
 }
 
 export const useInviteWorkspaceMemberMutation = (
-  workspaceId: number,
+  workspaceId: string | number,
   membersPage: number,
   membersLimit: number,
 ) => {
@@ -110,7 +124,7 @@ export const useInviteWorkspaceMemberMutation = (
 }
 
 export const useUpdateWorkspaceMemberRoleMutation = (
-  workspaceId: number,
+  workspaceId: string | number,
   membersPage: number,
   membersLimit: number,
 ) => {
@@ -133,7 +147,7 @@ export const useUpdateWorkspaceMemberRoleMutation = (
 }
 
 export const useRemoveWorkspaceMemberMutation = (
-  workspaceId: number,
+  workspaceId: string | number,
   membersPage: number,
   membersLimit: number,
 ) => {
@@ -150,6 +164,17 @@ export const useRemoveWorkspaceMemberMutation = (
           queryKey: workspaceQueryKeys.members(workspaceId, membersPage, membersLimit),
         }),
       ])
+    },
+  })
+}
+
+export const useDeleteWorkspaceMutation = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (workspaceId: string | number) => deleteWorkspace(workspaceId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["workspaces"] })
     },
   })
 }

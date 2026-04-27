@@ -28,22 +28,28 @@ export const requireWorkspaceRole = (options: RbacOptions) => {
         );
       }
 
-      const workspaceId = parseInt(
-        req.params.workspaceId || req.body.workspaceId || '0',
-        10
-      );
+      const workspaceIdParam = req.params.workspaceId || req.body.workspaceId || '';
+      const isNumeric = /^\d+$/.test(workspaceIdParam);
 
-      if (!workspaceId || isNaN(workspaceId)) {
-        throw ApiError.badRequest(
-          ErrorCode.VALIDATION_ERROR,
-          'Workspace ID is required'
-        );
+      let resolvedWorkspaceId: number;
+
+      if (isNumeric) {
+        resolvedWorkspaceId = Number(workspaceIdParam);
+      } else {
+        const workspace = await prisma.workspace.findUnique({
+          where: { slug: workspaceIdParam, deletedAt: null },
+          select: { id: true },
+        });
+        if (!workspace) {
+          throw ApiError.notFound(ErrorCode.WORKSPACE_NOT_FOUND, 'Workspace not found');
+        }
+        resolvedWorkspaceId = workspace.id;
       }
 
       const membership = await prisma.workspaceMember.findFirst({
         where: {
           userId: req.user.id,
-          workspaceId,
+          workspaceId: resolvedWorkspaceId,
           deletedAt: null,
         },
       });
@@ -57,7 +63,8 @@ export const requireWorkspaceRole = (options: RbacOptions) => {
 
       const userRole = membership.role as WorkspaceRole;
       req.workspaceRole = userRole;
-      req.workspaceId = workspaceId;
+      req.workspaceId = resolvedWorkspaceId;
+      req.params.workspaceId = String(resolvedWorkspaceId);
 
       if (options.requiredRoles && options.requiredRoles.length > 0) {
         const hasRequiredRole = options.requiredRoles.some(
@@ -101,7 +108,7 @@ export const requireWorkspaceRole = (options: RbacOptions) => {
 };
 
 export const requireOwner = requireWorkspaceRole({
-  requiredRoles: ['OWNER'],
+  requiredRoles: ['OWNER', 'ADMIN'],
 });
 
 export const requireMember = requireWorkspaceRole({

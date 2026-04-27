@@ -147,13 +147,8 @@ export class WorkspaceController extends BaseController {
     return authReq as AuthenticatedRequest & { user: NonNullable<AuthenticatedRequest['user']> };
   }
 
-  private getWorkspaceId(req: Request): number {
-    const workspaceId = parseInt(req.params.workspaceId || req.params.id || '0', 10);
-    if (!workspaceId || isNaN(workspaceId)) {
-      throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Invalid workspace ID');
-    }
-
-    return workspaceId;
+  private getWorkspaceId(req: Request): string {
+    return req.params.workspaceId || req.params.id || '';
   }
 
   private getMemberId(req: Request): number {
@@ -168,7 +163,12 @@ export class WorkspaceController extends BaseController {
   private getRoleFilter(req: Request): WorkspaceRole | undefined {
     const role = req.query.role;
     if (role === undefined) return undefined;
-    if (role === WorkspaceRole.OWNER || role === WorkspaceRole.MEMBER || role === WorkspaceRole.GUEST) {
+    if (
+      role === WorkspaceRole.OWNER ||
+      role === WorkspaceRole.ADMIN ||
+      role === WorkspaceRole.MEMBER ||
+      role === WorkspaceRole.GUEST
+    ) {
       return role;
     }
 

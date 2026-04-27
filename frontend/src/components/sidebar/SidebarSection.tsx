@@ -4,12 +4,14 @@ import type { LucideIcon } from "lucide-react"
 interface SidebarSectionProps {
   title?: string
   icon?: LucideIcon
-  items: React.ReactNode
+  items?: React.ReactNode
+  children?: React.ReactNode
   isCollapsed?: boolean
   className?: string
 }
 
-export function SidebarSection({ title, icon: Icon, items, isCollapsed, className }: SidebarSectionProps) {
+export function SidebarSection({ title, icon: Icon, items, children, isCollapsed, className }: SidebarSectionProps) {
+  const content = children || items
   return (
     <div className={cn("space-y-1", className)}>
       {!isCollapsed && title && (
@@ -25,7 +27,7 @@ export function SidebarSection({ title, icon: Icon, items, isCollapsed, classNam
           <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
       )}
-      <div className="space-y-0.5">{items}</div>
+      {content && <div className="space-y-0.5">{content}</div>}
     </div>
   )
 }

@@ -38,6 +38,7 @@ enum TaskPriority {
 
 enum WorkspaceRole {
   OWNER
+  ADMIN
   MEMBER
   GUEST
 }

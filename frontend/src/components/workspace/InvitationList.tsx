@@ -11,7 +11,7 @@ import { getWorkspaceRoleLabel } from "@/lib/workspace-role"
 import type { PendingInvitation } from "@/types/workspace"
 
 interface InvitationListProps {
-  workspaceId: number
+  workspaceId: string | number
   invitations: PendingInvitation[]
   isLoading: boolean
   canManage: boolean

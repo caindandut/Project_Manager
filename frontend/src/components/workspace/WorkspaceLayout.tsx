@@ -4,7 +4,6 @@ import { FolderKanban, LayoutDashboard, Users } from "lucide-react"
 import InviteMemberDialog from "@/components/workspace/InviteMemberDialog"
 import InvitationList from "@/components/workspace/InvitationList"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
@@ -21,7 +20,7 @@ interface WorkspaceLayoutProps {
   invitations: PendingInvitation[]
   invitationsLoading: boolean
   canManage: boolean
-  workspaceId: number
+  workspaceId: string | number
   children: React.ReactNode
 }
 

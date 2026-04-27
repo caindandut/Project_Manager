@@ -46,15 +46,15 @@ const TASK_STATUS_LABELS = {
 export default function WorkspaceDashboard() {
   const params = useParams()
   const { user } = useAuth()
-  const workspaceId = Number(params.workspaceId || "0")
-  const workspaceQuery = useWorkspaceDetailQuery(workspaceId)
+  const workspaceSlug = params.workspaceId || ""
+  const workspaceQuery = useWorkspaceDetailQuery(workspaceSlug)
   const workspace = workspaceQuery.data
 
   useEffect(() => {
     document.title = workspace ? `${workspace.name} | Workspace` : "Dashboard | Project Manager"
   }, [workspace])
 
-  if (!workspaceId) {
+  if (!workspaceSlug) {
     return (
       <Card>
         <CardHeader>
@@ -227,7 +227,7 @@ export default function WorkspaceDashboard() {
               </CardHeader>
               <CardContent className="space-y-2">
                 <Link
-                  to={`/workspaces/${workspaceId}/projects`}
+                  to={`/workspaces/${workspaceSlug}/projects`}
                   className={cn(
                     buttonVariants({ variant: "outline" }),
                     "w-full justify-start gap-2",
@@ -239,7 +239,7 @@ export default function WorkspaceDashboard() {
                 </Link>
 
                 <Link
-                  to={`/workspaces/${workspaceId}/members`}
+                  to={`/workspaces/${workspaceSlug}/members`}
                   className={cn(
                     buttonVariants({ variant: "outline" }),
                     "w-full justify-start gap-2",
@@ -251,7 +251,7 @@ export default function WorkspaceDashboard() {
                 </Link>
 
                 <Link
-                  to={`/workspaces/${workspaceId}/calendar`}
+                  to={`/workspaces/${workspaceSlug}/calendar`}
                   className={cn(
                     buttonVariants({ variant: "outline" }),
                     "w-full justify-start gap-2",
@@ -263,7 +263,7 @@ export default function WorkspaceDashboard() {
                 </Link>
 
                 <Link
-                  to={`/workspaces/${workspaceId}/settings`}
+                  to={`/workspaces/${workspaceSlug}/settings`}
                   className={cn(
                     buttonVariants({ variant: "outline" }),
                     "w-full justify-start gap-2",

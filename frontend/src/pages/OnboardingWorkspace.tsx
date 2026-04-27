@@ -69,18 +69,14 @@ export default function OnboardingWorkspacePage() {
   const [teamSize, setTeamSize] = useState('solo');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
 
-  // Auto-generate slug from name
+  // Only auto-generate slug if user hasn't manually edited it
   useEffect(() => {
-    if (workspaceName && !workspaceSlug) {
+    if (workspaceName && !slugManuallyEdited) {
       setWorkspaceSlug(normalizeSlug(workspaceName));
     }
-  }, [workspaceName, workspaceSlug]);
-
-  const slugPreview = useMemo(() => {
-    const slug = workspaceSlug || 'ten-khong-gian';
-    return `localhost:5173/workspaces/${slug}`;
-  }, [workspaceSlug]);
+  }, [workspaceName, slugManuallyEdited]);
 
   const isValidSlug = useMemo(() => {
     return /^[a-z0-9-]+$/.test(workspaceSlug) && workspaceSlug.length > 0;
@@ -168,22 +164,24 @@ export default function OnboardingWorkspacePage() {
                 type="text"
                 className="flex-1 bg-transparent outline-none"
                 value={workspaceSlug}
-                onChange={(e) => setWorkspaceSlug(e.target.value)}
+                onChange={(e) => {
+                  setSlugManuallyEdited(true);
+                  setWorkspaceSlug(e.target.value);
+                }}
                 placeholder="ten-khong-gian"
                 maxLength={50}
               />
             </div>
-            <p className="text-xs text-muted-foreground">{slugPreview}</p>
           </div>
 
           {/* Team Size */}
           <div className="space-y-3">
             <Label>Quy mô đội nhóm</Label>
-            <RadioGroup value={teamSize} onValueChange={setTeamSize}>
+            <RadioGroup value={teamSize} onValueChange={setTeamSize} className="space-y-2">
               {TEAM_SIZES.map((size) => (
-                <div key={size.value} className="flex items-center space-x-2">
+                <div key={size.value} className="flex items-center space-x-2 rounded-md border p-3 hover:bg-muted/50 cursor-pointer" onClick={() => setTeamSize(size.value)}>
                   <RadioGroupItem value={size.value} id={`team-${size.value}`} />
-                  <Label htmlFor={`team-${size.value}`} className="font-normal">
+                  <Label htmlFor={`team-${size.value}`} className="font-normal cursor-pointer">
                     {size.label}
                   </Label>
                 </div>

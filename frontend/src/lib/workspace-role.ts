@@ -2,6 +2,7 @@ import type { WorkspaceRole } from "@/types/workspace"
 
 export const workspaceRoleVariantMap: Record<WorkspaceRole, "default" | "secondary" | "outline"> = {
   OWNER: "default",
+  ADMIN: "default",
   MEMBER: "secondary",
   GUEST: "outline",
 }
@@ -11,12 +12,16 @@ const workspaceRoleLabelMap = {
     short: "Admin",
     full: "Quản trị viên",
   },
+  ADMIN: {
+    short: "Admin",
+    full: "Quản trị viên",
+  },
   MEMBER: {
-    short: "Thành viên",
+    short: "Member",
     full: "Thành viên",
   },
   GUEST: {
-    short: "Khách",
+    short: "Guest",
     full: "Khách cộng tác",
   },
 } as const satisfies Record<WorkspaceRole, { short: string; full: string }>

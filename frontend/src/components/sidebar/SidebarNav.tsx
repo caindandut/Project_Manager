@@ -52,12 +52,12 @@ export default function SidebarNav() {
   const location = useLocation()
   const params = useParams()
 
-  const workspaceId = Number(params.workspaceId || "0")
+  const workspaceSlug = params.workspaceId || ""
   const projectId = params.projectId
-  const workspaceQuery = useWorkspaceDetailQuery(workspaceId)
+  const workspaceQuery = useWorkspaceDetailQuery(workspaceSlug)
 
   const workspace = workspaceQuery.data
-  const basePath = workspaceId ? `/workspaces/${workspaceId}` : ""
+  const basePath = workspaceSlug ? `/workspaces/${workspaceSlug}` : ""
   const projectBasePath = projectId ? `${basePath}/projects/${projectId}` : ""
 
   const isInProject = Boolean(projectId)
@@ -143,10 +143,11 @@ export default function SidebarNav() {
         </SidebarSection>
 
         {/* Workspace Section */}
-        {workspaceId > 0 && (
+        {Boolean(workspaceSlug) && (
           <SidebarSection
             title={workspace?.name || "Workspace"}
             icon={isCollapsed ? FolderKanban : undefined}
+            items={null}
             isCollapsed={isCollapsed}
           >
             {!isCollapsed && workspaceQuery.isLoading ? (
@@ -215,7 +216,12 @@ export default function SidebarNav() {
 
         {/* Project Section */}
         {isInProject && (
-          <SidebarSection title="Dự án" icon={isCollapsed ? KanbanSquare : undefined} isCollapsed={isCollapsed}>
+          <SidebarSection
+            title="Dự án"
+            icon={isCollapsed ? KanbanSquare : undefined}
+            items={null}
+            isCollapsed={isCollapsed}
+          >
             {currentProjectItems.map((item) => (
               <SidebarItem
                 key={item.key}

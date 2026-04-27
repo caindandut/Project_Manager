@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Camera, LoaderCircle, X } from 'lucide-react';
@@ -6,16 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/stores/authStore';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import apiClient, { normalizeApiError } from '@/lib/api-client';
 
 interface OnboardingProfileState {
   name?: string;
   password?: string;
-}
-
-interface UploadAvatarResponse {
-  avatar: string;
 }
 
 const API_BASE_URL = 'http://localhost:5000';
@@ -27,8 +22,7 @@ export default function OnboardingProfilePage() {
 
   const [name, setName] = useState(user?.name || '');
   const [password, setPassword] = useState('');
-  const [avatar, setAvatar] = useState<string | null>(user?.avatar || null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(user?.avatar || null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,9 +55,9 @@ export default function OnboardingProfilePage() {
       return;
     }
 
-    // Create local preview immediately
-    const previewUrl = URL.createObjectURL(file);
-    setAvatarPreview(previewUrl);
+    // Show preview immediately from local file
+    const localPreview = URL.createObjectURL(file);
+    setAvatarUrl(localPreview);
 
     setIsUploading(true);
 
@@ -71,7 +65,7 @@ export default function OnboardingProfilePage() {
       const formData = new FormData();
       formData.append('avatar', file);
 
-      const response = await apiClient.post<{ data: UploadAvatarResponse }>(
+      const response = await apiClient.post<{ data: { avatar: string } }>(
         '/auth/me/avatar',
         formData,
         {
@@ -81,38 +75,48 @@ export default function OnboardingProfilePage() {
         }
       );
 
-      // Revoke the preview URL to free memory
-      URL.revokeObjectURL(previewUrl);
+      // Revoke local preview
+      URL.revokeObjectURL(localPreview);
 
-      const avatarUrl = response.data.data.avatar;
-      setAvatar(avatarUrl);
-      setAvatarPreview(null);
+      // Use the URL from server response (which starts with /uploads/...)
+      const serverAvatarUrl = response.data.data.avatar;
+      
+      // Construct full URL if it's a relative path
+      const fullAvatarUrl = serverAvatarUrl.startsWith('http') 
+        ? serverAvatarUrl 
+        : `${API_BASE_URL}${serverAvatarUrl}`;
+      
+      setAvatarUrl(fullAvatarUrl);
 
       // Update user in store
       if (user) {
-        setUser({ ...user, avatar: avatarUrl });
+        setUser({ ...user, avatar: fullAvatarUrl });
       }
 
       toast.success('Cập nhật ảnh đại diện thành công.');
     } catch (err) {
-      // Revoke the preview URL on error
-      URL.revokeObjectURL(previewUrl);
-      setAvatarPreview(null);
+      // Revoke local preview on error
+      URL.revokeObjectURL(localPreview);
+      // Reset to original avatar or null
+      setAvatarUrl(user?.avatar || null);
       
       const error = normalizeApiError(err);
       toast.error(error.message || 'Không thể tải lên ảnh đại diện.');
     } finally {
       setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
-  const handleRemoveAvatar = () => {
-    setAvatar(null);
-    setAvatarPreview(null);
+  const handleRemoveAvatar = useCallback(() => {
+    setAvatarUrl(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
-  };
+  }, []);
 
   const handleContinue = () => {
     if (!name.trim()) {
@@ -127,12 +131,10 @@ export default function OnboardingProfilePage() {
       state: {
         name: name.trim(),
         password: password.trim() || undefined,
-        avatar,
+        avatar: avatarUrl,
       } as OnboardingProfileState,
     });
   };
-
-  const avatarUrl = avatarPreview || (avatar ? (avatar.startsWith('http') ? avatar : `${API_BASE_URL}${avatar}`) : null);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
@@ -147,32 +149,36 @@ export default function OnboardingProfilePage() {
           {/* Avatar */}
           <div className="flex justify-center">
             <div className="relative">
-              <Avatar
-                className="h-24 w-24 cursor-pointer transition-opacity hover:opacity-80"
+              {/* Avatar display */}
+              <div
+                className="relative h-24 w-24 cursor-pointer overflow-hidden rounded-full bg-muted"
                 onClick={handleAvatarClick}
               >
                 {avatarUrl ? (
-                  <AvatarImage src={avatarUrl} alt={name} className="object-cover" />
-                ) : null}
-                <AvatarFallback className="bg-primary/10 text-primary text-2xl">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-
-              {/* Upload overlay - always visible if no avatar, or on hover when has avatar */}
-              <div
-                className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/40 transition-opacity"
-                onClick={handleAvatarClick}
-              >
-                {isUploading ? (
-                  <LoaderCircle className="h-8 w-8 animate-spin text-white" />
+                  <img
+                    src={avatarUrl}
+                    alt={name}
+                    className="h-full w-full object-cover"
+                    key={avatarUrl}
+                  />
                 ) : (
-                  <Camera className="h-8 w-8 text-white" />
+                  <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-muted-foreground">
+                    {initials}
+                  </div>
                 )}
+
+                {/* Upload overlay */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity hover:opacity-100">
+                  {isUploading ? (
+                    <LoaderCircle className="h-8 w-8 animate-spin text-white" />
+                  ) : (
+                    <Camera className="h-8 w-8 text-white" />
+                  )}
+                </div>
               </div>
 
               {/* Remove button */}
-              {avatar && !isUploading && (
+              {avatarUrl && !isUploading && (
                 <button
                   type="button"
                   onClick={(e) => {

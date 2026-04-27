@@ -34,7 +34,7 @@ export interface AuthenticatedRequest extends Request {
   workspaceId?: number;
 }
 
-export type WorkspaceRole = 'OWNER' | 'MEMBER' | 'GUEST';
+export type WorkspaceRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'GUEST';
 
 export interface QueryParams {
   page?: number;

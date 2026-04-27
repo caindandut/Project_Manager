@@ -26,7 +26,7 @@ import { getWorkspaceRoleLabel } from "@/lib/workspace-role"
 import type { WorkspaceMember } from "@/types/workspace"
 
 interface UpdateRoleDialogProps {
-  workspaceId: number
+  workspaceId: string | number
   member: WorkspaceMember
   membersPage: number
   membersLimit: number
@@ -39,7 +39,9 @@ export default function UpdateRoleDialog({
   membersLimit,
 }: UpdateRoleDialogProps) {
   const [open, setOpen] = useState(false)
-  const [role, setRole] = useState<"MEMBER" | "GUEST">(member.role === "GUEST" ? "GUEST" : "MEMBER")
+  const [role, setRole] = useState<"ADMIN" | "MEMBER" | "GUEST">(
+    member.role === "GUEST" ? "GUEST" : member.role === "ADMIN" ? "ADMIN" : "MEMBER"
+  )
   const updateRoleMutation = useUpdateWorkspaceMemberRoleMutation(workspaceId, membersPage, membersLimit)
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -77,11 +79,12 @@ export default function UpdateRoleDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Vai trò mới</Label>
-            <Select value={role} onValueChange={(value: "MEMBER" | "GUEST") => setRole(value)}>
+            <Select value={role} onValueChange={(value: "ADMIN" | "MEMBER" | "GUEST") => setRole(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Chọn vai trò" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="ADMIN">{getWorkspaceRoleLabel("ADMIN")} - Quản trị viên</SelectItem>
                 <SelectItem value="MEMBER">{getWorkspaceRoleLabel("MEMBER")} - Thành viên</SelectItem>
                 <SelectItem value="GUEST">{getWorkspaceRoleLabel("GUEST")} - Khách cộng tác</SelectItem>
               </SelectContent>

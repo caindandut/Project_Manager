@@ -40,7 +40,7 @@ export interface Task {
   createdAt: string
 }
 
-export async function getProjectDetail(workspaceId: number, projectId: number): Promise<Project> {
+export async function getProjectDetail(workspaceId: string | number, projectId: number): Promise<Project> {
   const response = await apiClient.get<Project>(
     `/workspaces/${workspaceId}/projects/${projectId}`
   )

@@ -7,6 +7,7 @@ import type {
   InviteWorkspaceMemberPayload,
   PaginatedWorkspaceResult,
   PendingInvitation,
+  UpdateWorkspacePayload,
   UpdateWorkspaceMemberRolePayload,
   WorkspaceDetail,
   WorkspaceListItem,
@@ -63,9 +64,21 @@ export const createWorkspace = async (payload: CreateWorkspacePayload) => {
   }
 }
 
-export const getWorkspaceDetail = async (workspaceId: number) => {
+export const getWorkspaceDetail = async (workspaceId: string | number) => {
   try {
     const response = await apiClient.get<ApiResponse<WorkspaceDetail>>(`/workspaces/${workspaceId}`)
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const updateWorkspace = async (workspaceId: string | number, payload: UpdateWorkspacePayload) => {
+  try {
+    const response = await apiClient.patch<ApiResponse<WorkspaceDetail>>(
+      `/workspaces/${workspaceId}`,
+      payload,
+    )
     return unwrapResponse(response)
   } catch (error) {
     throw normalizeApiError(error)
@@ -78,7 +91,7 @@ export const getWorkspaceMembers = async ({
   limit = 50,
   role,
 }: {
-  workspaceId: number
+  workspaceId: string | number
   page?: number
   limit?: number
   role?: WorkspaceRole
@@ -98,7 +111,7 @@ export const getWorkspaceMembers = async ({
 }
 
 export const inviteWorkspaceMember = async (
-  workspaceId: number,
+  workspaceId: string | number,
   payload: InviteWorkspaceMemberPayload,
 ) => {
   try {
@@ -113,7 +126,7 @@ export const inviteWorkspaceMember = async (
 }
 
 export const updateWorkspaceMemberRole = async (
-  workspaceId: number,
+  workspaceId: string | number,
   memberId: number,
   payload: UpdateWorkspaceMemberRolePayload,
 ) => {
@@ -128,7 +141,7 @@ export const updateWorkspaceMemberRole = async (
   }
 }
 
-export const removeWorkspaceMember = async (workspaceId: number, memberId: number) => {
+export const removeWorkspaceMember = async (workspaceId: string | number, memberId: number) => {
   try {
     const response = await apiClient.delete<ApiResponse<{ message: string }>>(
       `/workspaces/${workspaceId}/members/${memberId}`,
@@ -139,7 +152,7 @@ export const removeWorkspaceMember = async (workspaceId: number, memberId: numbe
   }
 }
 
-export const getWorkspacePendingInvitations = async (workspaceId: number) => {
+export const getWorkspacePendingInvitations = async (workspaceId: string | number) => {
   try {
     const response = await apiClient.get<ApiResponse<PendingInvitation[]>>(
       `/workspaces/${workspaceId}/invitations`,
@@ -150,10 +163,21 @@ export const getWorkspacePendingInvitations = async (workspaceId: number) => {
   }
 }
 
-export const cancelWorkspaceInvitation = async (workspaceId: number, invitationId: number) => {
+export const cancelWorkspaceInvitation = async (workspaceId: string | number, invitationId: number) => {
   try {
     const response = await apiClient.delete<ApiResponse<{ message: string }>>(
       `/workspaces/${workspaceId}/invitations/${invitationId}`,
+    )
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const deleteWorkspace = async (workspaceId: string | number) => {
+  try {
+    const response = await apiClient.delete<ApiResponse<{ message: string }>>(
+      `/workspaces/${workspaceId}`,
     )
     return unwrapResponse(response)
   } catch (error) {

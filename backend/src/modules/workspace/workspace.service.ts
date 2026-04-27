@@ -40,6 +40,7 @@ interface WorkspaceMemberListOptions extends WorkspaceListOptions {
 type FormattedWorkspace = {
   id: number;
   name: string;
+  slug: string;
   description: string | null;
   logo: string | null;
   createdAt: Date;
@@ -65,11 +66,11 @@ export class WorkspaceService extends BaseService<
     return this.formatWorkspace(workspace);
   }
 
-  async getWorkspaceDetail(workspaceId: number, userId: number) {
+  async getWorkspaceDetail(workspaceId: string | number, userId: number) {
     const workspace = await this.findWorkspaceOrThrow(workspaceId);
     const [member, stats] = await Promise.all([
-      workspaceRepository.findMemberByUserId(workspaceId, userId),
-      workspaceRepository.getStats(workspaceId),
+      workspaceRepository.findMemberByUserId(workspace.id, userId),
+      workspaceRepository.getStats(workspace.id),
     ]);
 
     if (!member) {
@@ -95,26 +96,26 @@ export class WorkspaceService extends BaseService<
     };
   }
 
-  async update(id: number, data: UpdateWorkspaceInput) {
-    await this.findWorkspaceOrThrow(id);
-    const updated = await workspaceRepository.update(id, data);
+  async update(id: string | number, data: UpdateWorkspaceInput) {
+    const workspace = await this.findWorkspaceOrThrow(id);
+    const updated = await workspaceRepository.update(workspace.id, data);
     return {
       ...this.formatWorkspace(updated),
       updatedAt: updated.updatedAt,
     };
   }
 
-  async delete(id: number) {
-    await this.findWorkspaceOrThrow(id);
-    await workspaceRepository.softDelete(id);
+  async delete(id: string | number) {
+    const workspace = await this.findWorkspaceOrThrow(id);
+    await workspaceRepository.softDelete(workspace.id);
 
-    logger.info(`Workspace deleted: ${id}`);
+    logger.info(`Workspace deleted: ${workspace.id}`);
     return { message: 'Workspace deleted successfully' };
   }
 
-  async getMembers(workspaceId: number, options?: WorkspaceMemberListOptions) {
-    await this.findWorkspaceOrThrow(workspaceId);
-    const result = await workspaceRepository.getMembers(workspaceId, options);
+  async getMembers(id: string | number, options?: WorkspaceMemberListOptions) {
+    const workspace = await this.findWorkspaceOrThrow(id);
+    const result = await workspaceRepository.getMembers(workspace.id, options);
 
     return {
       data: result.data.map((member) => this.formatMember(member)),
@@ -122,8 +123,8 @@ export class WorkspaceService extends BaseService<
     };
   }
 
-  async inviteMember(workspaceId: number, data: InviteMemberInput) {
-    await this.findWorkspaceOrThrow(workspaceId);
+  async inviteMember(id: string | number, data: InviteMemberInput) {
+    const workspace = await this.findWorkspaceOrThrow(id);
 
     const role = data.role || WorkspaceRole.MEMBER;
     if (role === WorkspaceRole.OWNER) {
@@ -138,7 +139,7 @@ export class WorkspaceService extends BaseService<
       throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
     }
 
-    const existingMember = await workspaceRepository.findMemberByUserId(workspaceId, user.id);
+    const existingMember = await workspaceRepository.findMemberByUserId(workspace.id, user.id);
     if (existingMember) {
       throw ApiError.conflict(
         ErrorCode.MEMBER_ALREADY_EXISTS,
@@ -146,19 +147,20 @@ export class WorkspaceService extends BaseService<
       );
     }
 
-    const member = await workspaceRepository.addMember(workspaceId, user.id, role);
-    logger.info(`User ${user.id} added to workspace ${workspaceId} as ${role}`);
+    const member = await workspaceRepository.addMember(workspace.id, user.id, role);
+    logger.info(`User ${user.id} added to workspace ${workspace.id} as ${role}`);
 
     return this.formatMember(member);
   }
 
   async updateMemberRole(
-    workspaceId: number,
+    id: string | number,
     memberId: number,
     data: UpdateMemberRoleInput,
     requesterId: number,
   ) {
-    const member = await this.findMemberOrThrow(workspaceId, memberId);
+    const workspace = await this.findWorkspaceOrThrow(id);
+    const member = await this.findMemberOrThrow(workspace.id, memberId);
 
     if (data.role === WorkspaceRole.OWNER) {
       throw ApiError.badRequest(
@@ -167,10 +169,17 @@ export class WorkspaceService extends BaseService<
       );
     }
 
-    if (member.role === WorkspaceRole.OWNER || member.userId === requesterId) {
+    if (member.role === WorkspaceRole.OWNER) {
       throw ApiError.badRequest(
         ErrorCode.MEMBER_CANNOT_CHANGE_OWNER_ROLE,
-        'Cannot change this member role',
+        'Cannot change the owner role',
+      );
+    }
+
+    if (member.userId === requesterId) {
+      throw ApiError.badRequest(
+        ErrorCode.MEMBER_CANNOT_CHANGE_OWNER_ROLE,
+        'Cannot change your own role',
       );
     }
 
@@ -182,8 +191,9 @@ export class WorkspaceService extends BaseService<
     };
   }
 
-  async removeMember(workspaceId: number, memberId: number, requesterId: number) {
-    const member = await this.findMemberOrThrow(workspaceId, memberId);
+  async removeMember(id: string | number, memberId: number, requesterId: number) {
+    const workspace = await this.findWorkspaceOrThrow(id);
+    const member = await this.findMemberOrThrow(workspace.id, memberId);
 
     if (member.role === WorkspaceRole.OWNER) {
       throw ApiError.badRequest(
@@ -200,13 +210,14 @@ export class WorkspaceService extends BaseService<
     }
 
     await workspaceRepository.removeMemberById(member.id);
-    logger.info(`Member ${member.id} removed from workspace ${workspaceId}`);
+    logger.info(`Member ${member.id} removed from workspace ${workspace.id}`);
 
     return { message: 'Member removed successfully' };
   }
 
-  async leave(workspaceId: number, userId: number) {
-    const member = await workspaceRepository.findMemberByUserId(workspaceId, userId);
+  async leave(id: string | number, userId: number) {
+    const workspace = await this.findWorkspaceOrThrow(id);
+    const member = await workspaceRepository.findMemberByUserId(workspace.id, userId);
     if (!member) {
       throw ApiError.notFound(ErrorCode.MEMBER_NOT_FOUND, 'Member not found');
     }
@@ -219,14 +230,14 @@ export class WorkspaceService extends BaseService<
     }
 
     await workspaceRepository.removeMemberById(member.id);
-    logger.info(`User ${userId} left workspace ${workspaceId}`);
+    logger.info(`User ${userId} left workspace ${workspace.id}`);
 
     return { message: 'Left workspace successfully' };
   }
 
-  async getPendingInvitations(workspaceId: number) {
-    await this.findWorkspaceOrThrow(workspaceId);
-    const invitations = await workspaceRepository.findPendingInvitations(workspaceId);
+  async getPendingInvitations(id: string | number) {
+    const workspace = await this.findWorkspaceOrThrow(id);
+    const invitations = await workspaceRepository.findPendingInvitations(workspace.id);
 
     return {
       data: invitations.map((inv) => ({
@@ -246,14 +257,15 @@ export class WorkspaceService extends BaseService<
     };
   }
 
-  async cancelInvitation(workspaceId: number, invitationId: number, userId: number) {
-    const member = await workspaceRepository.findMemberByUserId(workspaceId, userId);
-    if (!member || member.role !== WorkspaceRole.OWNER) {
-      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Only owner can cancel invitations');
+  async cancelInvitation(id: string | number, invitationId: number, userId: number) {
+    const workspace = await this.findWorkspaceOrThrow(id);
+    const member = await workspaceRepository.findMemberByUserId(workspace.id, userId);
+    if (!member || (member.role !== WorkspaceRole.OWNER && member.role !== WorkspaceRole.ADMIN)) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Only owner or admin can cancel invitations');
     }
 
     const invitation = await prisma.invitation.findFirst({
-      where: { id: invitationId, workspaceId, status: 'PENDING', deletedAt: null },
+      where: { id: invitationId, workspaceId: workspace.id, status: 'PENDING', deletedAt: null },
     });
 
     if (!invitation) {
@@ -266,7 +278,7 @@ export class WorkspaceService extends BaseService<
     return { message: 'Invitation cancelled successfully' };
   }
 
-  async getById(id: number): Promise<unknown> {
+  async getById(id: string | number): Promise<unknown> {
     const workspace = await this.findWorkspaceOrThrow(id);
     return this.formatWorkspace(workspace);
   }
@@ -279,8 +291,11 @@ export class WorkspaceService extends BaseService<
     throw ApiError.notFound(ErrorCode.NOT_IMPLEMENTED, 'Not implemented');
   }
 
-  private async findWorkspaceOrThrow(workspaceId: number): Promise<Workspace> {
-    const workspace = await workspaceRepository.findById(workspaceId);
+  private async findWorkspaceOrThrow(workspaceId: string | number): Promise<Workspace> {
+    const isNumeric = /^\d+$/.test(String(workspaceId));
+    const workspace = isNumeric
+      ? await workspaceRepository.findById(Number(workspaceId))
+      : await workspaceRepository.findBySlug(String(workspaceId));
     if (!workspace) {
       throw ApiError.notFound(ErrorCode.WORKSPACE_NOT_FOUND, 'Workspace not found');
     }
@@ -304,6 +319,7 @@ export class WorkspaceService extends BaseService<
     return {
       id: workspace.id,
       name: workspace.name,
+      slug: workspace.slug,
       description: workspace.description,
       logo: workspace.logo,
       createdAt: workspace.createdAt,

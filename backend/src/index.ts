@@ -10,7 +10,9 @@ import { prisma } from './config';
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 app.use(cors({
   origin: config.CLIENT_URL,
   credentials: true,

@@ -3,7 +3,6 @@ import {
   Check,
   LogOut,
   Moon,
-  Settings,
   Sun,
   User,
 } from "lucide-react"

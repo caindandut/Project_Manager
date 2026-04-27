@@ -1,7 +1,6 @@
 import { useEffect } from "react"
 import { Link, useParams } from "react-router-dom"
 import {
-  ArrowLeft,
   CheckCircle2,
   Circle,
   Clock,
@@ -54,18 +53,18 @@ const TASK_STATUS_LABELS = {
 
 export default function ProjectOverview() {
   const params = useParams()
-  const workspaceId = Number(params.workspaceId || "0")
+  const workspaceSlug = params.workspaceSlug || ""
   const projectId = Number(params.projectId || "0")
 
-  const workspaceQuery = useWorkspaceDetailQuery(workspaceId)
-  const projectQuery = useProjectDetailQuery(workspaceId, projectId)
+  const workspaceQuery = useWorkspaceDetailQuery(workspaceSlug)
+  const projectQuery = useProjectDetailQuery(workspaceSlug, projectId)
   const project = projectQuery.data
 
   useEffect(() => {
     document.title = project ? `${project.name} | Overview` : "Project Overview | Project Manager"
   }, [project])
 
-  if (!workspaceId || !projectId) {
+  if (!workspaceSlug || !projectId) {
     return (
       <Card>
         <CardHeader>
@@ -73,7 +72,7 @@ export default function ProjectOverview() {
           <CardDescription>Vui lòng chọn một dự án hợp lệ.</CardDescription>
         </CardHeader>
         <CardContent>
-          <Link to={`/workspaces/${workspaceId}/projects`} className={cn(buttonVariants({ variant: "outline" }))}>
+          <Link to={`/workspaces/${workspaceSlug}/projects`} className={cn(buttonVariants({ variant: "outline" }))}>
             Quay lại danh sách dự án
           </Link>
         </CardContent>
@@ -104,11 +103,11 @@ export default function ProjectOverview() {
     <div className="space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link to={`/workspaces/${workspaceId}`} className="hover:text-foreground">
+        <Link to={`/workspaces/${workspaceSlug}`} className="hover:text-foreground">
           {workspaceQuery.data?.name || "Workspace"}
         </Link>
         <span>/</span>
-        <Link to={`/workspaces/${workspaceId}/projects`} className="hover:text-foreground">
+        <Link to={`/workspaces/${workspaceSlug}/projects`} className="hover:text-foreground">
           Dự án
         </Link>
         <span>/</span>

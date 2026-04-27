@@ -196,7 +196,7 @@ export default function WorkspacesPage() {
                     <span>Workspace #{workspace.id}</span>
                   </div>
 
-                  <Link to={`/workspaces/${workspace.id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                  <Link to={`/workspaces/${workspace.slug}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
                     <span>Xem chi tiết</span>
                     <ArrowRight className="h-4 w-4" />
                   </Link>
