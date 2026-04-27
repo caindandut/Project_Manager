@@ -113,6 +113,31 @@ export class WorkspaceController extends BaseController {
     });
   };
 
+  getPendingInvitations = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const workspaceId = this.getWorkspaceId(req);
+      const result = await workspaceService.getPendingInvitations(workspaceId);
+      res.json(success(result.data));
+    });
+  };
+
+  cancelInvitation = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const workspaceId = this.getWorkspaceId(req);
+      const invitationId = parseInt(req.params.invitationId as string, 10);
+      if (!invitationId || isNaN(invitationId)) {
+        throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Invalid invitation ID');
+      }
+      const result = await workspaceService.cancelInvitation(
+        workspaceId,
+        invitationId,
+        authReq.user.id,
+      );
+      res.json(success(result));
+    });
+  };
+
   private requireAuth(req: Request): AuthenticatedRequest & { user: NonNullable<AuthenticatedRequest['user']> } {
     const authReq = req as AuthenticatedRequest;
     if (!authReq.user) {

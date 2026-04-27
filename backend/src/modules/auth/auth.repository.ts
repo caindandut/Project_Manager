@@ -1,6 +1,7 @@
 import { BaseRepository } from '../../common/base/BaseRepository';
 import { prisma } from '../../config';
-import { User, RefreshToken, Prisma } from '@prisma/client';
+import { User, RefreshToken, Workspace, Prisma } from '@prisma/client';
+import { WorkspaceRole } from '../../types/enums';
 
 export class AuthRepository extends BaseRepository<User, Prisma.UserCreateInput, Prisma.UserUpdateInput> {
   constructor() {
@@ -52,7 +53,6 @@ export class AuthRepository extends BaseRepository<User, Prisma.UserCreateInput,
   }
 
   async createResetToken(userId: number, token: string, expiresAt: Date): Promise<void> {
-    // Delete any existing reset tokens for this user
     await prisma.resetToken.deleteMany({ where: { userId } });
     await prisma.resetToken.create({
       data: { userId, token, expiresAt },
@@ -86,6 +86,70 @@ export class AuthRepository extends BaseRepository<User, Prisma.UserCreateInput,
       where: { id: userId },
       data: { password: hashedPassword },
     });
+  }
+
+  async hasWorkspaces(userId: number): Promise<boolean> {
+    const count = await prisma.workspaceMember.count({
+      where: {
+        userId,
+        deletedAt: null,
+        role: WorkspaceRole.OWNER,
+      },
+    });
+    return count > 0;
+  }
+
+  // OTP methods
+  async createOtpCode(email: string, code: string, type: string, expiresAt: Date): Promise<void> {
+    // Delete existing OTPs for this email and type
+    await prisma.otpCode.deleteMany({
+      where: { email, type },
+    });
+    await prisma.otpCode.create({
+      data: { email, code, type, expiresAt },
+    });
+  }
+
+  async findValidOtpCode(email: string, code: string, type: string): Promise<{ id: number; attempts: number } | null> {
+    return prisma.otpCode.findFirst({
+      where: {
+        email,
+        code,
+        type,
+        verified: false,
+        expiresAt: { gt: new Date() },
+      },
+      select: { id: true, attempts: true },
+    });
+  }
+
+  async incrementOtpAttempts(id: number): Promise<void> {
+    await prisma.otpCode.update({
+      where: { id },
+      data: { attempts: { increment: 1 } },
+    });
+  }
+
+  async verifyOtpCode(id: number): Promise<void> {
+    await prisma.otpCode.update({
+      where: { id },
+      data: { verified: true },
+    });
+  }
+
+  async deleteOtpCode(email: string, type: string): Promise<void> {
+    await prisma.otpCode.deleteMany({
+      where: { email, type },
+    });
+  }
+
+  async getOtpCode(email: string, type: string): Promise<{ code: string; expiresAt: Date } | null> {
+    const otp = await prisma.otpCode.findFirst({
+      where: { email, type, expiresAt: { gt: new Date() } },
+      select: { code: true, expiresAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    return otp as { code: string; expiresAt: Date } | null;
   }
 }
 

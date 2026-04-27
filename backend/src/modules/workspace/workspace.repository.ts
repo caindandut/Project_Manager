@@ -78,12 +78,18 @@ export class WorkspaceRepository extends BaseRepository<
   }
 
   async createWithOwner(
-    data: Prisma.WorkspaceCreateInput,
+    data: { name: string; description?: string; logo?: string },
     ownerId: number,
   ): Promise<Workspace> {
+    // Generate slug from name
+    const slug = this.generateSlug(data.name);
+
     return prisma.workspace.create({
       data: {
-        ...data,
+        name: data.name,
+        slug,
+        description: data.description,
+        logo: data.logo,
         members: {
           create: {
             userId: ownerId,
@@ -92,6 +98,16 @@ export class WorkspaceRepository extends BaseRepository<
         },
       },
     });
+  }
+
+  private generateSlug(name: string): string {
+    let slug = name.toLowerCase();
+    slug = slug.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    slug = slug.replace(/\s+/g, '-');
+    slug = slug.replace(/[^a-z0-9-]/g, '');
+    slug = slug.replace(/-+/g, '-');
+    slug = slug.replace(/^-+|-+$/g, '');
+    return slug;
   }
 
   async findUserByEmail(email: string): Promise<User | null> {
@@ -195,6 +211,68 @@ export class WorkspaceRepository extends BaseRepository<
     ]);
 
     return { memberCount, projectCount, taskCount };
+  }
+
+  async findBySlug(slug: string): Promise<Workspace | null> {
+    return prisma.workspace.findFirst({
+      where: { slug, deletedAt: null },
+    });
+  }
+
+  async findBySlugForUser(slug: string, userId: number): Promise<Workspace | null> {
+    return prisma.workspace.findFirst({
+      where: {
+        slug,
+        deletedAt: null,
+        members: {
+          some: {
+            userId,
+            deletedAt: null,
+          },
+        },
+      },
+    });
+  }
+
+  async findPendingInvitations(workspaceId: number) {
+    return prisma.invitation.findMany({
+      where: {
+        workspaceId,
+        status: 'PENDING',
+        deletedAt: null,
+      },
+      include: {
+        invitedBy: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async cancelInvitation(invitationId: number): Promise<void> {
+    await prisma.invitation.update({
+      where: { id: invitationId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  async isSlugTaken(slug: string, excludeId?: number): Promise<boolean> {
+    const count = await prisma.workspace.count({
+      where: {
+        slug,
+        deletedAt: null,
+        ...(excludeId ? { NOT: { id: excludeId } } : {}),
+      },
+    });
+    return count > 0;
+  }
+
+  async updateSlug(id: number, slug: string): Promise<Workspace> {
+    return prisma.workspace.update({
+      where: { id },
+      data: { slug },
+    });
   }
 }
 

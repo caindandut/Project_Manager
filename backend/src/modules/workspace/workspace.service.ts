@@ -5,6 +5,7 @@ import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode, WorkspaceRole } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
+import { prisma } from '../../config';
 
 export interface CreateWorkspaceInput {
   name: string;
@@ -221,6 +222,48 @@ export class WorkspaceService extends BaseService<
     logger.info(`User ${userId} left workspace ${workspaceId}`);
 
     return { message: 'Left workspace successfully' };
+  }
+
+  async getPendingInvitations(workspaceId: number) {
+    await this.findWorkspaceOrThrow(workspaceId);
+    const invitations = await workspaceRepository.findPendingInvitations(workspaceId);
+
+    return {
+      data: invitations.map((inv) => ({
+        id: inv.id,
+        email: inv.email,
+        role: inv.role,
+        status: inv.status,
+        invitedBy: {
+          id: inv.invitedBy.id,
+          name: inv.invitedBy.name,
+          email: inv.invitedBy.email,
+          avatar: inv.invitedBy.avatar,
+        },
+        invitedAt: inv.createdAt,
+        expiresAt: inv.expiresAt,
+      })),
+    };
+  }
+
+  async cancelInvitation(workspaceId: number, invitationId: number, userId: number) {
+    const member = await workspaceRepository.findMemberByUserId(workspaceId, userId);
+    if (!member || member.role !== WorkspaceRole.OWNER) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Only owner can cancel invitations');
+    }
+
+    const invitation = await prisma.invitation.findFirst({
+      where: { id: invitationId, workspaceId, status: 'PENDING', deletedAt: null },
+    });
+
+    if (!invitation) {
+      throw ApiError.notFound(ErrorCode.INVITATION_NOT_FOUND, 'Invitation not found');
+    }
+
+    await workspaceRepository.cancelInvitation(invitationId);
+    logger.info(`Invitation ${invitationId} cancelled by user ${userId}`);
+
+    return { message: 'Invitation cancelled successfully' };
   }
 
   async getById(id: number): Promise<unknown> {

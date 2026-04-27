@@ -127,6 +127,7 @@ model RefreshToken {
 model Workspace {
   id          Int       @id @default(autoincrement())
   name        String    @db.VarChar(100)
+  slug        String    @unique @db.VarChar(50)
   description String?   @db.Text
   logo        String?   @db.VarChar(500)
 
@@ -139,6 +140,7 @@ model Workspace {
   deletedAt DateTime?                  @map("deleted_at")
 
   @@index([deletedAt], name: "idx_workspace_deleted")
+  @@index([slug], name: "idx_workspace_slug")
   @@map("workspaces")
 }
 
@@ -361,4 +363,24 @@ model Notification {
   @@index([deletedAt], name: "idx_notification_deleted")
   @@index([taskId], name: "idx_notification_task")
   @@map("notifications")
+}
+
+// ------------------------------------------------------------
+// OtpCode (for email verification during registration)
+// ------------------------------------------------------------
+model OtpCode {
+  id        Int      @id @default(autoincrement())
+  email     String   @db.VarChar(255)
+  code      String   @map("code") @db.VarChar(6)
+  type      String   @default("REGISTRATION") @map("type") @db.VarChar(20)
+  attempts  Int      @default(0)
+  expiresAt DateTime @map("expires_at") @db.DateTime
+  verified  Boolean  @default(false) @map("verified")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@index([email], name: "idx_otp_email")
+  @@index([expiresAt], name: "idx_otp_expires")
+  @@map("otp_codes")
 }

@@ -24,6 +24,12 @@ export interface EnvConfig {
 
   RATE_LIMIT_WINDOW_MS: number;
   RATE_LIMIT_MAX_REQUESTS: number;
+
+  EMAIL_HOST: string;
+  EMAIL_PORT: number;
+  EMAIL_USER: string;
+  EMAIL_PASS: string;
+  EMAIL_FROM: string;
 }
 
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -36,7 +42,7 @@ const validateRequired = (name: string, value: string | undefined, fallback: str
 
 const config: EnvConfig = {
   NODE_ENV: process.env.NODE_ENV || 'development',
-  PORT: parseInt(process.env.PORT || '3000', 10),
+  PORT: parseInt(process.env.PORT || '5000', 10),
   DATABASE_URL: validateRequired('DATABASE_URL', process.env.DATABASE_URL, 'mysql://root:password@localhost:3306/pm_tool'),
 
   JWT_SECRET: validateRequired('JWT_SECRET', process.env.JWT_SECRET, 'dev-only-jwt-secret'),
@@ -52,7 +58,7 @@ const config: EnvConfig = {
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
   GOOGLE_CALLBACK_URL:
     process.env.GOOGLE_CALLBACK_URL ||
-    `http://localhost:${process.env.PORT || '3000'}/api/v1/auth/google/callback`,
+    `http://localhost:${process.env.PORT || '5000'}/api/v1/auth/google/callback`,
 
   UPLOAD_DIR: path.resolve(__dirname, '../../uploads'),
   MAX_FILE_SIZE: parseInt(process.env.MAX_FILE_SIZE || '10485760', 10),
@@ -61,6 +67,12 @@ const config: EnvConfig = {
 
   RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
   RATE_LIMIT_MAX_REQUESTS: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),
+
+  EMAIL_HOST: process.env.EMAIL_HOST || 'smtp.gmail.com',
+  EMAIL_PORT: parseInt(process.env.EMAIL_PORT || '587', 10),
+  EMAIL_USER: process.env.EMAIL_USER || '',
+  EMAIL_PASS: process.env.EMAIL_PASS || '',
+  EMAIL_FROM: process.env.EMAIL_FROM || 'noreply@projectmanager.com',
 };
 
 export default config;

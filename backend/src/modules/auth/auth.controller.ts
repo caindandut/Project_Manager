@@ -7,6 +7,8 @@ import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
 import { config } from '../../config';
 import { getGoogleAuthUrl, verifyIdToken } from './google-auth.util';
+import { SendOtpDto, VerifyOtpDto } from './dto/otp.dto';
+import { RegisterWithOtpDto } from './dto/register-with-otp.dto';
 
 export class AuthController extends BaseController {
   constructor() {
@@ -53,8 +55,9 @@ export class AuthController extends BaseController {
         path: '/',
       });
 
-      const frontendUrl = new URL(config.CLIENT_URL);
+      const frontendUrl = new URL('/google/callback', config.CLIENT_URL);
       frontendUrl.searchParams.set('accessToken', result.accessToken);
+      frontendUrl.searchParams.set('requireOnboarding', String(result.requireOnboarding));
       frontendUrl.searchParams.set('user', JSON.stringify(result.user));
       res.redirect(frontendUrl.toString());
     });
@@ -195,6 +198,75 @@ export class AuthController extends BaseController {
         secure: config.NODE_ENV === 'production',
         sameSite: 'strict',
         path: '/',
+      });
+
+      res.json(success(result));
+    });
+  };
+
+  completeOnboarding = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = req as AuthenticatedRequest;
+      if (!authReq.user) {
+        throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
+      }
+
+      const result = await authService.completeOnboarding(authReq.user.id, req.body);
+
+      res.cookie('refreshToken', result.refreshToken, {
+        httpOnly: true,
+        secure: config.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        path: '/',
+      });
+
+      res.json(success(result));
+    });
+  };
+
+  // ─── OTP Auth ────────────────────────────────────────────────────────────────
+
+  sendOtp = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const dto = req.body as SendOtpDto;
+      const result = await authService.sendOtp(dto.email);
+      res.json(success(result));
+    });
+  };
+
+  verifyOtp = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const dto = req.body as VerifyOtpDto;
+      const result = await authService.verifyOtp(dto.email, dto.code);
+      res.json(success(result));
+    });
+  };
+
+  registerWithOtp = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const dto = req.body as RegisterWithOtpDto;
+      const result = await authService.registerWithOtp(dto);
+      res.status(201).json(success(result));
+    });
+  };
+
+  uploadAvatar = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = req as AuthenticatedRequest;
+      if (!authReq.user) {
+        throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
+      }
+
+      if (!req.file) {
+        throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'No file uploaded');
+      }
+
+      const result = await authService.uploadAvatar(authReq.user.id, {
+        originalname: req.file.originalname,
+        buffer: req.file.buffer,
+        mimetype: req.file.mimetype,
+        size: req.file.size,
       });
 
       res.json(success(result));

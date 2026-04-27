@@ -70,4 +70,16 @@ router.delete(
   workspaceController.removeMember,
 );
 
+router.get(
+  '/:workspaceId/invitations',
+  requireGuest,
+  workspaceController.getPendingInvitations,
+);
+
+router.delete(
+  '/:workspaceId/invitations/:invitationId',
+  requireOwner,
+  workspaceController.cancelInvitation,
+);
+
 export default router;
