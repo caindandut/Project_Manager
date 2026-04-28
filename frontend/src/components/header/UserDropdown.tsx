@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom"
 import {
   Check,
   LogOut,
+  Mail,
   Moon,
   Sun,
   User,
@@ -72,6 +73,13 @@ export default function UserDropdown() {
           <Link to="/settings" className="cursor-pointer">
             <User className="mr-2 h-4 w-4" />
             Hồ sơ
+          </Link>
+        </DropdownMenuItem>
+
+        <DropdownMenuItem asChild>
+          <Link to="/my-invitations" className="cursor-pointer">
+            <Mail className="mr-2 h-4 w-4" />
+            Lời mời của tôi
           </Link>
         </DropdownMenuItem>
 

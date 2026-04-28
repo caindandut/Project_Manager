@@ -165,11 +165,15 @@ export const useAuth = () => {
   const registerWithOtpMutation = useMutation({
     mutationFn: async (payload: RegisterWithOtpInput) => {
       try {
-        const response = await apiClient.post<ApiResponse<AuthUser>>('/auth/register-with-otp', payload)
+        const response = await apiClient.post<ApiResponse<AuthSuccessPayload>>('/auth/register-with-otp', payload)
         return unwrapResponse(response)
       } catch (error) {
         throw normalizeApiError(error)
       }
+    },
+    onSuccess: (data) => {
+      setAuthSession({ user: data.user, accessToken: data.accessToken })
+      queryClient.setQueryData(AUTH_ME_QUERY_KEY, data.user)
     },
   })
 

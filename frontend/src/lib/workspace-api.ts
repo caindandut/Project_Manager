@@ -115,9 +115,53 @@ export const inviteWorkspaceMember = async (
   payload: InviteWorkspaceMemberPayload,
 ) => {
   try {
-    const response = await apiClient.post<ApiResponse<WorkspaceMember>>(
+    const response = await apiClient.post<ApiResponse<PendingInvitation>>(
       `/workspaces/${workspaceId}/members`,
       payload,
+    )
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const getWorkspaceInvitationByToken = async (token: string) => {
+  try {
+    const response = await apiClient.get<ApiResponse<PendingInvitation>>(
+      `/workspaces/invitations/by-token/${token}`,
+    )
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const getMyWorkspaceInvitations = async () => {
+  try {
+    const response = await apiClient.get<ApiResponse<PendingInvitation[]>>(
+      "/workspaces/invitations/me",
+    )
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const acceptWorkspaceInvitation = async (token: string) => {
+  try {
+    const response = await apiClient.post<ApiResponse<PendingInvitation>>(
+      `/workspaces/invitations/${token}/accept`,
+    )
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const declineWorkspaceInvitation = async (token: string) => {
+  try {
+    const response = await apiClient.post<ApiResponse<PendingInvitation>>(
+      `/workspaces/invitations/${token}/decline`,
     )
     return unwrapResponse(response)
   } catch (error) {

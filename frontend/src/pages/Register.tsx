@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArrowLeft, ArrowRight, LoaderCircle, Mail, User, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,6 +15,7 @@ type RegisterStep = 'email' | 'otp' | 'profile'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const {
     googleAuth,
     isAuthenticated,
@@ -36,6 +37,13 @@ export default function RegisterPage() {
   useEffect(() => {
     document.title = 'Đăng ký | Project Manager'
   }, [])
+
+  useEffect(() => {
+    const invitedEmail = searchParams.get('email')
+    if (invitedEmail) {
+      setEmail(invitedEmail)
+    }
+  }, [searchParams])
 
   useEffect(() => {
     if (step === 'otp' && resendTimer > 0) {
@@ -145,7 +153,7 @@ export default function RegisterPage() {
     try {
       await registerWithOtp({ email, name, password })
       toast.success('Tạo tài khoản thành công!')
-      navigate('/login', { replace: true })
+      navigate('/workspaces', { replace: true })
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, 'Không thể tạo tài khoản. Vui lòng thử lại.'))
     }

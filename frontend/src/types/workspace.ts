@@ -96,9 +96,15 @@ export interface PendingInvitationUser {
 
 export interface PendingInvitation {
   id: number
+  token: string
   email: string
   role: Exclude<WorkspaceRole, "OWNER">
   status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED"
+  workspace?: {
+    id: number
+    name: string
+    slug: string
+  }
   invitedBy: PendingInvitationUser
   invitedAt: string
   expiresAt: string

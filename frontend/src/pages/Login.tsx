@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArrowLeft, LoaderCircle, Mail } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -15,19 +15,21 @@ type LoginStep = 'email' | 'password'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login, googleAuth, isAuthenticated } = useAuth()
   const [step, setStep] = useState<LoginStep>('email')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loginSuccessShown, setLoginSuccessShown] = useState(false)
+  const redirectTo = (location.state as { from?: string } | null)?.from || '/workspaces'
 
   useEffect(() => {
     document.title = 'Đăng nhập | Project Manager'
   }, [])
 
   if (isAuthenticated) {
-    return <Navigate to="/workspaces" replace />
+    return <Navigate to={redirectTo} replace />
   }
 
   const handleEmailSubmit = (e: React.FormEvent) => {
@@ -47,7 +49,7 @@ export default function LoginPage() {
       await login({ email, password })
       setLoginSuccessShown(true)
       toast.success('Đăng nhập thành công.')
-      navigate('/workspaces', { replace: true })
+      navigate(redirectTo, { replace: true })
     } catch (error) {
       toast.error(
         toVietnameseErrorMessage(error, 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.')

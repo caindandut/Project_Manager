@@ -156,14 +156,14 @@ export const validationRules = {
       .normalizeEmail(),
     body('role')
       .optional()
-      .isIn(['MEMBER', 'GUEST'])
-      .withMessage('Role must be MEMBER or GUEST'),
+      .isIn(['ADMIN', 'MEMBER', 'GUEST'])
+      .withMessage('Role must be ADMIN, MEMBER, or GUEST'),
   ],
 
   updateMemberRole: [
     body('role')
-      .isIn(['MEMBER', 'GUEST'])
-      .withMessage('Role must be MEMBER or GUEST'),
+      .isIn(['ADMIN', 'MEMBER', 'GUEST'])
+      .withMessage('Role must be ADMIN, MEMBER, or GUEST'),
   ],
 
   // Project validations

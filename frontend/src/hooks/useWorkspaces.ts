@@ -118,6 +118,9 @@ export const useInviteWorkspaceMemberMutation = (
         queryClient.invalidateQueries({
           queryKey: workspaceQueryKeys.members(workspaceId, membersPage, membersLimit),
         }),
+        queryClient.invalidateQueries({
+          queryKey: workspaceQueryKeys.invitations(workspaceId),
+        }),
       ])
     },
   })

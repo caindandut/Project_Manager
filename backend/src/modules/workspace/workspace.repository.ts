@@ -1,7 +1,7 @@
 import { BaseRepository } from '../../common/base/BaseRepository';
 import { prisma } from '../../config';
-import { Prisma, User, Workspace, WorkspaceMember } from '@prisma/client';
-import { WorkspaceRole } from '../../types/enums';
+import { Invitation, Prisma, User, Workspace, WorkspaceMember } from '@prisma/client';
+import { InvitationStatus, WorkspaceRole } from '../../types/enums';
 
 export type WorkspaceListItem = Workspace & {
   members: WorkspaceMember[];
@@ -13,6 +13,11 @@ export type WorkspaceListItem = Workspace & {
 
 export type WorkspaceMemberWithUser = WorkspaceMember & {
   user: Pick<User, 'id' | 'name' | 'email' | 'avatar'>;
+};
+
+export type WorkspaceInvitationWithDetails = Invitation & {
+  workspace: Pick<Workspace, 'id' | 'name' | 'slug'>;
+  invitedBy: Pick<User, 'id' | 'name' | 'email' | 'avatar'>;
 };
 
 export interface WorkspaceStats {
@@ -250,20 +255,124 @@ export class WorkspaceRepository extends BaseRepository<
     });
   }
 
-  async findPendingInvitations(workspaceId: number) {
+  async findInvitations(workspaceId: number) {
     return prisma.invitation.findMany({
       where: {
         workspaceId,
-        status: 'PENDING',
         deletedAt: null,
       },
       include: {
+        workspace: {
+          select: { id: true, name: true, slug: true },
+        },
         invitedBy: {
           select: { id: true, name: true, email: true, avatar: true },
         },
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  async findPendingInvitationByEmail(
+    workspaceId: number,
+    email: string,
+  ): Promise<Invitation | null> {
+    return prisma.invitation.findFirst({
+      where: {
+        workspaceId,
+        email,
+        status: InvitationStatus.PENDING,
+        expiresAt: { gt: new Date() },
+        deletedAt: null,
+      },
+    });
+  }
+
+  async createInvitation(data: {
+    workspaceId: number;
+    invitedById: number;
+    email: string;
+    role: WorkspaceRole.ADMIN | WorkspaceRole.MEMBER | WorkspaceRole.GUEST;
+    token: string;
+    expiresAt: Date;
+  }): Promise<WorkspaceInvitationWithDetails> {
+    return prisma.invitation.create({
+      data,
+      include: {
+        workspace: {
+          select: { id: true, name: true, slug: true },
+        },
+        invitedBy: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+      },
+    });
+  }
+
+  async findInvitationByToken(token: string): Promise<WorkspaceInvitationWithDetails | null> {
+    return prisma.invitation.findFirst({
+      where: { token, deletedAt: null },
+      include: {
+        workspace: {
+          select: { id: true, name: true, slug: true },
+        },
+        invitedBy: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+      },
+    });
+  }
+
+  async findInvitationsByEmail(email: string): Promise<WorkspaceInvitationWithDetails[]> {
+    return prisma.invitation.findMany({
+      where: {
+        email,
+        deletedAt: null,
+      },
+      include: {
+        workspace: {
+          select: { id: true, name: true, slug: true },
+        },
+        invitedBy: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async updateInvitationStatus(
+    invitationId: number,
+    status: InvitationStatus.ACCEPTED | InvitationStatus.DECLINED | InvitationStatus.EXPIRED,
+  ): Promise<Invitation> {
+    return prisma.invitation.update({
+      where: { id: invitationId },
+      data: { status },
+    });
+  }
+
+  async acceptPendingInvitationsForUser(user: Pick<User, 'id' | 'email'>): Promise<void> {
+    const invitations = await prisma.invitation.findMany({
+      where: {
+        email: user.email,
+        status: InvitationStatus.PENDING,
+        expiresAt: { gt: new Date() },
+        deletedAt: null,
+      },
+    });
+
+    for (const invitation of invitations) {
+      const existingMember = await this.findMemberByUserId(invitation.workspaceId, user.id);
+      if (!existingMember) {
+        await this.addMember(
+          invitation.workspaceId,
+          user.id,
+          invitation.role as WorkspaceRole.ADMIN | WorkspaceRole.MEMBER | WorkspaceRole.GUEST,
+        );
+      }
+
+      await this.updateInvitationStatus(invitation.id, InvitationStatus.ACCEPTED);
+    }
   }
 
   async cancelInvitation(invitationId: number): Promise<void> {

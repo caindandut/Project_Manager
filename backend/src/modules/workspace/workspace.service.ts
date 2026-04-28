@@ -1,11 +1,18 @@
+import crypto from 'crypto';
 import { Workspace, WorkspaceMember } from '@prisma/client';
-import { workspaceRepository, WorkspaceListItem, WorkspaceMemberWithUser } from './workspace.repository';
+import {
+  workspaceRepository,
+  WorkspaceInvitationWithDetails,
+  WorkspaceListItem,
+  WorkspaceMemberWithUser,
+} from './workspace.repository';
 import { BaseService } from '../../common/base/BaseService';
 import { ApiError } from '../../common/utils/apiError';
-import { ErrorCode, WorkspaceRole } from '../../types/enums';
+import { ErrorCode, InvitationStatus, WorkspaceRole } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
-import { prisma } from '../../config';
+import { config, prisma } from '../../config';
+import { sendWorkspaceInvitationEmail } from '../../common/utils/email.service';
 
 export interface CreateWorkspaceInput {
   name: string;
@@ -46,6 +53,8 @@ type FormattedWorkspace = {
   createdAt: Date;
   updatedAt: Date;
 };
+
+const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class WorkspaceService extends BaseService<
   unknown,
@@ -123,9 +132,10 @@ export class WorkspaceService extends BaseService<
     };
   }
 
-  async inviteMember(id: string | number, data: InviteMemberInput) {
+  async inviteMember(id: string | number, data: InviteMemberInput, inviterId: number) {
     const workspace = await this.findWorkspaceOrThrow(id);
 
+    const email = data.email.trim().toLowerCase();
     const role = data.role || WorkspaceRole.MEMBER;
     if (role === WorkspaceRole.OWNER) {
       throw ApiError.badRequest(
@@ -134,12 +144,18 @@ export class WorkspaceService extends BaseService<
       );
     }
 
-    const user = await workspaceRepository.findUserByEmail(data.email);
-    if (!user) {
-      throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
+    const [user, inviter] = await Promise.all([
+      workspaceRepository.findUserByEmail(email),
+      prisma.user.findUnique({ where: { id: inviterId } }),
+    ]);
+
+    if (!inviter) {
+      throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'Inviter not found');
     }
 
-    const existingMember = await workspaceRepository.findMemberByUserId(workspace.id, user.id);
+    const existingMember = user
+      ? await workspaceRepository.findMemberByUserId(workspace.id, user.id)
+      : null;
     if (existingMember) {
       throw ApiError.conflict(
         ErrorCode.MEMBER_ALREADY_EXISTS,
@@ -147,10 +163,37 @@ export class WorkspaceService extends BaseService<
       );
     }
 
-    const member = await workspaceRepository.addMember(workspace.id, user.id, role);
-    logger.info(`User ${user.id} added to workspace ${workspace.id} as ${role}`);
+    const existingInvitation = await workspaceRepository.findPendingInvitationByEmail(workspace.id, email);
+    if (existingInvitation) {
+      throw ApiError.conflict(
+        ErrorCode.VALIDATION_ERROR,
+        'A pending invitation already exists for this email',
+      );
+    }
 
-    return this.formatMember(member);
+    const invitation = await workspaceRepository.createInvitation({
+      workspaceId: workspace.id,
+      invitedById: inviterId,
+      email,
+      role: role as WorkspaceRole.ADMIN | WorkspaceRole.MEMBER | WorkspaceRole.GUEST,
+      token: crypto.randomBytes(32).toString('hex'),
+      expiresAt: new Date(Date.now() + INVITATION_EXPIRY_MS),
+    });
+
+    await sendWorkspaceInvitationEmail({
+      to: email,
+      workspaceName: workspace.name,
+      inviterName: inviter.name || inviter.email,
+      role,
+      acceptUrl: this.buildMyInvitationsUrl(invitation.token),
+      declineUrl: this.buildMyInvitationsUrl(invitation.token),
+      registerUrl: this.buildRegisterUrl(invitation.token, email),
+      isExistingUser: Boolean(user),
+    });
+
+    logger.info(`Invitation ${invitation.id} sent to ${email} for workspace ${workspace.id} as ${role}`);
+
+    return this.formatInvitation(invitation);
   }
 
   async updateMemberRole(
@@ -237,24 +280,86 @@ export class WorkspaceService extends BaseService<
 
   async getPendingInvitations(id: string | number) {
     const workspace = await this.findWorkspaceOrThrow(id);
-    const invitations = await workspaceRepository.findPendingInvitations(workspace.id);
+    const invitations = await workspaceRepository.findInvitations(workspace.id);
 
     return {
-      data: invitations.map((inv) => ({
-        id: inv.id,
-        email: inv.email,
-        role: inv.role,
-        status: inv.status,
-        invitedBy: {
-          id: inv.invitedBy.id,
-          name: inv.invitedBy.name,
-          email: inv.invitedBy.email,
-          avatar: inv.invitedBy.avatar,
-        },
-        invitedAt: inv.createdAt,
-        expiresAt: inv.expiresAt,
-      })),
+      data: invitations.map((inv) => this.formatInvitation(inv)),
     };
+  }
+
+  async getInvitationByToken(token: string) {
+    const invitation = await this.findInvitationByTokenOrThrow(token);
+    return this.formatInvitation(invitation);
+  }
+
+  async getMyInvitations(userId: number) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
+    }
+
+    const invitations = await workspaceRepository.findInvitationsByEmail(user.email);
+    return {
+      data: invitations.map((inv) => this.formatInvitation(inv)),
+    };
+  }
+
+  async acceptInvitation(token: string, userId: number) {
+    const invitation = await this.findInvitationByTokenOrThrow(token);
+    this.assertInvitationCanBeAnswered(invitation);
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
+    }
+
+    if (user.email !== invitation.email) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'This invitation belongs to another email');
+    }
+
+    const existingMember = await workspaceRepository.findMemberByUserId(invitation.workspaceId, user.id);
+    if (!existingMember) {
+      await workspaceRepository.addMember(
+        invitation.workspaceId,
+        user.id,
+        invitation.role as WorkspaceRole.ADMIN | WorkspaceRole.MEMBER | WorkspaceRole.GUEST,
+      );
+    }
+
+    const updated = await workspaceRepository.updateInvitationStatus(
+      invitation.id,
+      InvitationStatus.ACCEPTED,
+    );
+
+    logger.info(`Invitation ${invitation.id} accepted by ${invitation.email}`);
+
+    return {
+      ...this.formatInvitation({ ...invitation, ...updated }),
+      workspace: invitation.workspace,
+    };
+  }
+
+  async declineInvitation(token: string, userId: number) {
+    const invitation = await this.findInvitationByTokenOrThrow(token);
+    this.assertInvitationCanBeAnswered(invitation);
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
+    }
+
+    if (user.email !== invitation.email) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'This invitation belongs to another email');
+    }
+
+    const updated = await workspaceRepository.updateInvitationStatus(
+      invitation.id,
+      InvitationStatus.DECLINED,
+    );
+
+    logger.info(`Invitation ${invitation.id} declined by ${invitation.email}`);
+
+    return this.formatInvitation({ ...invitation, ...updated });
   }
 
   async cancelInvitation(id: string | number, invitationId: number, userId: number) {
@@ -315,6 +420,30 @@ export class WorkspaceService extends BaseService<
     return member;
   }
 
+  private async findInvitationByTokenOrThrow(token: string): Promise<WorkspaceInvitationWithDetails> {
+    const invitation = await workspaceRepository.findInvitationByToken(token);
+    if (!invitation) {
+      throw ApiError.notFound(ErrorCode.INVITATION_NOT_FOUND, 'Invitation not found');
+    }
+
+    return invitation;
+  }
+
+  private assertInvitationCanBeAnswered(invitation: WorkspaceInvitationWithDetails): void {
+    if (invitation.status === InvitationStatus.ACCEPTED) {
+      throw ApiError.badRequest(ErrorCode.INVITATION_ALREADY_ACCEPTED, 'Invitation already accepted');
+    }
+
+    if (invitation.status === InvitationStatus.DECLINED) {
+      throw ApiError.badRequest(ErrorCode.INVITATION_ALREADY_DECLINED, 'Invitation already declined');
+    }
+
+    if (invitation.expiresAt < new Date()) {
+      void workspaceRepository.updateInvitationStatus(invitation.id, InvitationStatus.EXPIRED);
+      throw ApiError.badRequest(ErrorCode.INVITATION_EXPIRED, 'Invitation has expired');
+    }
+  }
+
   private formatWorkspace(workspace: Workspace): FormattedWorkspace {
     return {
       id: workspace.id,
@@ -348,6 +477,44 @@ export class WorkspaceService extends BaseService<
       role: member.role,
       joinedAt: member.joinedAt,
     };
+  }
+
+  private formatInvitation(inv: WorkspaceInvitationWithDetails) {
+    return {
+      id: inv.id,
+      token: inv.token,
+      email: inv.email,
+      role: inv.role,
+      status: inv.status,
+      workspace: inv.workspace
+        ? {
+            id: inv.workspace.id,
+            name: inv.workspace.name,
+            slug: inv.workspace.slug,
+          }
+        : undefined,
+      invitedBy: {
+        id: inv.invitedBy.id,
+        name: inv.invitedBy.name,
+        email: inv.invitedBy.email,
+        avatar: inv.invitedBy.avatar,
+      },
+      invitedAt: inv.createdAt,
+      expiresAt: inv.expiresAt,
+    };
+  }
+
+  private buildMyInvitationsUrl(token: string): string {
+    const url = new URL('/my-invitations', config.CLIENT_URL);
+    url.searchParams.set('token', token);
+    return url.toString();
+  }
+
+  private buildRegisterUrl(token: string, email: string): string {
+    const url = new URL('/register', config.CLIENT_URL);
+    url.searchParams.set('invitation', token);
+    url.searchParams.set('email', email);
+    return url.toString();
   }
 }
 

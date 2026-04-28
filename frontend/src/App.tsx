@@ -17,6 +17,7 @@ import ProjectOverview from '@/pages/ProjectOverview';
 import RegisterPage from '@/pages/Register';
 import SettingsPage from '@/pages/Settings';
 import WorkspaceDashboard from '@/pages/WorkspaceDashboard';
+import WorkspaceInvitationPage from '@/pages/WorkspaceInvitation';
 import WorkspaceSettingsPage from '@/pages/WorkspaceSettings';
 import WorkspacesPage from '@/pages/Workspaces';
 import MyTasksPage from '@/pages/MyTasks';
@@ -93,6 +94,7 @@ function App() {
             
             {/* Global settings */}
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/my-invitations" element={<WorkspaceInvitationPage />} />
           </Route>
         </Route>
 

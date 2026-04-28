@@ -1,7 +1,6 @@
 import { BaseRepository } from '../../common/base/BaseRepository';
 import { prisma } from '../../config';
 import { User, RefreshToken, Workspace, Prisma } from '@prisma/client';
-import { WorkspaceRole } from '../../types/enums';
 
 export class AuthRepository extends BaseRepository<User, Prisma.UserCreateInput, Prisma.UserUpdateInput> {
   constructor() {
@@ -93,7 +92,6 @@ export class AuthRepository extends BaseRepository<User, Prisma.UserCreateInput,
       where: {
         userId,
         deletedAt: null,
-        role: WorkspaceRole.OWNER,
       },
     });
     return count > 0;

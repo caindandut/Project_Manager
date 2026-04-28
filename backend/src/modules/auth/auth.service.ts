@@ -65,6 +65,8 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       name: data.name,
     });
 
+    await workspaceRepository.acceptPendingInvitationsForUser(user);
+
     logger.info(`User registered: ${user.email}`);
 
     return {
@@ -129,6 +131,8 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
           googleId: payload.sub,
           avatar: payload.picture,
         });
+
+        await workspaceRepository.acceptPendingInvitationsForUser(user);
 
         logger.info(`New user registered via Google OAuth: ${user.email}`);
       }
@@ -284,18 +288,29 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       name: data.name,
     });
 
+    await workspaceRepository.acceptPendingInvitationsForUser(user);
+
     // Clean up OTP
     await authRepository.deleteOtpCode(data.email, OTP_TYPE_REGISTRATION);
 
     logger.info(`User registered with OTP: ${user.email}`);
 
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken(user);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await authRepository.createRefreshToken(user.id, refreshToken, expiresAt);
+
     return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      avatar: user.avatar,
-      bio: user.bio,
-      createdAt: user.createdAt,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        bio: user.bio,
+      },
+      accessToken,
+      refreshToken,
+      expiresIn: 900,
     };
   }
 

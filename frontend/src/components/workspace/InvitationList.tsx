@@ -17,6 +17,20 @@ interface InvitationListProps {
   canManage: boolean
 }
 
+const STATUS_LABELS: Record<PendingInvitation["status"], string> = {
+  PENDING: "Đang chờ",
+  ACCEPTED: "Đã chấp nhận",
+  DECLINED: "Đã từ chối",
+  EXPIRED: "Hết hạn",
+}
+
+const STATUS_VARIANTS: Record<PendingInvitation["status"], "default" | "secondary" | "destructive" | "outline"> = {
+  PENDING: "secondary",
+  ACCEPTED: "default",
+  DECLINED: "destructive",
+  EXPIRED: "outline",
+}
+
 export default function InvitationList({
   workspaceId,
   invitations,
@@ -56,7 +70,7 @@ export default function InvitationList({
                 <Skeleton className="h-3 w-24" />
               </div>
             </div>
-            <Skeleton className="h-6 w-6 rounded-md" />
+            <Skeleton className="h-6 w-16 rounded-md" />
           </div>
         ))}
       </div>
@@ -68,7 +82,7 @@ export default function InvitationList({
       <div className="space-y-3">
         <p className="text-sm font-medium text-foreground">Lời mời đã gửi</p>
         <div className="rounded-md border border-dashed border-border/80 bg-muted/30 px-3 py-4 text-center">
-          <p className="text-sm text-muted-foreground">Chưa có lời mời nào đang chờ.</p>
+          <p className="text-sm text-muted-foreground">Chưa có lời mời nào.</p>
         </div>
       </div>
     )
@@ -83,7 +97,7 @@ export default function InvitationList({
             key={invitation.id}
             className="flex items-center justify-between rounded-md border border-border/80 bg-muted/20 px-3 py-2"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <Avatar className="h-8 w-8">
                 {invitation.invitedBy.avatar ? (
                   <AvatarImage src={invitation.invitedBy.avatar} alt={invitation.invitedBy.name ?? ""} />
@@ -97,9 +111,12 @@ export default function InvitationList({
                   <Mail className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
                   <span className="truncate text-sm font-medium">{invitation.email}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <Badge variant="secondary" className="text-xs">
                     {getWorkspaceRoleLabel(invitation.role)}
+                  </Badge>
+                  <Badge variant={STATUS_VARIANTS[invitation.status]} className="text-xs">
+                    {STATUS_LABELS[invitation.status]}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
                     bởi {invitation.invitedBy.name || invitation.invitedBy.email}
@@ -108,7 +125,7 @@ export default function InvitationList({
               </div>
             </div>
 
-            {canManage ? (
+            {canManage && invitation.status === "PENDING" ? (
               <Button
                 variant="ghost"
                 size="sm"

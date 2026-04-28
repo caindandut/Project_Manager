@@ -69,9 +69,44 @@ export class WorkspaceController extends BaseController {
 
   inviteMember = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
       const workspaceId = this.getWorkspaceId(req);
-      const result = await workspaceService.inviteMember(workspaceId, req.body);
+      const result = await workspaceService.inviteMember(workspaceId, req.body, authReq.user.id);
       res.status(201).json(success(result));
+    });
+  };
+
+  getInvitationByToken = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const token = this.getInvitationToken(req);
+      const result = await workspaceService.getInvitationByToken(token);
+      res.json(success(result));
+    });
+  };
+
+  getMyInvitations = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const result = await workspaceService.getMyInvitations(authReq.user.id);
+      res.json(success(result.data));
+    });
+  };
+
+  acceptInvitation = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const token = this.getInvitationToken(req);
+      const result = await workspaceService.acceptInvitation(token, authReq.user.id);
+      res.json(success(result));
+    });
+  };
+
+  declineInvitation = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const token = this.getInvitationToken(req);
+      const result = await workspaceService.declineInvitation(token, authReq.user.id);
+      res.json(success(result));
     });
   };
 
@@ -158,6 +193,15 @@ export class WorkspaceController extends BaseController {
     }
 
     return memberId;
+  }
+
+  private getInvitationToken(req: Request): string {
+    const token = req.params.token || '';
+    if (!token || token.length < 32) {
+      throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Invalid invitation token');
+    }
+
+    return token;
   }
 
   private getRoleFilter(req: Request): WorkspaceRole | undefined {

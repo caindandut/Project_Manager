@@ -9,7 +9,27 @@ import { validate, validationRules } from '../../common/middlewares/validation.m
 
 const router = Router();
 
+router.get(
+  '/invitations/by-token/:token',
+  workspaceController.getInvitationByToken,
+);
+
 router.use(authMiddleware);
+
+router.get(
+  '/invitations/me',
+  workspaceController.getMyInvitations,
+);
+
+router.post(
+  '/invitations/:token/accept',
+  workspaceController.acceptInvitation,
+);
+
+router.post(
+  '/invitations/:token/decline',
+  workspaceController.declineInvitation,
+);
 
 router.post(
   '/',

@@ -17,6 +17,44 @@ interface SendEmailOptions {
   html: string;
 }
 
+export async function sendWorkspaceInvitationEmail(options: {
+  to: string;
+  workspaceName: string;
+  inviterName: string;
+  role: string;
+  acceptUrl: string;
+  declineUrl: string;
+  registerUrl: string;
+  isExistingUser: boolean;
+}): Promise<void> {
+  const primaryUrl = options.isExistingUser ? options.acceptUrl : options.registerUrl;
+  const primaryLabel = options.isExistingUser ? 'Xem lời mời' : 'Đăng ký và tham gia';
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px;">
+      <h1 style="color: #111827; font-size: 20px; margin: 0 0 12px 0;">Project Manager</h1>
+      <p style="color: #374151; font-size: 15px; line-height: 1.6;">
+        ${options.inviterName} đã mời bạn tham gia workspace <strong>${options.workspaceName}</strong>
+        với vai trò <strong>${options.role}</strong>.
+      </p>
+      <div style="margin: 24px 0;">
+        <a href="${primaryUrl}" style="display: inline-block; background: #2563eb; color: #ffffff; text-decoration: none; padding: 10px 16px; border-radius: 8px; font-weight: 600;">
+          ${primaryLabel}
+        </a>
+      </div>
+      <p style="color: #6b7280; font-size: 13px; line-height: 1.5;">
+        Bạn có thể chấp nhận hoặc từ chối lời mời sau khi đăng nhập vào tài khoản của mình.
+      </p>
+    </div>
+  `;
+
+  await sendEmail({
+    to: options.to,
+    subject: `Lời mời tham gia workspace ${options.workspaceName}`,
+    html,
+  });
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
   await transporter.sendMail({
     from: config.EMAIL_FROM,

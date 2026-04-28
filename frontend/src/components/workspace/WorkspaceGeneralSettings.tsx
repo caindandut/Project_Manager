@@ -1,33 +1,15 @@
 import { useEffect, useRef, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
-import { LoaderCircle, Settings, Trash2, Upload } from "lucide-react"
+import { useParams } from "react-router-dom"
+import { LoaderCircle, Settings, Upload } from "lucide-react"
 import { toast } from "sonner"
 
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  useDeleteWorkspaceMutation,
   useUpdateWorkspaceMutation,
   useWorkspaceDetailQuery,
 } from "@/hooks/useWorkspaces"
@@ -46,17 +28,14 @@ function getInitials(text: string): string {
 
 export default function WorkspaceGeneralSettings() {
   const params = useParams()
-  const navigate = useNavigate()
   const workspaceSlug = params.workspaceId || ""
 
   const { data: workspace, isLoading } = useWorkspaceDetailQuery(workspaceSlug)
   const updateMutation = useUpdateWorkspaceMutation(workspaceSlug)
-  const deleteMutation = useDeleteWorkspaceMutation()
 
   const [name, setName] = useState("")
   const [description, setDescription] = useState("")
   const [isDirty, setIsDirty] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -66,9 +45,7 @@ export default function WorkspaceGeneralSettings() {
     }
   }, [workspace])
 
-  const getWorkspaceUrl = () => {
-    return `${window.location.origin}/workspaces/${workspace?.slug}`
-  }
+  const getWorkspaceUrl = () => `${window.location.origin}/workspaces/${workspace?.slug}`
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value)
@@ -130,20 +107,8 @@ export default function WorkspaceGeneralSettings() {
     }
   }
 
-  const handleDelete = async () => {
-    try {
-      await deleteMutation.mutateAsync(workspaceSlug)
-      toast.success("Đã xóa không gian làm việc.")
-      setDeleteDialogOpen(false)
-      navigate("/workspaces")
-    } catch (error) {
-      toast.error(toVietnameseErrorMessage(error, "Không thể xóa không gian làm việc."))
-    }
-  }
-
   const canEdit = workspace?.role === "OWNER" || workspace?.role === "ADMIN"
   const isSaving = updateMutation.isPending
-  const isDeleting = deleteMutation.isPending
 
   if (isLoading) {
     return (
@@ -156,15 +121,15 @@ export default function WorkspaceGeneralSettings() {
           </div>
         </div>
         <Card>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-5">
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-5">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
-          </div>
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-24 w-full" />
-        </CardContent>
+            <Skeleton className="h-24 w-full" />
+          </CardContent>
         </Card>
       </div>
     )
@@ -172,25 +137,21 @@ export default function WorkspaceGeneralSettings() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#DEEBFF]">
           <Settings className="h-5 w-5 text-[#0052CC]" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold">Cài đặt Chung</h1>
+          <h1 className="text-2xl font-semibold">Cài đặt chung</h1>
           <p className="text-sm text-muted-foreground">
             Cập nhật thông tin không gian làm việc.
           </p>
         </div>
       </div>
 
-      {/* Form card */}
       <Card>
         <CardContent className="space-y-5">
-          {/* Logo + name row */}
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            {/* Logo */}
             <div className="flex flex-col gap-3">
               <Label>Logo</Label>
               <div className="flex items-center gap-4">
@@ -227,7 +188,6 @@ export default function WorkspaceGeneralSettings() {
               </div>
             </div>
 
-            {/* Tên không gian làm việc */}
             <div className="space-y-2">
               <Label htmlFor="workspace-name">
                 Tên không gian làm việc <span className="text-destructive">*</span>
@@ -243,7 +203,6 @@ export default function WorkspaceGeneralSettings() {
             </div>
           </div>
 
-          {/* Địa chỉ URL */}
           <div className="space-y-2">
             <Label htmlFor="workspace-url">Địa chỉ URL không gian làm việc</Label>
             <Input
@@ -255,7 +214,6 @@ export default function WorkspaceGeneralSettings() {
             />
           </div>
 
-          {/* Mô tả */}
           <div className="space-y-2">
             <Label htmlFor="workspace-description">Mô tả</Label>
             <textarea
@@ -269,8 +227,7 @@ export default function WorkspaceGeneralSettings() {
             />
           </div>
 
-          {/* Save */}
-          <div className="flex items-center gap-3 pt-2 border-t pt-4">
+          <div className="flex items-center gap-3 border-t pt-4">
             <Button
               onClick={handleSave}
               disabled={!isDirty || !canEdit || isSaving}
@@ -292,54 +249,6 @@ export default function WorkspaceGeneralSettings() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Delete card — only shown to OWNER */}
-      {workspace?.role === "OWNER" && (
-        <Card className="border-destructive/50">
-          <CardHeader>
-            <CardTitle className="text-destructive">Vùng nguy hiểm</CardTitle>
-            <CardDescription>
-              Thao tác dưới đây không thể hoàn tác.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={isDeleting}>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Xóa không gian làm việc
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Xóa không gian làm việc?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Thao tác này sẽ xóa vĩnh viễn không gian làm việc và tất cả dữ liệu
-                    liên quan. Hành động này không thể hoàn tác.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Hủy</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    {isDeleting ? (
-                      <>
-                        <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                        Đang xóa...
-                      </>
-                    ) : (
-                      "Xóa không gian làm việc"
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }
