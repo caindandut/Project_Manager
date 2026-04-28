@@ -2,6 +2,7 @@ import { useState } from "react"
 import {
   BarChart3,
   Calendar,
+  CheckSquare,
   ChevronDown,
   FolderKanban,
   Home,
@@ -32,6 +33,7 @@ const PERSONAL_ITEMS = [
 
 const WORKSPACE_ITEMS = [
   { key: "overview", label: "Tổng quan", icon: LayoutDashboard, href: "" },
+  { key: "my-tasks", label: "Công việc của tôi", icon: CheckSquare, href: "my-tasks" },
   { key: "projects", label: "Dự án", icon: FolderKanban, href: "projects" },
   { key: "board", label: "Bảng", icon: KanbanSquare, href: "board" },
   { key: "calendar", label: "Lịch", icon: Calendar, href: "calendar" },

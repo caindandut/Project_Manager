@@ -7,6 +7,7 @@ import commentRoutes from '../modules/comment/comment.routes';
 import attachmentRoutes from '../modules/attachment/attachment.routes';
 import notificationRoutes from '../modules/notification/notification.routes';
 import reportRoutes from '../modules/report/report.routes';
+import myTasksRoutes from '../modules/my-tasks/my-tasks.routes';
 
 const router = Router();
 
@@ -33,5 +34,8 @@ router.use('/notifications', notificationRoutes);
 
 // Report routes
 router.use('/reports', reportRoutes);
+
+// My tasks routes
+router.use('/my-tasks', myTasksRoutes);
 
 export default router;

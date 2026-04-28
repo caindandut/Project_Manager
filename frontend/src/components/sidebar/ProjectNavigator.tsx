@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 import {
   Calendar,
+  CheckSquare,
   ChevronDown,
   ChevronRight,
   Folder,
@@ -276,6 +277,15 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
           isCollapsed={true}
         />
 
+        {/* My Tasks */}
+        <SidebarItem
+          icon={CheckSquare}
+          label="Công việc của tôi"
+          href={`${basePath}/my-tasks`}
+          isActive={location.pathname === `${basePath}/my-tasks`}
+          isCollapsed={true}
+        />
+
         {/* Projects folder icon */}
         <div className="flex items-center justify-center py-2">
           <Folder className="h-4 w-4 text-[#5E6C84]" />
@@ -292,6 +302,14 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
         label="Trang chủ"
         href={basePath}
         isActive={location.pathname === basePath && !isInProject}
+      />
+
+      {/* My Tasks */}
+      <SidebarItem
+        icon={CheckSquare}
+        label="Công việc của tôi"
+        href={`${basePath}/my-tasks`}
+        isActive={location.pathname === `${basePath}/my-tasks`}
       />
 
       {/* Projects section */}
