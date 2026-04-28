@@ -1,6 +1,7 @@
-import { List, Calendar } from "lucide-react"
+import { List } from "lucide-react"
 
 import ProjectTaskListPage from "@/pages/ProjectTaskListPage"
+import { CalendarView } from "@/components/calendar/CalendarView"
 
 export function ProjectListPage() {
   return <ProjectTaskListPage />
@@ -15,13 +16,12 @@ export function ProjectGanttPage() {
 }
 
 export function ProjectCalendarPage() {
-  return <ProjectViewContent view="calendar" />
+  return <CalendarView />
 }
 
-function ProjectViewContent({ view }: { view: "gantt" | "calendar" }) {
+function ProjectViewContent({ view }: { view: "gantt" }) {
   const views = {
     gantt: { icon: List, title: "Gantt", description: "Xem công việc dạng biểu đồ Gantt" },
-    calendar: { icon: Calendar, title: "Lịch", description: "Xem công việc theo lịch" },
   }
 
   const config = views[view]
@@ -42,3 +42,4 @@ function ProjectViewContent({ view }: { view: "gantt" | "calendar" }) {
     </div>
   )
 }
+
