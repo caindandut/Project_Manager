@@ -27,11 +27,11 @@ export const validate = (
       message: err.msg,
     }));
 
-    throw ApiError.badRequest(
+    next(ApiError.badRequest(
       ErrorCode.VALIDATION_ERROR,
       'Validation failed',
       formattedErrors
-    );
+    ));
   };
 };
 
@@ -238,6 +238,10 @@ export const validationRules = {
       .optional()
       .isIn(['LOWEST', 'LOW', 'MEDIUM', 'HIGH', 'HIGHEST'])
       .withMessage('Invalid priority'),
+    body('startDate')
+      .optional()
+      .isISO8601()
+      .withMessage('Start date must be a valid ISO 8601 date'),
     body('dueDate')
       .optional()
       .isISO8601()
@@ -271,8 +275,12 @@ export const validationRules = {
       .optional()
       .isIn(['LOWEST', 'LOW', 'MEDIUM', 'HIGH', 'HIGHEST'])
       .withMessage('Invalid priority'),
+    body('startDate')
+      .optional({ nullable: true })
+      .isISO8601()
+      .withMessage('Start date must be a valid ISO 8601 date'),
     body('dueDate')
-      .optional()
+      .optional({ nullable: true })
       .isISO8601()
       .withMessage('Due date must be a valid ISO 8601 date'),
     body('estimatedHours')
