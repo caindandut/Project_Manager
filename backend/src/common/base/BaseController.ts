@@ -3,6 +3,10 @@ import { ApiError } from '../utils/apiError';
 import { ErrorCode } from '../../types/enums';
 import { logger } from '../utils/logger';
 
+export interface AuthenticatedRequest extends Request {
+  userId?: number;
+}
+
 export abstract class BaseController {
   protected readonly resourceName: string;
 
@@ -65,5 +69,12 @@ export abstract class BaseController {
       throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Invalid ID parameter');
     }
     return id;
+  }
+
+  protected getUserId(req: Request): number | undefined {
+    if ('user' in req && req.user && typeof (req.user as { id?: number }).id === 'number') {
+      return (req.user as { id: number }).id;
+    }
+    return undefined;
   }
 }

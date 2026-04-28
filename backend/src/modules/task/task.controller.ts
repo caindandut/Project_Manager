@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Prisma, TaskPriority, TaskStatus, TaskType } from '@prisma/client';
 import { taskService, TaskFilter } from './task.service';
-import { BaseController } from '../../common/base/BaseController';
+import { BaseController, AuthenticatedRequest } from '../../common/base/BaseController';
 import { success } from '../../common/utils/apiResponse';
 import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
@@ -61,6 +61,7 @@ export class TaskController extends BaseController {
         includeSubTasks: this.parseBoolean(req.query.includeSubTasks, true),
         includeComments: this.parseBoolean(req.query.includeComments, true),
         includeAttachments: this.parseBoolean(req.query.includeAttachments, true),
+        includeActivities: this.parseBoolean(req.query.includeActivities, true),
         commentLimit: parseInt(req.query.commentLimit as string, 10) || 5,
       });
       res.json(success(result));
@@ -70,7 +71,8 @@ export class TaskController extends BaseController {
   update = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
       const taskId = this.getTaskId(req);
-      const result = await taskService.update(taskId, req.body);
+      const userId = this.getUserId(req);
+      const result = await taskService.update(taskId, req.body, userId);
       res.json(success(result));
     });
   };
@@ -86,7 +88,8 @@ export class TaskController extends BaseController {
   updateStatus = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
       const taskId = this.getTaskId(req);
-      const result = await taskService.updateStatus(taskId, req.body.status);
+      const userId = this.getUserId(req);
+      const result = await taskService.updateStatus(taskId, req.body.status, userId);
       res.json(success(result));
     });
   };
@@ -94,7 +97,8 @@ export class TaskController extends BaseController {
   assign = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
       const taskId = this.getTaskId(req);
-      const result = await taskService.assign(taskId, req.body.assigneeId ?? null);
+      const userId = this.getUserId(req);
+      const result = await taskService.assign(taskId, req.body.assigneeId ?? null, userId);
       res.json(success(result));
     });
   };

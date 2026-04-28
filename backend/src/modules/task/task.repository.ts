@@ -1,4 +1,5 @@
 import {
+  ActivityLog,
   Attachment,
   Comment,
   Prisma,
@@ -32,6 +33,7 @@ export type TaskDetail = Task & {
   subTasks: Array<Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'createdAt'>>;
   comments: Array<Comment & { user: Pick<User, 'id' | 'name' | 'avatar'> }>;
   attachments: Array<Attachment & { uploadedBy: Pick<User, 'id' | 'name' | 'avatar'> }>;
+  activities: Array<ActivityLog & { user: Pick<User, 'id' | 'name' | 'avatar'> }>;
 };
 
 export interface TaskCursorListOptions {
@@ -91,6 +93,7 @@ export class TaskRepository extends BaseRepository<
       includeSubTasks: boolean;
       includeComments: boolean;
       includeAttachments: boolean;
+      includeActivities?: boolean;
       commentLimit: number;
     },
   ): Promise<TaskDetail | null> {
@@ -131,6 +134,11 @@ export class TaskRepository extends BaseRepository<
           include: { uploadedBy: { select: { id: true, name: true, avatar: true } } },
           orderBy: { createdAt: 'desc' },
           take: options.includeAttachments ? undefined : 0,
+        },
+        activities: {
+          orderBy: { createdAt: 'desc' },
+          take: options.includeActivities !== false ? 50 : 0,
+          include: { user: { select: { id: true, name: true, avatar: true } } },
         },
       },
     }) as Promise<TaskDetail | null>;

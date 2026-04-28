@@ -232,7 +232,7 @@ export const validationRules = {
       .withMessage('Type must be TASK or SUB_TASK'),
     body('status')
       .optional()
-      .isIn(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'])
+      .isIn(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE', 'CANCELLED'])
       .withMessage('Invalid status'),
     body('priority')
       .optional()
@@ -265,7 +265,7 @@ export const validationRules = {
       .withMessage('Description must be at most 5000 characters'),
     body('status')
       .optional()
-      .isIn(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'])
+      .isIn(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE', 'CANCELLED'])
       .withMessage('Invalid status'),
     body('priority')
       .optional()
@@ -291,7 +291,7 @@ export const validationRules = {
 
   updateTaskStatus: [
     body('status')
-      .isIn(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'])
+      .isIn(['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE', 'CANCELLED'])
       .withMessage('Invalid status'),
   ],
 

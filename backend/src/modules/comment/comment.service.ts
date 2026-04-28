@@ -1,10 +1,11 @@
-import { Comment } from '@prisma/client';
+import { Comment, Prisma } from '@prisma/client';
 import { commentRepository, CommentWithUser } from './comment.repository';
 import { BaseService } from '../../common/base/BaseService';
 import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
+import { prisma } from '../../config';
 
 export interface CreateCommentInput {
   content: string;
@@ -52,6 +53,9 @@ export class CommentService extends BaseService<
     }
 
     logger.info(`Comment created: ${comment.id} on task ${data.taskId}`);
+
+    // Log activity
+    await this.logActivity(comment.id, data.taskId, data.userId, 'COMMENT_CREATE');
 
     return this.formatComment(fullComment);
   }
@@ -104,6 +108,11 @@ export class CommentService extends BaseService<
       throw ApiError.notFound(ErrorCode.COMMENT_NOT_FOUND, 'Comment not found');
     }
 
+    // Log activity
+    if (userId) {
+      await this.logActivity(id, comment.taskId, userId, 'COMMENT_UPDATE');
+    }
+
     return this.formatComment(fullComment);
   }
 
@@ -122,6 +131,9 @@ export class CommentService extends BaseService<
 
     await commentRepository.softDelete(id);
     logger.info(`Comment deleted: ${id}`);
+
+    // Log activity
+    await this.logActivity(id, comment.taskId, userId, 'COMMENT_DELETE');
 
     return { message: 'Comment deleted successfully' };
   }
@@ -154,6 +166,30 @@ export class CommentService extends BaseService<
     _options?: ListOptions,
   ): Promise<{ data: CommentServiceResponse[]; meta?: PaginationMeta }> {
     throw ApiError.notFound(ErrorCode.NOT_IMPLEMENTED, 'Not implemented');
+  }
+
+  private async logActivity(
+    commentId: number,
+    taskId: number,
+    userId: number,
+    action: string,
+  ): Promise<void> {
+    try {
+      await prisma.activityLog.create({
+        data: {
+          action,
+          entityType: 'COMMENT',
+          entityId: commentId,
+          taskId,
+          userId,
+          metadata: {
+            commentId,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to log comment activity', err);
+    }
   }
 }
 

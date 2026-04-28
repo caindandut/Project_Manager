@@ -26,6 +26,7 @@ enum TaskStatus {
   IN_PROGRESS
   REVIEW
   DONE
+  CANCELLED
 }
 
 enum TaskPriority {
@@ -235,6 +236,7 @@ model Task {
   type            TaskType     @default(TASK)       @map("type")
   status          TaskStatus   @default(TODO)       @map("status")
   priority        TaskPriority @default(MEDIUM)     @map("priority")
+  startDate       DateTime?    @map("start_date")  @db.DateTime
   dueDate         DateTime?    @map("due_date")    @db.DateTime
   estimatedHours  Float?       @map("estimated_hours")
   loggedHours     Float        @default(0)         @map("logged_hours")

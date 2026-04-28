@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { Attachment } from '@prisma/client';
+import { Attachment, Prisma } from '@prisma/client';
 import { attachmentRepository, AttachmentWithUploader } from './attachment.repository';
 import { BaseService } from '../../common/base/BaseService';
 import { ApiError } from '../../common/utils/apiError';
@@ -9,6 +9,7 @@ import { logger } from '../../common/utils/logger';
 import { config } from '../../config';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { ALLOWED_MIME_TYPES, FILE_SIZE_LIMITS } from '../../config/constants';
+import { prisma } from '../../config';
 
 export interface UploadAttachmentInput {
   taskId: number;
@@ -56,7 +57,7 @@ export class AttachmentService extends BaseService<
       );
     }
 
-    const maxSize = FILE_SIZE_LIMITS.DOCUMENT;
+    const maxSize = FILE_SIZE_LIMITS.ARCHIVE;
     if (file.size > maxSize) {
       throw ApiError.badRequest(
         ErrorCode.ATTACHMENT_FILE_TOO_LARGE,
@@ -94,6 +95,10 @@ export class AttachmentService extends BaseService<
     }
 
     logger.info(`Attachment uploaded: ${attachment.id} for task ${taskId}`);
+
+    await this.logActivity(attachment.id, taskId, uploadedById, 'ATTACHMENT_UPLOAD', {
+      fileName: file.originalname,
+    });
 
     return this.formatAttachment(fullAttachment);
   }
@@ -147,6 +152,10 @@ export class AttachmentService extends BaseService<
 
     await attachmentRepository.softDelete(id);
     logger.info(`Attachment deleted: ${id}`);
+
+    await this.logActivity(id, attachment.taskId, userId, 'ATTACHMENT_DELETE', {
+      fileName: attachment.fileName,
+    });
 
     return { message: 'Attachment deleted successfully' };
   }
@@ -205,6 +214,32 @@ export class AttachmentService extends BaseService<
 
     const relativePath = fileUrl.startsWith('/') ? fileUrl.slice(1) : fileUrl;
     return path.join(process.cwd(), relativePath);
+  }
+
+  private async logActivity(
+    attachmentId: number,
+    taskId: number,
+    userId: number,
+    action: string,
+    extraData: Record<string, unknown> = {},
+  ): Promise<void> {
+    try {
+      await prisma.activityLog.create({
+        data: {
+          action,
+          entityType: 'ATTACHMENT',
+          entityId: attachmentId,
+          taskId,
+          userId,
+          metadata: {
+            attachmentId,
+            ...extraData,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    } catch (err) {
+      logger.error('Failed to log attachment activity', err);
+    }
   }
 
   getAll(

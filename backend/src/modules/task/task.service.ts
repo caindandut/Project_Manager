@@ -5,6 +5,7 @@ import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
+import { prisma } from '../../config';
 
 export interface CreateTaskInput {
   title: string;
@@ -12,6 +13,7 @@ export interface CreateTaskInput {
   type?: TaskType;
   status?: TaskStatus;
   priority?: TaskPriority;
+  startDate?: string | Date;
   dueDate?: string | Date;
   estimatedHours?: number;
   projectId: number;
@@ -24,6 +26,7 @@ export interface UpdateTaskInput {
   description?: string;
   status?: TaskStatus;
   priority?: TaskPriority;
+  startDate?: string | Date | null;
   dueDate?: string | Date | null;
   estimatedHours?: number;
   assigneeId?: number | null;
@@ -51,6 +54,7 @@ export interface TaskDetailOptions {
   includeSubTasks?: boolean;
   includeComments?: boolean;
   includeAttachments?: boolean;
+  includeActivities?: boolean;
   commentLimit?: number;
 }
 
@@ -91,6 +95,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       type,
       status: data.status || TaskStatus.TODO,
       priority: data.priority || TaskPriority.MEDIUM,
+      startDate: data.startDate,
       dueDate: data.dueDate,
       estimatedHours: data.estimatedHours,
       projectId: data.projectId,
@@ -178,37 +183,96 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     };
   }
 
-  async update(id: number, data: UpdateTaskInput) {
+  async update(id: number, data: UpdateTaskInput, userId?: number) {
     const task = await this.findTaskWithProjectOrThrow(id);
 
     if (data.assigneeId !== undefined && data.assigneeId !== null) {
       await this.ensureAssigneeInWorkspace(task.project.workspaceId, data.assigneeId);
     }
 
-    const updated = await taskRepository.updateTask(id, data);
+    // Parse dates before updating
+    const updateData: Prisma.TaskUncheckedUpdateInput = {
+      ...data,
+      startDate: data.startDate !== undefined
+        ? (data.startDate ? new Date(data.startDate) : null)
+        : undefined,
+      dueDate: data.dueDate !== undefined
+        ? (data.dueDate ? new Date(data.dueDate) : null)
+        : undefined,
+    };
+
+    const updated = await taskRepository.updateTask(id, updateData);
+
+    // Log activity
+    if (userId) {
+      await this.logTaskActivity(updated, task, userId);
+    }
+
     return {
       id: updated.id,
       title: updated.title,
       status: updated.status,
       priority: updated.priority,
+      startDate: updated.startDate,
       dueDate: updated.dueDate,
       updatedAt: updated.updatedAt,
     };
   }
 
-  async updateStatus(id: number, status: TaskStatus) {
-    await this.findTaskOrThrow(id);
-    return taskRepository.updateStatus(id, status);
+  async updateStatus(id: number, status: TaskStatus, userId?: number) {
+    const task = await this.findTaskWithProjectOrThrow(id);
+    const previousStatus = task.status;
+    const updated = await taskRepository.updateStatus(id, status);
+
+    // Log activity
+    if (userId && previousStatus !== status) {
+      await prisma.activityLog.create({
+        data: {
+          action: 'UPDATE',
+          entityType: 'TASK',
+          entityId: updated.id,
+          taskId: updated.id,
+          userId,
+          metadata: {
+            field: 'status',
+            oldValue: previousStatus,
+            newValue: status,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    return updated;
   }
 
-  async assign(id: number, assigneeId: number | null) {
+  async assign(id: number, assigneeId: number | null, userId?: number) {
     const task = await this.findTaskWithProjectOrThrow(id);
+    const previousAssigneeId = task.assigneeId;
 
     if (assigneeId !== null) {
       await this.ensureAssigneeInWorkspace(task.project.workspaceId, assigneeId);
     }
 
     const updated = await taskRepository.updateAssignee(id, assigneeId);
+
+    // Log activity
+    if (userId && previousAssigneeId !== assigneeId) {
+      await prisma.activityLog.create({
+        data: {
+          action: 'UPDATE',
+          entityType: 'TASK',
+          entityId: updated.id,
+          taskId: updated.id,
+          userId,
+          metadata: {
+            field: 'assignee',
+            oldValue: previousAssigneeId,
+            newValue: assigneeId,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
+
     return {
       id: updated.id,
       assignee: updated.assignee
@@ -312,6 +376,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       type: task.type,
       status: task.status,
       priority: task.priority,
+      startDate: task.startDate,
       dueDate: task.dueDate,
       estimatedHours: task.estimatedHours,
       loggedHours: task.loggedHours,
@@ -345,6 +410,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       type: task.type,
       status: task.status,
       priority: task.priority,
+      startDate: task.startDate,
       dueDate: task.dueDate,
       assignee: task.assignee
         ? {
@@ -392,7 +458,85 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
         },
         createdAt: attachment.createdAt,
       })),
+      activities: (task.activities || []).map((activity) => {
+        const meta = activity.metadata as { field?: string; oldValue?: unknown; newValue?: unknown; fileName?: string } | null;
+        return {
+          id: activity.id,
+          action: activity.action,
+          field: meta?.field ?? null,
+          oldValue: meta?.oldValue != null ? String(meta.oldValue) : null,
+          newValue: meta?.newValue != null ? String(meta.newValue) : null,
+          createdAt: activity.createdAt,
+          user: {
+            id: activity.user.id,
+            name: activity.user.name,
+            email: '',
+            avatar: activity.user.avatar,
+          },
+          metadata: meta,
+        };
+      }),
     };
+  }
+
+  private async logTaskActivity(
+    updated: Task,
+    previous: Task & { project: { workspaceId: number } },
+    userId: number,
+  ): Promise<void> {
+    try {
+      const changes: Record<string, { old: unknown; new: unknown }> = {};
+
+      if (updated.title !== previous.title) {
+        changes['title'] = { old: previous.title ?? null, new: updated.title ?? null };
+      }
+      if (updated.description !== previous.description) {
+        changes['description'] = { old: previous.description ?? null, new: updated.description ?? null };
+      }
+      if (updated.status !== previous.status) {
+        changes['status'] = { old: previous.status, new: updated.status };
+      }
+      if (updated.priority !== previous.priority) {
+        changes['priority'] = { old: previous.priority, new: updated.priority };
+      }
+      if (updated.dueDate?.getTime() !== previous.dueDate?.getTime()) {
+        changes['dueDate'] = {
+          old: previous.dueDate?.toISOString() ?? null,
+          new: updated.dueDate?.toISOString() ?? null,
+        };
+      }
+      if (updated.startDate?.getTime() !== previous.startDate?.getTime()) {
+        changes['startDate'] = {
+          old: previous.startDate?.toISOString() ?? null,
+          new: updated.startDate?.toISOString() ?? null,
+        };
+      }
+      if (updated.assigneeId !== previous.assigneeId) {
+        changes['assignee'] = {
+          old: previous.assigneeId ?? null,
+          new: updated.assigneeId ?? null,
+        };
+      }
+
+      for (const [field, change] of Object.entries(changes)) {
+        await prisma.activityLog.create({
+          data: {
+            action: 'UPDATE',
+            entityType: 'TASK',
+            entityId: updated.id,
+            taskId: updated.id,
+            userId,
+            metadata: {
+              field,
+              oldValue: change.old ?? null,
+              newValue: change.new ?? null,
+            } as Prisma.InputJsonValue,
+          },
+        });
+      }
+    } catch (err) {
+      logger.error('Failed to log task activity', err);
+    }
   }
 
   private encodeCursor(id: number): string {
