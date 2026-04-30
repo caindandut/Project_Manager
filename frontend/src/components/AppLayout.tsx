@@ -18,16 +18,14 @@ export default function AppLayout() {
 
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background">
+      <div className="h-screen flex flex-col overflow-hidden bg-background">
         <AppHeader onMenuClick={toggleSidebar} />
 
-        <div className="flex">
+        <div className="flex flex-1 min-h-0 pt-14">
           <AppSidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
 
-          <main className="flex-1 pt-14">
-            <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-              <Outlet />
-            </div>
+          <main className="flex-1 h-full overflow-auto">
+            <Outlet />
           </main>
         </div>
       </div>

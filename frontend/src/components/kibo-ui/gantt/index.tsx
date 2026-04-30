@@ -25,6 +25,7 @@ import {
   startOfDay,
   startOfMonth,
 } from "date-fns";
+import { vi } from "date-fns/locale";
 import { atom, useAtom } from "jotai";
 import throttle from "lodash.throttle";
 import { PlusIcon, TrashIcon } from "lucide-react";
@@ -172,9 +173,16 @@ const getAddRange = (range: Range) => {
 const getDateByMousePosition = (context: GanttContextProps, mouseX: number) => {
   const timelineStartDate = new Date(context.timelineData[0].year, 0, 1);
   const columnWidth = (context.columnWidth * context.zoom) / 100;
+
+  if (context.range === "daily") {
+    // In daily mode, each column = 1 day, snap to nearest column
+    const dayOffset = Math.round(mouseX / columnWidth);
+    return addDays(timelineStartDate, dayOffset);
+  }
+
   const offset = Math.floor(mouseX / columnWidth);
-  const daysIn = getsDaysIn(context.range);
   const addRange = getAddRange(context.range);
+  const daysIn = getsDaysIn(context.range);
   const month = addRange(timelineStartDate, offset);
   const daysInMonth = daysIn(month);
   const pixelsPerDay = Math.round(columnWidth / daysInMonth);
@@ -244,7 +252,8 @@ const getWidth = (
   if (context.range === "daily") {
     const delta = differenceIn(endAt, startAt);
 
-    return parsedColumnWidth * (delta ? delta : 1);
+    // +1 because a task spanning from day X to day Y occupies (Y-X+1) columns
+    return parsedColumnWidth * (delta ? delta + 1 : 1);
   }
 
   const daysInStartMonth = getDaysInMonth(startAt);
@@ -364,17 +373,18 @@ const DailyHeader: FC = () => {
             renderHeaderItem={(item: number) => (
               <div className="flex items-center justify-center gap-1">
                 <p>
-                  {format(addDays(new Date(year.year, index, 1), item), "d")}
+                  {format(addDays(new Date(year.year, index, 1), item), "d", { locale: vi })}
                 </p>
                 <p className="text-muted-foreground">
                   {format(
                     addDays(new Date(year.year, index, 1), item),
-                    "EEEEE"
+                    "EEEEE",
+                    { locale: vi }
                   )}
                 </p>
               </div>
             )}
-            title={format(new Date(year.year, index, 1), "MMMM yyyy")}
+            title={format(new Date(year.year, index, 1), "MMMM yyyy", { locale: vi })}
           />
           <GanttColumns
             columns={month.days}
@@ -397,7 +407,7 @@ const MonthlyHeader: FC = () => {
       <GanttContentHeader
         columns={year.quarters.flatMap((quarter) => quarter.months).length}
         renderHeaderItem={(item: number) => (
-          <p>{format(new Date(year.year, item, 1), "MMM")}</p>
+          <p>{format(new Date(year.year, item, 1), "MMM", { locale: vi })}</p>
         )}
         title={`${year.year}`}
       />
@@ -421,7 +431,7 @@ const QuarterlyHeader: FC = () => {
           columns={quarter.months.length}
           renderHeaderItem={(item: number) => (
             <p>
-              {format(new Date(year.year, quarterIndex * 3 + item, 1), "MMM")}
+              {format(new Date(year.year, quarterIndex * 3 + item, 1), "MMM", { locale: vi })}
             </p>
           )}
           title={`Q${quarterIndex + 1} ${year.year}`}
@@ -475,8 +485,8 @@ export const GanttSidebarItem: FC<GanttSidebarItemProps> = ({
       ? addDays(feature.endAt, 1)
       : feature.endAt;
   const duration = tempEndAt
-    ? formatDistance(feature.startAt, tempEndAt)
-    : `${formatDistance(feature.startAt, new Date())} so far`;
+    ? formatDistance(feature.startAt, tempEndAt, { locale: vi })
+    : `${formatDistance(feature.startAt, new Date(), { locale: vi })} đến nay`;
 
   const handleClick: MouseEventHandler<HTMLDivElement> = (event) => {
     if (event.target === event.currentTarget) {
@@ -533,8 +543,8 @@ export const GanttSidebarHeader: FC = () => (
     style={{ height: "var(--gantt-header-height)" }}
   >
     {/* <Checkbox className="shrink-0" /> */}
-    <p className="flex-1 truncate text-left">Issues</p>
-    <p className="shrink-0">Duration</p>
+    <p className="flex-1 truncate text-left">Mục công việc</p>
+    <p className="shrink-0">Thời lượng</p>
   </div>
 );
 
@@ -742,7 +752,7 @@ export const GanttCreateMarkerTrigger: FC<GanttCreateMarkerTriggerProps> = ({
           <PlusIcon className="text-muted-foreground" size={12} />
         </button>
         <div className="whitespace-nowrap rounded-full border border-border/50 bg-background/90 px-2 py-1 text-foreground text-xs backdrop-blur-lg">
-          {formatDate(date, "MMM dd, yyyy")}
+          {formatDate(date, "dd MMM, yyyy", { locale: vi })}
         </div>
       </div>
     </div>
@@ -772,8 +782,8 @@ export const GanttFeatureDragHelper: FC<GanttFeatureDragHelperProps> = ({
   return (
     <div
       className={cn(
-        "group -translate-y-1/2 !cursor-col-resize absolute top-1/2 z-[3] h-full w-6 rounded-md outline-none",
-        direction === "left" ? "-left-2.5" : "-right-2.5"
+        "group -translate-y-1/2 !cursor-col-resize absolute top-1/2 z-[3] h-full w-10 rounded-md outline-none",
+        direction === "left" ? "-left-4" : "-right-4"
       )}
       ref={setNodeRef}
       {...attributes}
@@ -781,7 +791,7 @@ export const GanttFeatureDragHelper: FC<GanttFeatureDragHelperProps> = ({
     >
       <div
         className={cn(
-          "-translate-y-1/2 absolute top-1/2 h-[80%] w-1 rounded-sm bg-muted-foreground opacity-0 transition-all",
+          "-translate-y-1/2 absolute top-1/2 h-[80%] w-1.5 rounded-sm bg-primary/70 opacity-0 transition-all",
           direction === "left" ? "left-2.5" : "right-2.5",
           direction === "left" ? "group-hover:left-0" : "group-hover:right-0",
           isPressed && (direction === "left" ? "left-0" : "right-0"),
@@ -796,7 +806,7 @@ export const GanttFeatureDragHelper: FC<GanttFeatureDragHelperProps> = ({
             isPressed && "block"
           )}
         >
-          {format(date, "MMM dd, yyyy")}
+          {format(date, "dd MMM, yyyy", { locale: vi })}
         </div>
       )}
     </div>
@@ -805,20 +815,36 @@ export const GanttFeatureDragHelper: FC<GanttFeatureDragHelperProps> = ({
 
 export type GanttFeatureItemCardProps = Pick<GanttFeature, "id"> & {
   children?: ReactNode;
+  onSelect?: (id: string) => void;
 };
 
 export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
   id,
   children,
+  onSelect,
 }) => {
   const [, setDragging] = useGanttDragging();
   const { attributes, listeners, setNodeRef } = useDraggable({ id });
   const isPressed = Boolean(attributes["aria-pressed"]);
+  const didDrag = useRef(false);
 
-  useEffect(() => setDragging(isPressed), [isPressed, setDragging]);
+  useEffect(() => {
+    setDragging(isPressed);
+    if (isPressed) didDrag.current = true;
+  }, [isPressed, setDragging]);
+
+  const handleClick = useCallback(() => {
+    if (!didDrag.current) {
+      onSelect?.(id);
+    }
+    didDrag.current = false;
+  }, [onSelect, id]);
 
   return (
-    <Card className="h-full w-full rounded-md bg-background p-2 text-xs shadow-sm">
+    <Card
+      className="h-full w-full rounded-md bg-background p-2 text-xs shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+      onClick={handleClick}
+    >
       <div
         className={cn(
           "flex h-full w-full items-center justify-between gap-2 text-left",
@@ -836,12 +862,14 @@ export const GanttFeatureItemCard: FC<GanttFeatureItemCardProps> = ({
 
 export type GanttFeatureItemProps = GanttFeature & {
   onMove?: (id: string, startDate: Date, endDate: Date | null) => void;
+  onSelect?: (id: string) => void;
   children?: ReactNode;
   className?: string;
 };
 
 export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
   onMove,
+  onSelect,
   children,
   className,
   ...feature
@@ -874,7 +902,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
 
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
-      distance: 10,
+      distance: 3,
     },
   });
 
@@ -955,7 +983,7 @@ export const GanttFeatureItem: FC<GanttFeatureItemProps> = ({
           onDragStart={handleItemDragStart}
           sensors={[mouseSensor]}
         >
-          <GanttFeatureItemCard id={feature.id}>
+          <GanttFeatureItemCard id={feature.id} onSelect={onSelect}>
             {children ?? (
               <p className="flex-1 truncate text-xs">{feature.name}</p>
             )}
@@ -1133,7 +1161,7 @@ export const GanttMarker: FC<
                             "group pointer-events-auto sticky top-0 flex select-auto flex-col flex-nowrap items-center justify-center whitespace-nowrap rounded-b-md bg-card px-2 py-1 text-foreground text-xs",
                             className
                           )} />}>{label}<span className="max-h-[0] overflow-hidden opacity-80 transition-all group-hover:max-h-[2rem]">
-                            {formatDate(date, "MMM dd, yyyy")}
+                            {formatDate(date, "dd MMM, yyyy", { locale: vi })}
                           </span></ContextMenuTrigger>
         <ContextMenuContent>
           {onRemove ? (
@@ -1142,7 +1170,7 @@ export const GanttMarker: FC<
               onClick={handleRemove}
             >
               <TrashIcon size={16} />
-              Remove marker
+              Xóa đánh dấu
             </ContextMenuItem>
           ) : null}
         </ContextMenuContent>
@@ -1177,8 +1205,8 @@ export const GanttProvider: FC<GanttProviderProps> = ({
   const [sidebarWidth, setSidebarWidth] = useState(0);
 
   const headerHeight = 60;
-  const rowHeight = 36;
-  let columnWidth = 50;
+  const rowHeight = 44;
+  let columnWidth = 80;
 
   if (range === "monthly") {
     columnWidth = 150;
@@ -1199,13 +1227,39 @@ export const GanttProvider: FC<GanttProviderProps> = ({
     [zoom, columnWidth, sidebarWidth]
   );
 
+  // Scroll to today on mount and when range changes
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollLeft =
-        scrollRef.current.scrollWidth / 2 - scrollRef.current.clientWidth / 2;
+    // Small delay to let the DOM update after range change
+    const timer = setTimeout(() => {
+      if (!scrollRef.current) return;
+
+      const today = new Date();
+      const startYear = timelineData[0]?.year ?? today.getFullYear() - 1;
+      const parsedColumnWidth = (columnWidth * zoom) / 100;
+
+      let todayOffset: number;
+      if (range === "daily") {
+        const timelineStart = new Date(startYear, 0, 1);
+        const daysSinceStart = Math.floor(
+          (today.getTime() - timelineStart.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        todayOffset = daysSinceStart * parsedColumnWidth;
+      } else {
+        const monthsSinceStart =
+          (today.getFullYear() - startYear) * 12 + today.getMonth();
+        todayOffset = monthsSinceStart * parsedColumnWidth;
+      }
+
+      // Position today at ~1/4 from the left so user can see past + future
+      scrollRef.current.scrollLeft = Math.max(
+        0,
+        todayOffset - scrollRef.current.clientWidth / 4
+      );
       setScrollX(scrollRef.current.scrollLeft);
-    }
-  }, [setScrollX]);
+    }, 50);
+
+    return () => clearTimeout(timer);
+  }, [setScrollX, range]);
 
   // Update sidebar width when DOM is ready
   useEffect(() => {
@@ -1410,7 +1464,7 @@ export type GanttTodayProps = {
 };
 
 export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
-  const label = "Today";
+  const label = "Hôm nay";
   const date = useMemo(() => new Date(), []);
   const gantt = useContext(GanttContext);
   const differenceIn = useMemo(
@@ -1453,7 +1507,7 @@ export const GanttToday: FC<GanttTodayProps> = ({ className }) => {
       >
         {label}
         <span className="max-h-[0] overflow-hidden opacity-80 transition-all group-hover:max-h-[2rem]">
-          {formatDate(date, "MMM dd, yyyy")}
+          {formatDate(date, "dd MMM, yyyy", { locale: vi })}
         </span>
       </div>
       <div className={cn("h-full w-px bg-card", className)} />

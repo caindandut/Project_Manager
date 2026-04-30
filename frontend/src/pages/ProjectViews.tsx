@@ -1,7 +1,6 @@
-import { List } from "lucide-react"
-
 import ProjectTaskListPage from "@/pages/ProjectTaskListPage"
 import { CalendarView } from "@/components/calendar/CalendarView"
+import { GanttView } from "@/components/gantt/GanttView"
 
 export function ProjectListPage() {
   return <ProjectTaskListPage />
@@ -12,34 +11,10 @@ export function ProjectKanbanPage() {
 }
 
 export function ProjectGanttPage() {
-  return <ProjectViewContent view="gantt" />
+  return <GanttView />
 }
 
 export function ProjectCalendarPage() {
   return <CalendarView />
-}
-
-function ProjectViewContent({ view }: { view: "gantt" }) {
-  const views = {
-    gantt: { icon: List, title: "Gantt", description: "Xem công việc dạng biểu đồ Gantt" },
-  }
-
-  const config = views[view]
-  const Icon = config.icon
-
-  return (
-    <div className="space-y-6 p-6">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-          <Icon className="h-5 w-5 text-primary" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold">{config.title}</h1>
-          <p className="text-sm text-muted-foreground">{config.description}</p>
-        </div>
-      </div>
-      <p className="text-muted-foreground">Tính năng đang phát triển.</p>
-    </div>
-  )
 }
 
