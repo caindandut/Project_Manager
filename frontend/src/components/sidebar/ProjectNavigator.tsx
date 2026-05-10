@@ -13,9 +13,11 @@ import {
   Plus,
   Settings,
   TrendingUp,
+  Users,
 } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useProjectsQuery } from "@/hooks/useProjects"
 import { cn } from "@/lib/utils"
 
@@ -33,6 +35,33 @@ interface SidebarItemProps {
   isCollapsed?: boolean
   children?: React.ReactNode
   onClick?: () => void
+}
+
+function CollapsedTooltip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Tooltip delayDuration={150}>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent
+        side="right"
+        sideOffset={8}
+        className="rounded-md border border-white/10 bg-zinc-950 px-2 py-1 text-xs font-medium text-white shadow-lg"
+      >
+        {label}
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+function SectionTitle({ children, isCollapsed }: { children?: React.ReactNode; isCollapsed?: boolean }) {
+  if (isCollapsed) {
+    return <div className="my-2 h-px bg-sidebar-border" />
+  }
+
+  return (
+    <div className="px-3 pb-1 pt-3 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </div>
+  )
 }
 
 export function SidebarItem({
@@ -57,21 +86,21 @@ export function SidebarItem({
   }
 
   if (isCollapsed) {
-    return (
+    const link = (
       <Link
         to={hasChildren ? "#" : href}
         onClick={handleClick}
         className={cn(
           "flex items-center justify-center rounded-md py-2 transition-colors cursor-pointer",
-          isActive
-            ? "bg-primary/20 text-primary"
-            : "text-sidebar-foreground hover:bg-sidebar-accent"
+          isActive ? "bg-primary/20 text-primary" : "text-sidebar-foreground hover:bg-sidebar-accent"
         )}
-        title={label}
+        aria-label={label}
       >
         <Icon className="h-4 w-4 shrink-0" />
       </Link>
     )
+
+    return <CollapsedTooltip label={label}>{link}</CollapsedTooltip>
   }
 
   const content = (
@@ -80,9 +109,7 @@ export function SidebarItem({
       onClick={handleClick}
       className={cn(
         "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
-        isActive
-          ? "bg-primary/20 text-primary"
-          : "text-sidebar-foreground hover:bg-sidebar-accent",
+        isActive ? "bg-primary/20 text-primary" : "text-sidebar-foreground hover:bg-sidebar-accent",
         indent && "ml-5",
         hasChildren && "justify-between"
       )}
@@ -107,11 +134,7 @@ export function SidebarItem({
     return (
       <div>
         {content}
-        {expanded && (
-          <div className="mt-1 space-y-0.5">
-            {children}
-          </div>
-        )}
+        {expanded && <div className="mt-1 space-y-0.5">{children}</div>}
       </div>
     )
   }
@@ -129,20 +152,20 @@ interface ProjectViewItemProps {
 
 export function ProjectViewItem({ label, href, icon: Icon, isActive, isCollapsed }: ProjectViewItemProps) {
   if (isCollapsed) {
-    return (
+    const link = (
       <Link
         to={href}
         className={cn(
           "flex items-center justify-center rounded-md py-1.5 transition-colors",
-          isActive
-            ? "bg-primary/20 text-primary"
-            : "text-muted-foreground hover:bg-sidebar-accent"
+          isActive ? "bg-primary/20 text-primary" : "text-muted-foreground hover:bg-sidebar-accent"
         )}
-        title={label}
+        aria-label={label}
       >
         <Icon className="h-3.5 w-3.5 shrink-0" />
       </Link>
     )
+
+    return <CollapsedTooltip label={label}>{link}</CollapsedTooltip>
   }
 
   return (
@@ -190,18 +213,20 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
   if (isCollapsed) {
     return (
       <div className="space-y-1">
-        <Link
-          to={projectPath}
-          className={cn(
-            "flex items-center justify-center rounded-md py-2 transition-colors",
-            isActive
-              ? "bg-sidebar-accent text-sidebar-foreground"
-              : "text-muted-foreground hover:bg-sidebar-accent"
-          )}
-          title={project.name}
-        >
-          <Folder className="h-4 w-4 shrink-0" />
-        </Link>
+        <CollapsedTooltip label={project.name}>
+          <Link
+            to={projectPath}
+            className={cn(
+              "flex items-center justify-center rounded-md py-2 transition-colors",
+              isActive
+                ? "bg-sidebar-accent text-sidebar-foreground"
+                : "text-muted-foreground hover:bg-sidebar-accent"
+            )}
+            aria-label={project.name}
+          >
+            <Folder className="h-4 w-4 shrink-0" />
+          </Link>
+        </CollapsedTooltip>
         {isExpanded && (
           <div className="space-y-0.5">
             {viewItems.map((item) => (
@@ -268,16 +293,14 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
   if (isCollapsed) {
     return (
       <nav className="space-y-1 px-1">
-        {/* Home */}
+        <SectionTitle isCollapsed />
         <SidebarItem
           icon={Home}
-          label="Trang chủ"
+          label="Tổng quan"
           href={basePath}
           isActive={location.pathname === basePath && !isInProject}
           isCollapsed={true}
         />
-
-        {/* My Tasks */}
         <SidebarItem
           icon={CheckSquare}
           label="Công việc của tôi"
@@ -285,45 +308,63 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
           isActive={location.pathname === `${basePath}/my-tasks`}
           isCollapsed={true}
         />
+        <SidebarItem
+          icon={Folder}
+          label="Dự án"
+          href={`${basePath}/projects`}
+          isActive={location.pathname === `${basePath}/projects`}
+          isCollapsed={true}
+        />
 
-        {/* Projects folder icon */}
-        <div className="flex items-center justify-center py-2">
-          <Folder className="h-4 w-4 text-muted-foreground" />
-        </div>
+        <SectionTitle isCollapsed />
+        <SidebarItem
+          icon={Users}
+          label="Thành viên"
+          href={`${basePath}/members`}
+          isActive={location.pathname === `${basePath}/members`}
+          isCollapsed={true}
+        />
+        <SidebarItem
+          icon={Settings}
+          label="Cài đặt workspace"
+          href={`${basePath}/settings`}
+          isActive={location.pathname.includes("/settings")}
+          isCollapsed={true}
+        />
       </nav>
     )
   }
 
   return (
     <nav className="space-y-1">
-      {/* Home */}
+      <SectionTitle>Dự án</SectionTitle>
       <SidebarItem
         icon={Home}
-        label="Trang chủ"
+        label="Tổng quan"
         href={basePath}
         isActive={location.pathname === basePath && !isInProject}
       />
-
-      {/* My Tasks */}
       <SidebarItem
         icon={CheckSquare}
         label="Công việc của tôi"
         href={`${basePath}/my-tasks`}
         isActive={location.pathname === `${basePath}/my-tasks`}
       />
+      <SidebarItem
+        icon={Folder}
+        label="Dự án"
+        href={`${basePath}/projects`}
+        isActive={location.pathname === `${basePath}/projects`}
+      />
 
-      {/* Projects section */}
-      <div className="pt-2">
-        <div className="px-3 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Folder className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Dự án
-            </span>
-          </div>
+      <div className="pt-1">
+        <div className="flex items-center justify-between px-3 py-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Danh sách project
+          </span>
           <Link
             to={`/workspaces/${workspaceId}/projects/new`}
-            className="flex items-center justify-center rounded-md p-1 text-muted-foreground hover:bg-sidebar-accent hover:text-primary transition-colors"
+            className="flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-primary"
             title="Tạo dự án"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -331,14 +372,14 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
         </div>
 
         {projectsQuery.isLoading ? (
-          <div className="px-2 space-y-1">
+          <div className="space-y-1 px-2">
             {[1, 2].map((i) => (
               <Skeleton key={i} className="h-9 w-full rounded-md" />
             ))}
           </div>
         ) : projects.length === 0 ? (
           <div className="px-3 py-4 text-center">
-            <p className="text-xs text-muted-foreground mb-2">Chưa có dự án nào</p>
+            <p className="mb-2 text-xs text-muted-foreground">Chưa có dự án nào</p>
             <Link
               to={`/workspaces/${workspaceId}/projects/new`}
               className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
@@ -365,22 +406,20 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
         )}
       </div>
 
-      {/* Settings section - Only show when expanded */}
-      <div className="pt-2 border-t border-sidebar-border mt-2">
-        <div className="px-3 py-2 flex items-center gap-2">
-          <Settings className="h-4 w-4 text-muted-foreground" />
-          <Link
-            to={`/workspaces/${workspaceId}/settings`}
-            className={cn(
-              "flex-1 text-xs font-semibold uppercase tracking-wide transition-colors",
-              location.pathname.includes("/settings")
-                ? "text-primary"
-                : "text-muted-foreground hover:text-sidebar-foreground"
-            )}
-          >
-            Cài đặt
-          </Link>
-        </div>
+      <div className="mt-2 border-t border-sidebar-border pt-1">
+        <SectionTitle>Cài đặt</SectionTitle>
+        <SidebarItem
+          icon={Users}
+          label="Thành viên"
+          href={`${basePath}/members`}
+          isActive={location.pathname === `${basePath}/members`}
+        />
+        <SidebarItem
+          icon={Settings}
+          label="Cài đặt workspace"
+          href={`${basePath}/settings`}
+          isActive={location.pathname.includes("/settings")}
+        />
       </div>
     </nav>
   )

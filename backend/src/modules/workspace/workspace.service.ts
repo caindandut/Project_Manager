@@ -77,9 +77,11 @@ export class WorkspaceService extends BaseService<
 
   async getWorkspaceDetail(workspaceId: string | number, userId: number) {
     const workspace = await this.findWorkspaceOrThrow(workspaceId);
-    const [member, stats] = await Promise.all([
+    const [member, stats, recentTasks, recentActivities] = await Promise.all([
       workspaceRepository.findMemberByUserId(workspace.id, userId),
       workspaceRepository.getStats(workspace.id),
+      workspaceRepository.getRecentTasks(workspace.id),
+      workspaceRepository.getRecentActivities(workspace.id),
     ]);
 
     if (!member) {
@@ -93,6 +95,25 @@ export class WorkspaceService extends BaseService<
       ...this.formatWorkspace(workspace),
       role: member.role,
       stats,
+      recentTasks: recentTasks.map((task) => ({
+        id: task.id,
+        title: task.title,
+        status: task.status,
+        updatedAt: task.updatedAt,
+        createdAt: task.createdAt,
+        project: task.project,
+        assignee: task.assignee,
+      })),
+      recentActivities: recentActivities.map((activity) => ({
+        id: activity.id,
+        action: activity.action,
+        entityType: activity.entityType,
+        entityId: activity.entityId,
+        metadata: activity.metadata,
+        createdAt: activity.createdAt,
+        user: activity.user,
+        task: activity.task,
+      })),
     };
   }
 

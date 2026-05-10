@@ -12,6 +12,7 @@ const STATUS_COLORS: Record<string, string> = {
   "Đang làm": "#3b82f6",
   "Xem xét": "#f97316",
   "Hoàn thành": "#22c55e",
+  "Đã hủy": "#ef4444",
 }
 
 const PRIORITY_COLORS: Record<string, string> = {
@@ -42,10 +43,12 @@ export default function OverviewCharts({ stats, isLoading }: OverviewChartsProps
     { name: "Đang làm", value: stats.inProgressTasks || 0, color: STATUS_COLORS["Đang làm"] },
     { name: "Xem xét", value: stats.reviewTasks || 0, color: STATUS_COLORS["Xem xét"] },
     { name: "Hoàn thành", value: stats.doneTasks || 0, color: STATUS_COLORS["Hoàn thành"] },
+    { name: "Đã hủy", value: stats.cancelledTasks || 0, color: STATUS_COLORS["Đã hủy"] },
   ].filter((d) => d.value > 0) : []
 
-  const totalTasks = stats?.totalTasks || 0
-  const completionRate = totalTasks > 0 ? Math.round((stats?.doneTasks || 0) / totalTasks * 100) : 0
+  // Exclude cancelled tasks from completion rate denominator for meaningful progress tracking
+  const activeTasks = (stats?.totalTasks || 0) - (stats?.cancelledTasks || 0)
+  const completionRate = activeTasks > 0 ? Math.round((stats?.doneTasks || 0) / activeTasks * 100) : 0
 
   // Priority data for horizontal bar chart
   const priorityData = stats ? [

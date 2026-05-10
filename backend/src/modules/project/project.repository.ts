@@ -19,6 +19,7 @@ export interface ProjectStats {
   inProgressTasks: number;
   reviewTasks: number;
   doneTasks: number;
+  cancelledTasks: number;
   overdueTasks: number;
   memberCount: number;
   subtaskCount: number;
@@ -225,6 +226,7 @@ export class ProjectRepository extends BaseRepository<
       inProgressTasks: countByStatus.get(TaskStatus.IN_PROGRESS) || 0,
       reviewTasks: countByStatus.get(TaskStatus.REVIEW) || 0,
       doneTasks: countByStatus.get(TaskStatus.DONE) || 0,
+      cancelledTasks: countByStatus.get(TaskStatus.CANCELLED) || 0,
       overdueTasks,
       memberCount,
       subtaskCount,

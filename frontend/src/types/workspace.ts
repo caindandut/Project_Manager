@@ -19,20 +19,53 @@ export interface WorkspaceStats {
   memberCount: number
   projectCount: number
   taskCount: number
-  todoCount?: number
-  inProgressCount?: number
-  doneCount?: number
+  todoCount: number
+  inProgressCount: number
+  doneCount: number
 }
 
 export interface RecentTask {
   id: number
   title: string
   status: string
+  project?: {
+    id: number
+    name: string
+    key: string
+  } | null
   assignee?: {
+    id?: number
     name: string | null
     email: string
+    avatar?: string | null
   } | null
+  createdAt?: string
   updatedAt?: string
+}
+
+export interface RecentActivity {
+  id: number
+  action: string
+  entityType: string
+  entityId: number
+  metadata?: Record<string, unknown> | null
+  createdAt: string
+  user: {
+    id: number
+    name: string | null
+    email: string
+    avatar: string | null
+  }
+  task?: {
+    id: number
+    title: string
+    status: string
+    project?: {
+      id: number
+      name: string
+      key: string
+    } | null
+  } | null
 }
 
 export interface WorkspaceDetail {
@@ -46,6 +79,7 @@ export interface WorkspaceDetail {
   updatedAt: string
   stats: WorkspaceStats
   recentTasks?: RecentTask[]
+  recentActivities?: RecentActivity[]
 }
 
 export interface WorkspaceMemberUser {

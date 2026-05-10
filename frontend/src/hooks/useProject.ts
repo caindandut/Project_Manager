@@ -20,9 +20,15 @@ export const useUpdateProjectMutation = (workspaceId: string | number, projectId
   return useMutation({
     mutationFn: (payload: UpdateProjectPayload) => updateProject(workspaceId, projectId, payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: projectQueryKeys.detail(workspaceId, projectId),
-      })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectQueryKeys.detail(workspaceId, projectId),
+        }),
+        // Also invalidate the projects list so the sidebar updates
+        queryClient.invalidateQueries({
+          queryKey: ["projects", String(workspaceId)],
+        }),
+      ])
     },
   })
 }

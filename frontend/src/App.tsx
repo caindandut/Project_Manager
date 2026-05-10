@@ -18,6 +18,8 @@ import RegisterPage from '@/pages/Register';
 import SettingsPage from '@/pages/Settings';
 import WorkspaceDashboard from '@/pages/WorkspaceDashboard';
 import WorkspaceInvitationPage from '@/pages/WorkspaceInvitation';
+import WorkspaceMembersPage from '@/pages/WorkspaceMembers';
+import WorkspaceProjectsPage from '@/pages/WorkspaceProjects';
 import WorkspaceSettingsPage from '@/pages/WorkspaceSettings';
 import WorkspacesPage from '@/pages/Workspaces';
 import MyTasksPage from '@/pages/MyTasks';
@@ -86,9 +88,9 @@ function App() {
             {/* Workspace routes */}
             <Route path="/workspaces/:workspaceId" element={<WorkspaceDashboard />} />
             <Route path="/workspaces/:workspaceId/my-tasks" element={<MyTasksPage />} />
-            <Route path="/workspaces/:workspaceId/projects" element={<WorkspacesPage />} />
+            <Route path="/workspaces/:workspaceId/projects" element={<WorkspaceProjectsPage />} />
             <Route path="/workspaces/:workspaceId/projects/new" element={<CreateProjectPage />} />
-            <Route path="/workspaces/:workspaceId/members" element={<WorkspacesPage />} />
+            <Route path="/workspaces/:workspaceId/members" element={<WorkspaceMembersPage />} />
             <Route path="/workspaces/:workspaceId/calendar" element={<WorkspacesPage />} />
             <Route path="/workspaces/:workspaceId/settings" element={<WorkspaceSettingsPage />} />
             

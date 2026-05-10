@@ -64,6 +64,7 @@ export interface ProjectStats {
   inProgressTasks: number
   reviewTasks: number
   doneTasks: number
+  cancelledTasks: number
   overdueTasks: number
   memberCount: number
   subtaskCount: number

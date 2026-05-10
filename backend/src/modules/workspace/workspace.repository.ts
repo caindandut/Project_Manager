@@ -24,6 +24,9 @@ export interface WorkspaceStats {
   memberCount: number;
   projectCount: number;
   taskCount: number;
+  todoCount: number;
+  inProgressCount: number;
+  doneCount: number;
 }
 
 export class WorkspaceRepository extends BaseRepository<
@@ -216,7 +219,12 @@ export class WorkspaceRepository extends BaseRepository<
   }
 
   async getStats(workspaceId: number): Promise<WorkspaceStats> {
-    const [memberCount, projectCount, taskCount] = await Promise.all([
+    const taskWhere: Prisma.TaskWhereInput = {
+      deletedAt: null,
+      project: { workspaceId, deletedAt: null },
+    };
+
+    const [memberCount, projectCount, taskCount, statusCounts] = await Promise.all([
       prisma.workspaceMember.count({
         where: { workspaceId, deletedAt: null },
       }),
@@ -224,14 +232,80 @@ export class WorkspaceRepository extends BaseRepository<
         where: { workspaceId, deletedAt: null },
       }),
       prisma.task.count({
-        where: {
-          deletedAt: null,
-          project: { workspaceId, deletedAt: null },
-        },
+        where: taskWhere,
+      }),
+      prisma.task.groupBy({
+        by: ['status'],
+        where: taskWhere,
+        _count: { _all: true },
       }),
     ]);
 
-    return { memberCount, projectCount, taskCount };
+    const getCount = (status: string) =>
+      statusCounts.find((item) => item.status === status)?._count._all ?? 0;
+
+    return {
+      memberCount,
+      projectCount,
+      taskCount,
+      todoCount: getCount('TODO'),
+      inProgressCount: getCount('IN_PROGRESS'),
+      doneCount: getCount('DONE'),
+    };
+  }
+
+  async getRecentTasks(workspaceId: number, take = 8) {
+    return prisma.task.findMany({
+      where: {
+        deletedAt: null,
+        project: { workspaceId, deletedAt: null },
+      },
+      include: {
+        project: {
+          select: { id: true, name: true, key: true },
+        },
+        assignee: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take,
+    });
+  }
+
+  async getRecentActivities(workspaceId: number, take = 8) {
+    return prisma.activityLog.findMany({
+      where: {
+        OR: [
+          {
+            task: {
+              project: { workspaceId, deletedAt: null },
+            },
+          },
+          {
+            entityType: 'WORKSPACE',
+            entityId: workspaceId,
+          },
+        ],
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, avatar: true },
+        },
+        task: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            project: {
+              select: { id: true, name: true, key: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take,
+    });
   }
 
   async findBySlug(slug: string): Promise<Workspace | null> {
