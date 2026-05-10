@@ -10,6 +10,7 @@ import { GoogleButton } from '@/components/auth/GoogleButton'
 import { AuthDivider } from '@/components/auth/AuthDivider'
 import { useAuth } from '@/hooks/useAuth'
 import { toVietnameseErrorMessage } from '@/lib/error-messages'
+import { getLastWorkspaceSlug } from '@/stores/authStore'
 
 type LoginStep = 'email' | 'password'
 
@@ -22,7 +23,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loginSuccessShown, setLoginSuccessShown] = useState(false)
-  const redirectTo = (location.state as { from?: string } | null)?.from || '/workspaces'
+  const lastSlug = getLastWorkspaceSlug()
+  const defaultRedirect = lastSlug ? `/workspaces/${lastSlug}` : '/workspaces'
+  const redirectTo = (location.state as { from?: string } | null)?.from || defaultRedirect
 
   useEffect(() => {
     document.title = 'Đăng nhập | Project Manager'

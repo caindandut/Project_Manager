@@ -12,7 +12,7 @@ export function GoogleButton({ onClick, isPending = false, label = 'Đăng nhậ
     <Button
       type="button"
       variant="outline"
-      className="relative h-10 w-full gap-2 border-input bg-background text-foreground hover:bg-accent hover:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50"
+      className="relative h-10 w-full gap-2 border-input bg-background text-foreground hover:bg-accent hover:text-foreground dark:border-input dark:bg-card dark:hover:bg-muted/80"
       onClick={onClick}
       disabled={isPending}
     >

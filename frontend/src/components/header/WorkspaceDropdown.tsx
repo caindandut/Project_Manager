@@ -43,24 +43,24 @@ export default function WorkspaceDropdown() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex h-9 items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors hover:bg-[#EBECF0]"
+          className="flex h-9 items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
         >
           {currentWorkspaceQuery.isLoading ? (
             <Skeleton className="h-8 w-8 rounded" />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-[#0052CC] text-white text-sm font-semibold">
+            <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground text-sm font-semibold">
               {currentWorkspace ? getInitials(currentWorkspace.name) : "?"}
             </div>
           )}
 
           <span className={cn(
-            "max-w-[180px] truncate text-[#172B4D]",
+            "max-w-[180px] truncate text-foreground",
             !currentWorkspace && "text-muted-foreground"
           )}>
             {currentWorkspace?.name || "Chọn workspace"}
           </span>
 
-          <ChevronDown className="h-4 w-4 text-[#5E6C84]" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
         </button>
       </DropdownMenuTrigger>
 
@@ -71,13 +71,13 @@ export default function WorkspaceDropdown() {
             <div className="px-3 py-3">
               <div className="flex items-start gap-3">
                 <Avatar className="h-10 w-10 rounded">
-                  <AvatarFallback className="rounded bg-[#0052CC] text-white text-sm font-semibold">
+                  <AvatarFallback className="rounded bg-primary text-primary-foreground text-sm font-semibold">
                     {getInitials(currentWorkspace.name)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-[#172B4D] truncate">{currentWorkspace.name}</p>
-                  <p className="text-xs text-[#5E6C84] mt-0.5">
+                  <p className="font-semibold text-sm text-foreground truncate">{currentWorkspace.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
                     {currentWorkspace.stats?.projectCount || 0} dự án
                   </p>
                 </div>
@@ -89,7 +89,7 @@ export default function WorkspaceDropdown() {
 
         {/* Workspace list */}
         <div className="p-1">
-          <p className="px-2 py-1.5 text-xs font-semibold text-[#5E6C84] uppercase tracking-wide">
+          <p className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
             Các workspace khác
           </p>
           {workspacesQuery.isLoading ? (
@@ -107,12 +107,12 @@ export default function WorkspaceDropdown() {
                     to={`/workspaces/${ws.slug}`}
                     className="flex items-center gap-3 cursor-pointer rounded-md mx-1"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded bg-[#DFE1E6] text-[#172B4D] text-xs font-semibold">
+                    <div className="flex h-8 w-8 items-center justify-center rounded bg-muted text-foreground text-xs font-semibold">
                       {getInitials(ws.name)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-[#172B4D] truncate">{ws.name}</p>
-                      <p className="text-xs text-[#5E6C84]">
+                      <p className="font-medium text-sm text-foreground truncate">{ws.name}</p>
+                      <p className="text-xs text-muted-foreground">
                         {ws.projectCount} dự án
                       </p>
                     </div>
@@ -128,10 +128,10 @@ export default function WorkspaceDropdown() {
         <DropdownMenuItem asChild>
           <Link
             to="/workspaces/create"
-            className="flex items-center gap-3 cursor-pointer rounded-md mx-1 text-[#0052CC]"
+            className="flex items-center gap-3 cursor-pointer rounded-md mx-1 text-primary"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded border-2 border-dashed border-[#0052CC]/30 bg-[#DEEBFF]">
-              <Plus className="h-4 w-4 text-[#0052CC]" />
+            <div className="flex h-8 w-8 items-center justify-center rounded border-2 border-dashed border-primary/30 bg-primary/10">
+              <Plus className="h-4 w-4 text-primary" />
             </div>
             <span className="font-medium text-sm">Tạo workspace mới</span>
           </Link>
@@ -146,8 +146,8 @@ export default function WorkspaceDropdown() {
                 to={`/workspaces/${workspaceSlug}/settings`}
                 className="flex items-center gap-3 cursor-pointer rounded-md mx-1"
               >
-                <Settings className="h-4 w-4 text-[#5E6C84]" />
-                <span className="text-sm text-[#172B4D]">Cài đặt workspace</span>
+                <Settings className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm text-foreground">Cài đặt workspace</span>
               </Link>
             </DropdownMenuItem>
           </>

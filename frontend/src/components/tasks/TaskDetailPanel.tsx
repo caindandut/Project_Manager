@@ -57,11 +57,11 @@ interface TaskDetailPanelProps {
 
 function PriorityBadge({ priority }: { priority: string }) {
   const styles: Record<string, string> = {
-    HIGHEST: "bg-red-100 text-red-700 border-red-200",
-    HIGH: "bg-red-50 text-red-600 border-red-100",
-    MEDIUM: "bg-yellow-50 text-yellow-600 border-yellow-100",
-    LOW: "bg-gray-100 text-gray-600 border-gray-200",
-    LOWEST: "bg-gray-50 text-gray-400 border-gray-100",
+    HIGHEST: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/70",
+    HIGH: "bg-red-50 text-red-600 border-red-100 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-900/70",
+    MEDIUM: "bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-950/35 dark:text-yellow-300 dark:border-yellow-900/70",
+    LOW: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700",
+    LOWEST: "bg-gray-50 text-gray-400 border-gray-100 dark:bg-slate-800/45 dark:text-slate-400 dark:border-slate-700",
   }
   return (
     <Badge
@@ -75,11 +75,11 @@ function PriorityBadge({ priority }: { priority: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    TODO: "bg-gray-100 text-gray-600 border-gray-200",
-    IN_PROGRESS: "bg-blue-50 text-blue-600 border-blue-100",
-    REVIEW: "bg-yellow-50 text-yellow-600 border-yellow-100",
-    DONE: "bg-green-50 text-green-600 border-green-100",
-    CANCELLED: "bg-red-50 text-red-400 border-red-100",
+    TODO: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700",
+    IN_PROGRESS: "bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/70",
+    REVIEW: "bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-950/35 dark:text-yellow-300 dark:border-yellow-900/70",
+    DONE: "bg-green-50 text-green-600 border-green-100 dark:bg-green-950/40 dark:text-green-300 dark:border-green-900/70",
+    CANCELLED: "bg-red-50 text-red-400 border-red-100 dark:bg-red-950/35 dark:text-red-300 dark:border-red-900/70",
   }
   return (
     <Badge
@@ -312,10 +312,10 @@ export default function TaskDetailPanel({
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/30" onClick={onClose} />
+      <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/70" onClick={onClose} />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 h-full w-full max-w-[520px] bg-background border-l border-border shadow-xl flex flex-col overflow-hidden animate-slide-in-from-right duration-300">
+      <div className="fixed right-0 top-0 z-50 h-full w-full max-w-[520px] bg-card border-l border-border shadow-xl flex flex-col overflow-hidden animate-slide-in-from-right duration-300">
         {isLoading || !task ? (
           <div className="flex-1 flex items-center justify-center">
             <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -347,7 +347,7 @@ export default function TaskDetailPanel({
                 </div>
                 {editingTitle ? (
                   <input
-                    className="text-lg font-semibold w-full bg-transparent border-b-2 border-[#0052CC] outline-none pb-0.5"
+                    className="text-lg font-semibold w-full bg-transparent border-b-2 border-primary outline-none pb-0.5"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     onBlur={() => setEditingTitle(false)}
@@ -362,7 +362,7 @@ export default function TaskDetailPanel({
                   />
                 ) : (
                   <h2
-                    className="text-lg font-semibold cursor-pointer hover:text-[#0052CC] transition-colors truncate"
+                    className="text-lg font-semibold cursor-pointer hover:text-primary transition-colors truncate"
                     onClick={() => setEditingTitle(true)}
                     title="Click để chỉnh sửa"
                   >
@@ -396,11 +396,11 @@ export default function TaskDetailPanel({
               {/* Description */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-[#5E6C84] uppercase">Mô tả</Label>
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase">Mô tả</Label>
                   {editingDesc && (
                     <Button
                       size="sm"
-                      className="h-7 text-xs bg-[#0052CC] hover:bg-[#0043A6]"
+                      className="h-7 text-xs bg-primary hover:bg-primary/90"
                       onClick={handleSaveDescription}
                       disabled={updateMutation.isPending}
                     >
@@ -437,7 +437,7 @@ export default function TaskDetailPanel({
 
               {/* Properties */}
               <div className="space-y-3">
-                <Label className="text-xs font-semibold text-[#5E6C84] uppercase">Thuộc tính</Label>
+                <Label className="text-xs font-semibold text-muted-foreground uppercase">Thuộc tính</Label>
 
                 <div className="grid grid-cols-2 gap-3">
                   {/* Status */}
@@ -533,7 +533,7 @@ export default function TaskDetailPanel({
                       type="date"
                       value={task.startDate ? String(task.startDate).split("T")[0] : ""}
                       onChange={(e) => handleStartDateChange(e.target.value)}
-                      className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring dark:bg-card"
                     />
                   </div>
 
@@ -544,7 +544,7 @@ export default function TaskDetailPanel({
                       type="date"
                       value={task.dueDate ? String(task.dueDate).split("T")[0] : ""}
                       onChange={(e) => handleDueDateChange(e.target.value)}
-                      className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring dark:bg-card"
                     />
                   </div>
                 </div>
@@ -557,7 +557,7 @@ export default function TaskDetailPanel({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-muted-foreground" />
-                    <Label className="text-xs font-semibold text-[#5E6C84] uppercase">
+                    <Label className="text-xs font-semibold text-muted-foreground uppercase">
                       Công việc con
                     </Label>
                     <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
@@ -591,8 +591,8 @@ export default function TaskDetailPanel({
                         className={cn(
                           "h-4 w-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors",
                           st.status === "DONE"
-                            ? "bg-[#0052CC] border-[#0052CC]"
-                            : "border-muted-foreground/40 hover:border-[#0052CC]",
+                            ? "bg-primary border-primary"
+                            : "border-muted-foreground/40 hover:border-primary",
                         )}
                         onClick={(e) => {
                           e.stopPropagation()
@@ -628,7 +628,7 @@ export default function TaskDetailPanel({
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <Label className="text-xs font-semibold text-[#5E6C84] uppercase">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase">
                     Bình luận
                   </Label>
                   <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
@@ -686,7 +686,7 @@ export default function TaskDetailPanel({
                 </div>
                 <Button
                   size="sm"
-                  className="bg-[#0052CC] hover:bg-[#0043A6]"
+                  className="bg-primary hover:bg-primary/90"
                   onClick={handleAddComment}
                   disabled={!comment.trim() || createCommentMutation.isPending}
                 >
@@ -703,7 +703,7 @@ export default function TaskDetailPanel({
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Paperclip className="h-4 w-4 text-muted-foreground" />
-                  <Label className="text-xs font-semibold text-[#5E6C84] uppercase">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase">
                     Tệp đính kèm
                   </Label>
                   <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
@@ -715,7 +715,7 @@ export default function TaskDetailPanel({
                   {task.attachments?.map((att) => (
                     <div
                       key={att.id}
-                      className="flex items-center gap-2 p-2 rounded-md border border-border hover:border-[#0052CC] group transition-colors cursor-pointer"
+                      className="flex items-center gap-2 p-2 rounded-md border border-border hover:border-primary group transition-colors cursor-pointer"
                       onClick={async () => {
                         try {
                           await downloadAttachment(att.id, att.fileName)
@@ -775,7 +775,7 @@ export default function TaskDetailPanel({
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <Label className="text-xs font-semibold text-[#5E6C84] uppercase">
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase">
                     Lịch sử hoạt động
                   </Label>
                   <Badge variant="secondary" className="text-[10px] h-4 px-1.5">

@@ -108,9 +108,9 @@ export function KanbanBoard({
         {STATUS_ORDER.map((status) => (
           <div
             key={status}
-            className="w-72 flex-shrink-0 bg-[#FAFBFC] rounded-lg border border-border overflow-hidden"
+            className="w-72 flex-shrink-0 bg-card rounded-lg border border-border overflow-hidden"
           >
-            <div className="px-3 py-2.5 bg-[#F4F5F7]">
+            <div className="px-3 py-2.5 bg-muted/60">
               <Skeleton className="h-4 w-24" />
             </div>
             <div className="p-2 space-y-2">

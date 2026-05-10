@@ -22,10 +22,13 @@ import WorkspaceSettingsPage from '@/pages/WorkspaceSettings';
 import WorkspacesPage from '@/pages/Workspaces';
 import MyTasksPage from '@/pages/MyTasks';
 import CreateProjectPage from '@/pages/CreateProjectPage';
+import { getLastWorkspaceSlug } from '@/stores/authStore';
 
 function RootRedirect() {
   const { isAuthenticated, isBootstrappingAuth } = useAuth();
-  const workspacesQuery = useWorkspacesQuery(1, 1);
+  const lastSlug = getLastWorkspaceSlug();
+  // Only fetch workspaces if no saved slug (fallback)
+  const workspacesQuery = useWorkspacesQuery(1, 1, { enabled: !lastSlug });
 
   if (isBootstrappingAuth) {
     return (
@@ -42,7 +45,12 @@ function RootRedirect() {
     return <Navigate to="/login" replace />;
   }
 
-  // If authenticated and workspaces loaded, redirect to first workspace
+  // If we have a saved last workspace, redirect there directly
+  if (lastSlug) {
+    return <Navigate to={`/workspaces/${lastSlug}`} replace />;
+  }
+
+  // Fallback: redirect to first workspace from API
   if (workspacesQuery.isSuccess && workspacesQuery.data?.data.length) {
     return <Navigate to={`/workspaces/${workspacesQuery.data.data[0].slug}`} replace />;
   }

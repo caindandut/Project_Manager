@@ -20,29 +20,29 @@ interface KanbanColumnProps {
 
 const STATUS_STYLES: Record<TaskStatus, { bg: string; dot: string; header: string }> = {
   TODO: {
-    bg: "bg-gray-50",
+    bg: "bg-muted/25",
     dot: "bg-gray-400",
-    header: "bg-[#F4F5F7]",
+    header: "bg-muted/60",
   },
   IN_PROGRESS: {
-    bg: "bg-blue-50/50",
+    bg: "bg-blue-50/50 dark:bg-blue-950/10",
     dot: "bg-blue-500",
-    header: "bg-[#E3F2FD]",
+    header: "bg-blue-50 dark:bg-blue-950/25",
   },
   REVIEW: {
-    bg: "bg-yellow-50/50",
+    bg: "bg-yellow-50/50 dark:bg-yellow-950/10",
     dot: "bg-yellow-500",
-    header: "bg-[#FFF8E1]",
+    header: "bg-yellow-50 dark:bg-yellow-950/25",
   },
   DONE: {
-    bg: "bg-green-50/50",
+    bg: "bg-green-50/50 dark:bg-green-950/10",
     dot: "bg-green-500",
-    header: "bg-[#E8F5E9]",
+    header: "bg-green-50 dark:bg-green-950/25",
   },
   CANCELLED: {
-    bg: "bg-red-50/30",
+    bg: "bg-red-50/30 dark:bg-red-950/10",
     dot: "bg-red-400",
-    header: "bg-[#FFEBEE]",
+    header: "bg-red-50 dark:bg-red-950/25",
   },
 }
 
@@ -63,17 +63,17 @@ export function KanbanColumn({
   return (
     <div
       className={cn(
-        "flex flex-col w-72 flex-shrink-0 rounded-lg border border-border bg-[#FAFBFC] overflow-hidden",
-        isOver && "ring-2 ring-[#0052CC]/30 bg-blue-50/30"
+        "flex flex-col w-72 flex-shrink-0 rounded-lg border border-border bg-card overflow-hidden",
+        isOver && "ring-2 ring-primary/30 bg-primary/10"
       )}
     >
       {/* Column Header */}
       <div className={cn("px-3 py-2.5 flex items-center gap-2", styles.header)}>
         <span className={cn("w-2 h-2 rounded-full", styles.dot)} />
-        <span className="text-sm font-semibold text-[#172B4D]">
+        <span className="text-sm font-semibold text-foreground">
           {TASK_STATUS_LABELS[status]}
         </span>
-        <span className="ml-auto text-xs text-muted-foreground/70 bg-white/70 px-1.5 py-0.5 rounded-full font-medium">
+        <span className="ml-auto text-xs text-muted-foreground bg-background/70 px-1.5 py-0.5 rounded-full font-medium">
           {tasks.length}
         </span>
       </div>

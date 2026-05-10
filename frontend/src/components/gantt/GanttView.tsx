@@ -1,8 +1,7 @@
 import { useState, useMemo, useCallback } from "react"
 import { useParams } from "react-router-dom"
 import { toast } from "sonner"
-import { addDays, formatDistance } from "date-fns"
-import { vi } from "date-fns/locale"
+import { addDays } from "date-fns"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
@@ -43,7 +42,7 @@ const STATUS_MAP: Record<TaskStatusType, GanttStatus> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function taskToGanttFeature(task: Task, projectKey: string): GanttFeature | null {
+function taskToGanttFeature(task: Task): GanttFeature | null {
   const startDate = task.startDate ? new Date(task.startDate) : null
   const dueDate = task.dueDate ? new Date(task.dueDate) : null
 
@@ -104,9 +103,9 @@ export function GanttView() {
   // Convert tasks to GanttFeatures
   const ganttFeatures = useMemo(() => {
     return tasksWithDates
-      .map((t) => taskToGanttFeature(t, projectKey))
+      .map((t) => taskToGanttFeature(t))
       .filter(Boolean) as GanttFeature[]
-  }, [tasksWithDates, projectKey])
+  }, [tasksWithDates])
 
   // Count tasks without dates
   const tasksWithoutDates = useMemo(
@@ -250,7 +249,7 @@ export function GanttView() {
             {/* Sidebar */}
             <GanttSidebar>
               {tasksWithDates.map((task) => {
-                const feature = taskToGanttFeature(task, projectKey)
+                const feature = taskToGanttFeature(task)
                 if (!feature) return null
                 return (
                   <GanttSidebarItem
@@ -273,7 +272,7 @@ export function GanttView() {
               <GanttFeatureList>
                 <GanttFeatureListGroup>
                   {tasksWithDates.map((task) => {
-                    const feature = taskToGanttFeature(task, projectKey)
+                    const feature = taskToGanttFeature(task)
                     if (!feature) return null
                     return (
                       <GanttFeatureItem

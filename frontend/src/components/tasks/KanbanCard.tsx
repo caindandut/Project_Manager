@@ -19,11 +19,11 @@ interface KanbanCardProps {
 
 function PriorityBadge({ priority }: { priority: string }) {
   const styles: Record<string, string> = {
-    HIGHEST: "bg-red-100 text-red-700 border-red-200",
-    HIGH: "bg-red-50 text-red-600 border-red-100",
-    MEDIUM: "bg-yellow-50 text-yellow-600 border-yellow-100",
-    LOW: "bg-gray-50 text-gray-500 border-gray-100",
-    LOWEST: "bg-gray-50 text-gray-400 border-gray-100",
+    HIGHEST: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/70",
+    HIGH: "bg-red-50 text-red-600 border-red-100 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-900/70",
+    MEDIUM: "bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-950/35 dark:text-yellow-300 dark:border-yellow-900/70",
+    LOW: "bg-gray-50 text-gray-500 border-gray-100 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700",
+    LOWEST: "bg-gray-50 text-gray-400 border-gray-100 dark:bg-slate-800/45 dark:text-slate-400 dark:border-slate-700",
   }
   return (
     <Badge
@@ -64,8 +64,8 @@ export function KanbanCard({ task, projectKey, onClick, isDragging }: KanbanCard
       {...attributes}
       {...listeners}
       className={cn(
-        "group bg-white rounded-lg border border-border p-3 cursor-grab active:cursor-grabbing select-none",
-        "hover:border-[#0052CC] hover:shadow-sm transition-all duration-200",
+        "group bg-card rounded-lg border border-border p-3 cursor-grab active:cursor-grabbing select-none",
+        "hover:border-primary hover:shadow-sm transition-all duration-200",
         dragging && "opacity-50 shadow-lg rotate-2 scale-105 z-50 cursor-grabbing"
       )}
       onClick={onClick}

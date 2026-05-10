@@ -28,8 +28,8 @@ function NavItem({ icon: Icon, label, tab, isActive, isCollapsed }: NavItemProps
       className={cn(
         "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
         isActive
-          ? "bg-[#DEEBFF] text-[#0052CC]"
-          : "text-[#172B4D] hover:bg-[#EBECF0]",
+          ? "bg-primary/20 text-primary"
+          : "text-sidebar-foreground hover:bg-sidebar-accent",
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -41,7 +41,7 @@ function NavItem({ icon: Icon, label, tab, isActive, isCollapsed }: NavItemProps
     return (
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="right" className="font-normal bg-[#172B4D] text-white">
+        <TooltipContent side="right" className="font-normal bg-popover text-popover-foreground">
           {label}
         </TooltipContent>
       </Tooltip>
@@ -64,7 +64,7 @@ export default function WorkspaceSettingsLayout({ children, activeTab }: Workspa
         <div className="flex h-full flex-col p-4">
           {/* Section header */}
           <div className="px-3 py-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-[#5E6C84]">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Cài đặt
             </span>
           </div>

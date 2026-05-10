@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { Link, useSearchParams } from "react-router-dom"
+import { Link, Navigate, useSearchParams } from "react-router-dom"
 import { ArrowRight, Clock3, FolderKanban, LayoutGrid, Users } from "lucide-react"
 
 import CreateWorkspaceDialog from "@/components/workspace/CreateWorkspaceDialog"
@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useWorkspacesQuery } from "@/hooks/useWorkspaces"
 import { cn } from "@/lib/utils"
 import { getWorkspaceRoleLabel, workspaceRoleVariantMap } from "@/lib/workspace-role"
+import { getLastWorkspaceSlug } from "@/stores/authStore"
 
 const WORKSPACES_PER_PAGE = 6
 
@@ -24,6 +25,15 @@ export default function WorkspacesPage() {
   useEffect(() => {
     document.title = "Workspace | Project Manager"
   }, [])
+
+  // Auto-redirect to the last workspace or first available workspace
+  const lastSlug = getLastWorkspaceSlug()
+  if (lastSlug) {
+    return <Navigate to={`/workspaces/${lastSlug}`} replace />
+  }
+  if (!workspacesQuery.isLoading && workspaces.length > 0) {
+    return <Navigate to={`/workspaces/${workspaces[0].slug}`} replace />
+  }
 
   const updatePage = (nextPage: number) => {
     const nextParams = new URLSearchParams(searchParams)

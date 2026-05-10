@@ -8,6 +8,7 @@ import attachmentRoutes from '../modules/attachment/attachment.routes';
 import notificationRoutes from '../modules/notification/notification.routes';
 import reportRoutes from '../modules/report/report.routes';
 import myTasksRoutes from '../modules/my-tasks/my-tasks.routes';
+import projectMemberRoutes from '../modules/project-member/project-member.routes';
 
 const router = Router();
 
@@ -34,6 +35,9 @@ router.use('/notifications', notificationRoutes);
 
 // Report routes
 router.use('/reports', reportRoutes);
+
+// Project member routes (nested under projects)
+router.use('/projects', projectMemberRoutes);
 
 // My tasks routes
 router.use('/my-tasks', myTasksRoutes);

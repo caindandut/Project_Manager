@@ -26,6 +26,7 @@ interface AuthState {
 
 const ACCESS_TOKEN_KEY = 'accessToken';
 const WORKSPACE_SLUG_KEY = 'onboardingWorkspaceSlug';
+const LAST_WORKSPACE_SLUG_KEY = 'lastWorkspaceSlug';
 
 const getInitialAccessToken = (): string | null => {
   if (typeof window === 'undefined') {
@@ -65,6 +66,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     window.localStorage.removeItem(ACCESS_TOKEN_KEY);
     window.localStorage.removeItem(WORKSPACE_SLUG_KEY);
+    window.localStorage.removeItem(LAST_WORKSPACE_SLUG_KEY);
 
     set({
       user: null,
@@ -121,4 +123,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
-export { ACCESS_TOKEN_KEY, WORKSPACE_SLUG_KEY, getInitialOnboardingSlug };
+export const getLastWorkspaceSlug = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(LAST_WORKSPACE_SLUG_KEY);
+};
+
+export const setLastWorkspaceSlug = (slug: string): void => {
+  if (typeof window !== 'undefined') {
+    window.localStorage.setItem(LAST_WORKSPACE_SLUG_KEY, slug);
+  }
+};
+
+export { ACCESS_TOKEN_KEY, WORKSPACE_SLUG_KEY, LAST_WORKSPACE_SLUG_KEY, getInitialOnboardingSlug };

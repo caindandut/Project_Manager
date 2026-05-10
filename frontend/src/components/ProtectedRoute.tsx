@@ -2,6 +2,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { LoaderCircle } from 'lucide-react';
 
 import { useAuth } from '@/hooks/useAuth';
+import { getLastWorkspaceSlug } from '@/stores/authStore';
 
 const ONBOARDING_ROUTES = ['/onboarding'];
 
@@ -31,7 +32,8 @@ export default function ProtectedRoute() {
     }
     // If user is fully authenticated, redirect away from onboarding
     if (isAuthenticated) {
-      return <Navigate to="/workspaces" replace />;
+      const lastSlug = getLastWorkspaceSlug();
+      return <Navigate to={lastSlug ? `/workspaces/${lastSlug}` : '/workspaces'} replace />;
     }
     // Not authenticated, redirect to login
     return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;

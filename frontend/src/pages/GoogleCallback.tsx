@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import apiClient, { normalizeApiError, unwrapResponse } from '@/lib/api-client';
 import ThemeToggle from '@/components/ThemeToggle';
 import { toVietnameseErrorMessage } from '@/lib/error-messages';
-import { useAuthStore, type AuthUser } from '@/stores/authStore';
+import { useAuthStore, getLastWorkspaceSlug, type AuthUser } from '@/stores/authStore';
 import type { ApiResponse } from '@/types/api';
 import { LoaderCircle } from 'lucide-react';
 
@@ -70,7 +70,8 @@ export default function GoogleCallbackPage() {
           navigate('/onboarding/profile', { replace: true });
         } else {
           toast.success('Đăng nhập Google thành công.');
-          navigate('/workspaces', { replace: true });
+          const lastSlug = getLastWorkspaceSlug();
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/workspaces', { replace: true });
         }
       } catch (error) {
         logout();

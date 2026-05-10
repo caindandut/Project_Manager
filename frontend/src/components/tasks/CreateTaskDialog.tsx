@@ -328,7 +328,7 @@ export default function CreateTaskDialog({
           <Button
             onClick={() => handleSubmit(true)}
             disabled={isSubmitting}
-            className="h-10 bg-[#0052CC] hover:bg-[#0043A6] gap-1.5"
+            className="h-10 bg-primary hover:bg-primary/90 gap-1.5"
           >
             {isSubmitting ? (
               <>

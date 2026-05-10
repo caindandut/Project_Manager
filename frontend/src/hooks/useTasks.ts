@@ -23,7 +23,7 @@ import type {
 
 export const useTasksQuery = (projectId: number, filters?: TaskFilter) =>
   useQuery({
-    queryKey: taskQueryKeys.list(projectId, filters),
+    queryKey: taskQueryKeys.list(projectId, filters as Record<string, unknown> | undefined),
     queryFn: () => getTasks(projectId, filters),
   })
 

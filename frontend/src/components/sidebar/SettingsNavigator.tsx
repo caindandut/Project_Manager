@@ -27,8 +27,8 @@ function NavItem({ icon: Icon, label, href, isActive, isCollapsed }: NavItemProp
       className={cn(
         "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors",
         isActive
-          ? "bg-[#DEEBFF] text-[#0052CC]"
-          : "text-[#172B4D] hover:bg-[#EBECF0]"
+          ? "bg-primary/20 text-primary"
+          : "text-sidebar-foreground hover:bg-sidebar-accent"
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />
@@ -40,7 +40,7 @@ function NavItem({ icon: Icon, label, href, isActive, isCollapsed }: NavItemProp
     return (
       <Tooltip delayDuration={0}>
         <TooltipTrigger asChild>{content}</TooltipTrigger>
-        <TooltipContent side="right" className="font-normal bg-[#172B4D] text-white">
+        <TooltipContent side="right" className="font-normal bg-popover text-popover-foreground">
           {label}
         </TooltipContent>
       </Tooltip>
@@ -72,8 +72,8 @@ export function SettingsNavigator({ isCollapsed }: SettingsNavigatorProps) {
           className={cn(
             "flex items-center justify-center rounded-md py-2 transition-colors",
             isMembersActive
-              ? "bg-[#DEEBFF] text-[#0052CC]"
-              : "text-[#172B4D] hover:bg-[#EBECF0]"
+              ? "bg-primary/20 text-primary"
+              : "text-sidebar-foreground hover:bg-sidebar-accent"
           )}
           title="Thành viên"
         >
@@ -86,8 +86,8 @@ export function SettingsNavigator({ isCollapsed }: SettingsNavigatorProps) {
           className={cn(
             "flex items-center justify-center rounded-md py-2 transition-colors",
             isSettingsActive
-              ? "bg-[#DEEBFF] text-[#0052CC]"
-              : "text-[#172B4D] hover:bg-[#EBECF0]"
+              ? "bg-primary/20 text-primary"
+              : "text-sidebar-foreground hover:bg-sidebar-accent"
           )}
           title="Cài đặt"
         >
@@ -101,7 +101,7 @@ export function SettingsNavigator({ isCollapsed }: SettingsNavigatorProps) {
     <div className="space-y-1">
       {/* Section Header */}
       <div className="px-3 py-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-[#5E6C84]">
+        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           Cài đặt
         </span>
       </div>

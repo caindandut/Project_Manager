@@ -1,7 +1,9 @@
 export interface Project {
   id: number
   name: string
+  key?: string
   description?: string
+  color?: string
   slug: string
   workspaceId: number
   createdAt: string

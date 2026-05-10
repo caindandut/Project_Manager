@@ -77,7 +77,7 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
   const handleStatusChange = async (taskId: number, newStatus: string) => {
     try {
       const task = tasks.find(t => t.id === taskId)
-      const oldStatusLabel = task ? TASK_STATUS_LABELS[task.status as keyof typeof TASK_STATUS_LABELS] : task?.status
+      const oldStatusLabel = task ? TASK_STATUS_LABELS[task.status as keyof typeof TASK_STATUS_LABELS] : "không xác định"
       const newStatusLabel = TASK_STATUS_LABELS[newStatus as keyof typeof TASK_STATUS_LABELS] || newStatus
 
       await updateTaskStatusApi(taskId, newStatus)

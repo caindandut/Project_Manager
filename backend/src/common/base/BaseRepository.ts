@@ -55,6 +55,11 @@ const MODEL_ALLOWED_FIELDS: Record<string, Set<string>> = {
     'userId', 'taskId',
     'createdAt', 'updatedAt', 'deletedAt',
   ]),
+  ProjectMember: new Set([
+    'id', 'role', 'joinedAt',
+    'projectId', 'userId',
+    'createdAt', 'updatedAt', 'deletedAt',
+  ]),
 };
 
 // ---------------------------------------------------------------------------

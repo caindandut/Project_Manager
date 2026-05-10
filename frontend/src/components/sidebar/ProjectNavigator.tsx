@@ -64,8 +64,8 @@ export function SidebarItem({
         className={cn(
           "flex items-center justify-center rounded-md py-2 transition-colors cursor-pointer",
           isActive
-            ? "bg-[#DEEBFF] text-[#0052CC]"
-            : "text-[#172B4D] hover:bg-[#EBECF0]"
+            ? "bg-primary/20 text-primary"
+            : "text-sidebar-foreground hover:bg-sidebar-accent"
         )}
         title={label}
       >
@@ -81,8 +81,8 @@ export function SidebarItem({
       className={cn(
         "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors cursor-pointer",
         isActive
-          ? "bg-[#DEEBFF] text-[#0052CC]"
-          : "text-[#172B4D] hover:bg-[#EBECF0]",
+          ? "bg-primary/20 text-primary"
+          : "text-sidebar-foreground hover:bg-sidebar-accent",
         indent && "ml-5",
         hasChildren && "justify-between"
       )}
@@ -94,9 +94,9 @@ export function SidebarItem({
       {hasChildren && (
         <span className="ml-auto">
           {expanded ? (
-            <ChevronDown className="h-4 w-4 text-[#5E6C84]" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <ChevronRight className="h-4 w-4 text-[#5E6C84]" />
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           )}
         </span>
       )}
@@ -135,8 +135,8 @@ export function ProjectViewItem({ label, href, icon: Icon, isActive, isCollapsed
         className={cn(
           "flex items-center justify-center rounded-md py-1.5 transition-colors",
           isActive
-            ? "bg-[#DEEBFF] text-[#0052CC]"
-            : "text-[#5E6C84] hover:bg-[#EBECF0]"
+            ? "bg-primary/20 text-primary"
+            : "text-muted-foreground hover:bg-sidebar-accent"
         )}
         title={label}
       >
@@ -150,10 +150,10 @@ export function ProjectViewItem({ label, href, icon: Icon, isActive, isCollapsed
       to={href}
       className={cn(
         "flex items-center gap-2 rounded-md py-1.5 text-sm transition-colors",
-        "px-3 ml-4 border-l border-[#DFE1E6] pl-4",
+        "px-3 ml-4 border-l border-sidebar-border pl-4",
         isActive
-          ? "bg-[#DEEBFF] text-[#0052CC] font-medium"
-          : "text-[#5E6C84] hover:text-[#172B4D] hover:bg-[#EBECF0]"
+          ? "bg-primary/20 text-primary font-medium"
+          : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent"
       )}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -195,8 +195,8 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
           className={cn(
             "flex items-center justify-center rounded-md py-2 transition-colors",
             isActive
-              ? "bg-[#EBECF0] text-[#172B4D]"
-              : "text-[#5E6C84] hover:bg-[#EBECF0]"
+              ? "bg-sidebar-accent text-sidebar-foreground"
+              : "text-muted-foreground hover:bg-sidebar-accent"
           )}
           title={project.name}
         >
@@ -226,8 +226,8 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
         className={cn(
           "flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors",
           isActive || isExpanded
-            ? "bg-[#EBECF0] text-[#172B4D]"
-            : "text-[#5E6C84] hover:bg-[#EBECF0] hover:text-[#172B4D]"
+            ? "bg-sidebar-accent text-sidebar-foreground"
+            : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
         )}
         onClick={() => setIsExpanded(!isExpanded)}
       >
@@ -288,7 +288,7 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
 
         {/* Projects folder icon */}
         <div className="flex items-center justify-center py-2">
-          <Folder className="h-4 w-4 text-[#5E6C84]" />
+          <Folder className="h-4 w-4 text-muted-foreground" />
         </div>
       </nav>
     )
@@ -316,14 +316,14 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
       <div className="pt-2">
         <div className="px-3 py-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Folder className="h-4 w-4 text-[#5E6C84]" />
-            <span className="text-xs font-semibold uppercase tracking-wide text-[#5E6C84]">
+            <Folder className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Dự án
             </span>
           </div>
           <Link
             to={`/workspaces/${workspaceId}/projects/new`}
-            className="flex items-center justify-center rounded-md p-1 text-[#5E6C84] hover:bg-[#EBECF0] hover:text-[#0052CC] transition-colors"
+            className="flex items-center justify-center rounded-md p-1 text-muted-foreground hover:bg-sidebar-accent hover:text-primary transition-colors"
             title="Tạo dự án"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -338,10 +338,10 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
           </div>
         ) : projects.length === 0 ? (
           <div className="px-3 py-4 text-center">
-            <p className="text-xs text-[#5E6C84] mb-2">Chưa có dự án nào</p>
+            <p className="text-xs text-muted-foreground mb-2">Chưa có dự án nào</p>
             <Link
               to={`/workspaces/${workspaceId}/projects/new`}
-              className="inline-flex items-center gap-1 text-xs text-[#0052CC] hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
               <Plus className="h-3 w-3" />
               Tạo dự án mới
@@ -366,16 +366,16 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
       </div>
 
       {/* Settings section - Only show when expanded */}
-      <div className="pt-2 border-t border-[#EBECF0] mt-2">
+      <div className="pt-2 border-t border-sidebar-border mt-2">
         <div className="px-3 py-2 flex items-center gap-2">
-          <Settings className="h-4 w-4 text-[#5E6C84]" />
+          <Settings className="h-4 w-4 text-muted-foreground" />
           <Link
             to={`/workspaces/${workspaceId}/settings`}
             className={cn(
               "flex-1 text-xs font-semibold uppercase tracking-wide transition-colors",
               location.pathname.includes("/settings")
-                ? "text-[#0052CC]"
-                : "text-[#5E6C84] hover:text-[#172B4D]"
+                ? "text-primary"
+                : "text-muted-foreground hover:text-sidebar-foreground"
             )}
           >
             Cài đặt

@@ -166,6 +166,23 @@ export const validationRules = {
       .withMessage('Role must be ADMIN, MEMBER, or GUEST'),
   ],
 
+  // ProjectMember validations
+  addProjectMember: [
+    body('userId')
+      .isInt({ min: 1 })
+      .withMessage('userId must be a positive integer'),
+    body('role')
+      .optional()
+      .isIn(['MEMBER', 'GUEST'])
+      .withMessage('Role must be MEMBER or GUEST'),
+  ],
+
+  updateProjectMemberRole: [
+    body('role')
+      .isIn(['MEMBER', 'GUEST'])
+      .withMessage('Role must be MEMBER or GUEST'),
+  ],
+
   // Project validations
   createProject: [
     body('name')

@@ -93,7 +93,7 @@ export default function CreateWorkspacePage() {
             <Button
               type="submit"
               disabled={createWorkspaceMutation.isPending}
-              className="h-9 bg-[#0052CC] hover:bg-[#0043A6]"
+              className="h-9 bg-primary hover:bg-primary/90"
             >
               {createWorkspaceMutation.isPending ? (
                 <>

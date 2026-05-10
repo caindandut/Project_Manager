@@ -119,7 +119,7 @@ export default function CreateProjectPage() {
             <Button
               type="submit"
               disabled={createProjectMutation.isPending}
-              className="h-9 bg-[#0052CC] hover:bg-[#0043A6]"
+              className="h-9 bg-primary hover:bg-primary/90"
             >
               {createProjectMutation.isPending ? (
                 <>

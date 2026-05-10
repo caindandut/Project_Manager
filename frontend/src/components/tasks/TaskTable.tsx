@@ -55,11 +55,11 @@ interface TaskTableProps {
 
 function PriorityBadge({ priority }: { priority: string }) {
   const styles: Record<string, string> = {
-    HIGHEST: "bg-red-100 text-red-700 border-red-200",
-    HIGH: "bg-red-50 text-red-600 border-red-100",
-    MEDIUM: "bg-yellow-50 text-yellow-600 border-yellow-100",
-    LOW: "bg-gray-50 text-gray-500 border-gray-100",
-    LOWEST: "bg-gray-50 text-gray-400 border-gray-100",
+    HIGHEST: "bg-red-100 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-900/70",
+    HIGH: "bg-red-50 text-red-600 border-red-100 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-900/70",
+    MEDIUM: "bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-950/35 dark:text-yellow-300 dark:border-yellow-900/70",
+    LOW: "bg-gray-50 text-gray-500 border-gray-100 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700",
+    LOWEST: "bg-gray-50 text-gray-400 border-gray-100 dark:bg-slate-800/45 dark:text-slate-400 dark:border-slate-700",
   }
   return (
     <Badge variant="outline" className={cn("text-xs font-normal", styles[priority] || "")}>
@@ -70,11 +70,11 @@ function PriorityBadge({ priority }: { priority: string }) {
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    TODO: "bg-gray-100 text-gray-600 border-gray-200",
-    IN_PROGRESS: "bg-blue-50 text-blue-600 border-blue-100",
-    REVIEW: "bg-yellow-50 text-yellow-600 border-yellow-100",
-    DONE: "bg-green-50 text-green-600 border-green-100",
-    CANCELLED: "bg-red-50 text-red-400 border-red-100",
+    TODO: "bg-gray-100 text-gray-600 border-gray-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700",
+    IN_PROGRESS: "bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/70",
+    REVIEW: "bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-950/35 dark:text-yellow-300 dark:border-yellow-900/70",
+    DONE: "bg-green-50 text-green-600 border-green-100 dark:bg-green-950/40 dark:text-green-300 dark:border-green-900/70",
+    CANCELLED: "bg-red-50 text-red-400 border-red-100 dark:bg-red-950/35 dark:text-red-300 dark:border-red-900/70",
   }
   return (
     <Badge variant="outline" className={cn("text-xs font-normal", styles[status] || "")}>
@@ -203,9 +203,9 @@ function TaskRow({
 function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField?: SortField; sortDir?: SortDir }) {
   if (sortField !== field) return <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
   return sortDir === "asc" ? (
-    <ArrowUp className="h-3.5 w-3.5 text-[#0052CC]" />
+    <ArrowUp className="h-3.5 w-3.5 text-primary" />
   ) : (
-    <ArrowDown className="h-3.5 w-3.5 text-[#0052CC]" />
+    <ArrowDown className="h-3.5 w-3.5 text-primary" />
   )
 }
 
@@ -254,16 +254,16 @@ function StatusGroup({
     <div className="border border-border rounded-lg overflow-hidden">
       {/* Group header */}
       <button
-        className="w-full flex items-center gap-2 px-4 py-2.5 bg-[#F4F5F7] hover:bg-[#EBECF0] transition-colors text-left"
+        className="w-full flex items-center gap-2 px-4 py-2.5 bg-muted/60 hover:bg-muted transition-colors text-left"
         onClick={() => setExpanded((v) => !v)}
       >
         {expanded ? (
-          <ChevronDown className="h-4 w-4 text-[#5E6C84]" />
+          <ChevronDown className="h-4 w-4 text-muted-foreground" />
         ) : (
-          <ChevronRight className="h-4 w-4 text-[#5E6C84]" />
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         )}
         <StatusBadge status={status} />
-        <span className="text-xs text-[#5E6C84] font-normal">
+        <span className="text-xs text-muted-foreground font-normal">
           {tasks.length} công việc
         </span>
       </button>
@@ -498,15 +498,15 @@ export function TaskTable({
     <div className="border border-border rounded-lg overflow-x-auto">
       <table className="w-full min-w-[700px]">
         <thead>
-          <tr className="bg-[#F4F5F7] border-b border-border">
+          <tr className="bg-muted/50 border-b border-border">
             {visibleCols.map((col) => {
               const sortConfig = sortableHeaders.find((h) => h.key === col.key)
               return (
                 <th
                   key={col.key}
                   className={cn(
-                    "px-3 py-2.5 text-left text-xs font-semibold text-[#5E6C84] uppercase tracking-wide whitespace-nowrap",
-                    sortConfig ? "cursor-pointer hover:text-[#172B4D] select-none" : "",
+                    "px-3 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap",
+                    sortConfig ? "cursor-pointer hover:text-foreground select-none" : "",
                   )}
                   onClick={sortConfig ? () => handleHeaderClick(sortConfig.key) : undefined}
                 >

@@ -29,10 +29,11 @@ export const workspaceQueryKeys = {
   invitations: (workspaceId: string | number) => ["workspace-invitations", String(workspaceId)] as const,
 }
 
-export const useWorkspacesQuery = (page: number, limit: number) =>
+export const useWorkspacesQuery = (page: number, limit: number, options?: { enabled?: boolean }) =>
   useQuery({
     queryKey: workspaceQueryKeys.list(page, limit),
     queryFn: () => getWorkspaces(page, limit),
+    enabled: options?.enabled ?? true,
   })
 
 export const useWorkspaceDetailQuery = (workspaceId: string | number) =>

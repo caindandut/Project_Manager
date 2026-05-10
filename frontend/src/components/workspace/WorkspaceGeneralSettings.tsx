@@ -138,8 +138,8 @@ export default function WorkspaceGeneralSettings() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#DEEBFF]">
-          <Settings className="h-5 w-5 text-[#0052CC]" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+          <Settings className="h-5 w-5 text-primary" />
         </div>
         <div>
           <h1 className="text-2xl font-semibold">Cài đặt chung</h1>
@@ -163,7 +163,7 @@ export default function WorkspaceGeneralSettings() {
                     </AvatarFallback>
                   </Avatar>
                 ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#DEEBFF] text-base font-semibold text-[#0052CC]">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-base font-semibold text-primary">
                     {getInitials(workspace?.name || "WS")}
                   </div>
                 )}

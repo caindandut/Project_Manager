@@ -4,7 +4,9 @@ import { BaseService } from '../../common/base/BaseService';
 import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
-import { PaginationMeta, ListOptions } from '../../types/interfaces';
+import { PaginationMeta, ListOptions, WorkspaceRole } from '../../types/interfaces';
+import { projectMemberRepository } from '../project-member/project-member.repository';
+import { prisma } from '../../config';
 
 export interface CreateProjectInput {
   name: string;
@@ -54,6 +56,9 @@ export class ProjectService extends BaseService<
       owner: { connect: { id: data.ownerId } },
     });
 
+    // Auto-add project creator as ADMIN member
+    await projectMemberRepository.addMember(project.id, data.ownerId, 'ADMIN');
+
     const created = await projectRepository.findByIdWithDetails(project.id, data.workspaceId);
     if (!created) {
       throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
@@ -67,11 +72,32 @@ export class ProjectService extends BaseService<
     };
   }
 
-  async getByIdInWorkspace(projectId: number, workspaceId: number) {
+  async getByIdInWorkspace(
+    projectId: number,
+    workspaceId: number,
+    userId: number,
+    workspaceRole: WorkspaceRole,
+  ) {
     const project = await this.findProjectWithDetailsOrThrow(projectId, workspaceId);
-    const [stats, recentTasks] = await Promise.all([
+
+    // RBAC: workspace OWNER/ADMIN can see any project;
+    // others must be a ProjectMember
+    if (workspaceRole !== 'OWNER' && workspaceRole !== 'ADMIN') {
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId, userId, deletedAt: null },
+      });
+      if (!membership) {
+        throw ApiError.forbidden(
+          ErrorCode.FORBIDDEN_ACCESS,
+          'You are not a member of this project',
+        );
+      }
+    }
+
+    const [stats, recentTasks, recentActivities] = await Promise.all([
       projectRepository.getStats(project.id),
       projectRepository.getRecentTasks(project.id),
+      projectRepository.getRecentActivities(project.id),
     ]);
 
     return {
@@ -79,11 +105,21 @@ export class ProjectService extends BaseService<
       owner: this.formatOwner(project),
       stats,
       recentTasks,
+      recentActivities,
     };
   }
 
-  async getAllInWorkspace(workspaceId: number, options?: ProjectListOptions) {
-    const result = await projectRepository.findAllInWorkspace(workspaceId, options);
+  async getAllInWorkspace(
+    workspaceId: number,
+    userId: number,
+    workspaceRole: WorkspaceRole,
+    options?: ProjectListOptions,
+  ) {
+    // Workspace OWNER/ADMIN see all projects; MEMBER/GUEST see only their projects
+    const result =
+      workspaceRole === 'OWNER' || workspaceRole === 'ADMIN'
+        ? await projectRepository.findAllInWorkspace(workspaceId, options)
+        : await projectRepository.findAllInWorkspaceForUser(workspaceId, userId, options);
 
     return {
       data: result.data.map((project) => this.formatProjectListItem(project)),

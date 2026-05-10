@@ -2,11 +2,12 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useParams, useLocation, Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { setLastWorkspaceSlug } from "@/stores/authStore"
 import { ProjectNavigator } from "./ProjectNavigator"
 
 interface AppSidebarProps {
@@ -19,6 +20,13 @@ export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) 
   const location = useLocation()
   const workspaceSlug = params.workspaceId || ""
   const [isCollapsed, setIsCollapsed] = useState(false)
+
+  // Persist the last visited workspace slug to localStorage
+  useEffect(() => {
+    if (workspaceSlug) {
+      setLastWorkspaceSlug(workspaceSlug)
+    }
+  }, [workspaceSlug])
 
   const toggleCollapsed = () => {
     setIsCollapsed((prev) => !prev)
@@ -39,7 +47,7 @@ export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) 
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-14 z-[60] flex h-[calc(100vh-3.5rem)] flex-col border-r bg-[#F4F5F7] transition-all duration-200",
+          "fixed left-0 top-14 z-[60] flex h-[calc(100vh-3.5rem)] flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200",
           isOpen ? "translate-x-0" : "-translate-x-full",
           isCollapsed ? "w-[60px]" : "w-[240px]",
           "lg:relative lg:top-0 lg:z-40 lg:h-screen lg:translate-x-0"
@@ -52,7 +60,7 @@ export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) 
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-[#5E6C84] hover:bg-[#EBECF0] hover:text-[#172B4D]"
+              className="h-8 w-8 p-0 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
               onClick={toggleCollapsed}
               title={isCollapsed ? "Mở rộng" : "Thu nhỏ"}
             >
@@ -77,8 +85,8 @@ export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) 
                     className={cn(
                       "flex items-center justify-center rounded-md py-2 transition-colors",
                       isSettingsActive
-                        ? "bg-[#DEEBFF] text-[#0052CC]"
-                        : "text-[#172B4D] hover:bg-[#EBECF0]"
+                        ? "bg-primary/20 text-primary"
+                        : "text-sidebar-foreground hover:bg-sidebar-accent"
                     )}
                     title="Cài đặt"
                   >
@@ -95,8 +103,8 @@ export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) 
 
         {/* Footer */}
         {!isCollapsed && (
-          <div className="border-t border-[#EBECF0] p-3">
-            <p className="text-[10px] text-[#5E6C84] text-center">
+          <div className="border-t border-sidebar-border p-3">
+            <p className="text-[10px] text-muted-foreground text-center">
               Jira Mini v1.0
             </p>
           </div>

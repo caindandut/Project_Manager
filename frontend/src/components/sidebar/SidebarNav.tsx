@@ -26,6 +26,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { useWorkspaceDetailQuery } from "@/hooks/useWorkspaces"
+import { useProjectsQuery } from "@/hooks/useProjects"
 
 const PERSONAL_ITEMS = [
   { key: "home", label: "Trang chủ", icon: Home, href: "/workspaces" },
@@ -58,6 +59,10 @@ export default function SidebarNav() {
   const projectId = params.projectId
   const workspaceQuery = useWorkspaceDetailQuery(workspaceSlug)
 
+  // Fetch projects for sidebar – the backend already filters by membership
+  const workspaceId = workspaceQuery.data?.id
+  const projectsQuery = useProjectsQuery(workspaceId ?? "")
+
   const workspace = workspaceQuery.data
   const basePath = workspaceSlug ? `/workspaces/${workspaceSlug}` : ""
   const projectBasePath = projectId ? `${basePath}/projects/${projectId}` : ""
@@ -87,6 +92,9 @@ export default function SidebarNav() {
   }
 
   const currentKey = getCurrentKey()
+
+  // Project list data (backend already filters by user membership)
+  const sidebarProjects = projectsQuery.data?.data ?? []
 
   return (
     <aside
@@ -196,7 +204,39 @@ export default function SidebarNav() {
                           href={item.href}
                           isActive={location.pathname === item.href}
                         />
-                        {/* Project list items can be added here when we have project data */}
+                        {/* Project list from API (filtered by membership) */}
+                        {projectsQuery.isLoading ? (
+                          <div className="space-y-1 py-1">
+                            <Skeleton className="h-7 w-full" />
+                            <Skeleton className="h-7 w-3/4" />
+                          </div>
+                        ) : (
+                          sidebarProjects.map((proj) => {
+                            const projHref = `${basePath}/projects/${proj.id}/overview`
+                            const isActiveProject = location.pathname.startsWith(
+                              `${basePath}/projects/${proj.id}`,
+                            )
+                            return (
+                              <Link
+                                key={proj.id}
+                                to={projHref}
+                                className={cn(
+                                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
+                                  "hover:bg-accent hover:text-accent-foreground",
+                                  isActiveProject
+                                    ? "bg-primary/10 font-medium text-primary"
+                                    : "text-muted-foreground",
+                                )}
+                              >
+                                <span
+                                  className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                                  style={{ backgroundColor: proj.color || "#94a3b8" }}
+                                />
+                                <span className="truncate">{proj.name}</span>
+                              </Link>
+                            )
+                          })
+                        )}
                       </CollapsibleContent>
                     </Collapsible>
                   )

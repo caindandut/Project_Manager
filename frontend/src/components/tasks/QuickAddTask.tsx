@@ -7,7 +7,7 @@ interface QuickAddTaskProps {
   onAdd: (title: string) => Promise<void>
 }
 
-export function QuickAddTask({ status, onAdd }: QuickAddTaskProps) {
+export function QuickAddTask({ status: _status, onAdd }: QuickAddTaskProps) {
   const [isAdding, setIsAdding] = useState(false)
   const [title, setTitle] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -75,14 +75,14 @@ export function QuickAddTask({ status, onAdd }: QuickAddTaskProps) {
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Nhập tiêu đề công việc..."
-        className="w-full px-2 py-1.5 text-sm border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-[#0052CC]/20 focus:border-[#0052CC] bg-white"
+        className="w-full px-2 py-1.5 text-sm border border-border rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary dark:bg-card"
         disabled={isSubmitting}
       />
       <div className="flex items-center gap-1 mt-2">
         <button
           onClick={handleSubmit}
           disabled={!title.trim() || isSubmitting}
-          className="px-3 py-1 text-xs bg-[#0052CC] text-white rounded hover:bg-[#0047B3] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-3 py-1 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Thêm
         </button>

@@ -28,21 +28,33 @@ export class ProjectController extends BaseController {
 
   getAll = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
       const workspaceId = this.getWorkspaceId(req);
       const page = parseInt(req.query.page as string, 10) || 1;
       const limit = parseInt(req.query.limit as string, 10) || 20;
       const sort = this.getSort(req);
 
-      const result = await projectService.getAllInWorkspace(workspaceId, { page, limit, sort });
+      const result = await projectService.getAllInWorkspace(
+        workspaceId,
+        authReq.user.id,
+        authReq.workspaceRole || 'GUEST',
+        { page, limit, sort },
+      );
       res.json(success(result.data, result.meta));
     });
   };
 
   getById = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
       const workspaceId = this.getWorkspaceId(req);
       const projectId = this.getProjectId(req);
-      const result = await projectService.getByIdInWorkspace(projectId, workspaceId);
+      const result = await projectService.getByIdInWorkspace(
+        projectId,
+        workspaceId,
+        authReq.user.id,
+        authReq.workspaceRole || 'GUEST',
+      );
       res.json(success(result));
     });
   };

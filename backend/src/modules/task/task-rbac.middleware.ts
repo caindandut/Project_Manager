@@ -7,19 +7,17 @@ import { AuthenticatedRequest, WorkspaceRole } from '../../types/interfaces';
 
 const roleHierarchy: Record<WorkspaceRole, number> = WORKSPACE_ROLES_HIERARCHY;
 
-const requireWorkspaceMembership = async (
-  req: AuthenticatedRequest,
+/**
+ * Checks workspace membership and returns the workspace role + workspaceId.
+ */
+const getWorkspaceMembership = async (
+  userId: number,
   workspaceId: number,
-  requiredRole: WorkspaceRole,
-): Promise<void> => {
-  if (!req.user) {
-    throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
-  }
-
+): Promise<{ role: WorkspaceRole }> => {
   const membership = await prisma.workspaceMember.findFirst({
     where: {
       workspaceId,
-      userId: req.user.id,
+      userId,
       deletedAt: null,
     },
   });
@@ -31,18 +29,45 @@ const requireWorkspaceMembership = async (
     );
   }
 
-  const userRole = membership.role as WorkspaceRole;
-  if (roleHierarchy[userRole] < roleHierarchy[requiredRole]) {
-    throw ApiError.forbidden(
-      ErrorCode.FORBIDDEN_ACCESS,
-      `This action requires ${requiredRole} role`,
-    );
-  }
-
-  req.workspaceId = workspaceId;
-  req.workspaceRole = userRole;
+  return { role: membership.role as WorkspaceRole };
 };
 
+/**
+ * Checks if the user is a project member (or workspace OWNER/ADMIN).
+ * Returns true if the user has access to the project.
+ */
+const assertProjectAccess = async (
+  userId: number,
+  projectId: number,
+  workspaceId: number,
+  workspaceRole: WorkspaceRole,
+): Promise<void> => {
+  // Workspace OWNER/ADMIN can access all projects
+  if (workspaceRole === 'OWNER' || workspaceRole === 'ADMIN') {
+    return;
+  }
+
+  // Check ProjectMember
+  const projectMember = await prisma.projectMember.findFirst({
+    where: {
+      projectId,
+      userId,
+      deletedAt: null,
+    },
+  });
+
+  if (!projectMember) {
+    throw ApiError.forbidden(
+      ErrorCode.FORBIDDEN_ACCESS,
+      'You are not a member of this project',
+    );
+  }
+};
+
+/**
+ * Middleware for routes with :projectId param (e.g. /projects/:projectId/tasks).
+ * Checks workspace membership role AND project membership.
+ */
 export const requireProjectTaskRole = (requiredRole: WorkspaceRole) => {
   return async (
     req: AuthenticatedRequest,
@@ -50,6 +75,10 @@ export const requireProjectTaskRole = (requiredRole: WorkspaceRole) => {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      if (!req.user) {
+        throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
+      }
+
       const projectId = parseInt(req.params.projectId || '0', 10);
       if (!projectId || isNaN(projectId)) {
         throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Invalid project ID');
@@ -64,7 +93,20 @@ export const requireProjectTaskRole = (requiredRole: WorkspaceRole) => {
         throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
       }
 
-      await requireWorkspaceMembership(req, project.workspaceId, requiredRole);
+      const { role: userRole } = await getWorkspaceMembership(req.user.id, project.workspaceId);
+
+      if (roleHierarchy[userRole] < roleHierarchy[requiredRole]) {
+        throw ApiError.forbidden(
+          ErrorCode.FORBIDDEN_ACCESS,
+          `This action requires ${requiredRole} role`,
+        );
+      }
+
+      // Check project membership (workspace OWNER/ADMIN bypass)
+      await assertProjectAccess(req.user.id, projectId, project.workspaceId, userRole);
+
+      req.workspaceId = project.workspaceId;
+      req.workspaceRole = userRole;
       next();
     } catch (error) {
       next(error);
@@ -72,6 +114,11 @@ export const requireProjectTaskRole = (requiredRole: WorkspaceRole) => {
   };
 };
 
+/**
+ * Middleware for routes with :taskId param (e.g. /tasks/:taskId).
+ * Resolves the task → project → workspace chain, then checks both
+ * workspace role and project membership.
+ */
 export const requireTaskRole = (requiredRole: WorkspaceRole) => {
   return async (
     req: AuthenticatedRequest,
@@ -79,6 +126,10 @@ export const requireTaskRole = (requiredRole: WorkspaceRole) => {
     next: NextFunction,
   ): Promise<void> => {
     try {
+      if (!req.user) {
+        throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
+      }
+
       const taskId = parseInt(req.params.taskId || '0', 10);
       if (!taskId || isNaN(taskId)) {
         throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Invalid task ID');
@@ -87,6 +138,7 @@ export const requireTaskRole = (requiredRole: WorkspaceRole) => {
       const task = await prisma.task.findFirst({
         where: { id: taskId, deletedAt: null },
         select: {
+          projectId: true,
           project: {
             select: {
               workspaceId: true,
@@ -100,7 +152,20 @@ export const requireTaskRole = (requiredRole: WorkspaceRole) => {
         throw ApiError.notFound(ErrorCode.TASK_NOT_FOUND, 'Task not found');
       }
 
-      await requireWorkspaceMembership(req, task.project.workspaceId, requiredRole);
+      const { role: userRole } = await getWorkspaceMembership(req.user.id, task.project.workspaceId);
+
+      if (roleHierarchy[userRole] < roleHierarchy[requiredRole]) {
+        throw ApiError.forbidden(
+          ErrorCode.FORBIDDEN_ACCESS,
+          `This action requires ${requiredRole} role`,
+        );
+      }
+
+      // Check project membership (workspace OWNER/ADMIN bypass)
+      await assertProjectAccess(req.user.id, task.projectId, task.project.workspaceId, userRole);
+
+      req.workspaceId = task.project.workspaceId;
+      req.workspaceRole = userRole;
       next();
     } catch (error) {
       next(error);

@@ -168,7 +168,7 @@ export function TaskToolbar({
           onChange={(e) =>
             onFiltersChange({ ...filters, status: e.target.value || undefined })
           }
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring dark:bg-card"
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -186,7 +186,7 @@ export function TaskToolbar({
               priority: e.target.value || undefined,
             })
           }
-          className="h-9 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          className="h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring dark:bg-card"
         >
           {PRIORITY_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -216,7 +216,7 @@ export function TaskToolbar({
               className={cn(
                 "px-3 h-9 text-xs font-medium transition-colors",
                 viewMode === "flat"
-                  ? "bg-[#0052CC] text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-background text-muted-foreground hover:bg-muted",
               )}
             >
@@ -227,7 +227,7 @@ export function TaskToolbar({
               className={cn(
                 "px-3 h-9 text-xs font-medium transition-colors",
                 viewMode === "grouped"
-                  ? "bg-[#0052CC] text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-background text-muted-foreground hover:bg-muted",
               )}
             >
@@ -238,7 +238,7 @@ export function TaskToolbar({
               className={cn(
                 "px-3 h-9 text-xs font-medium transition-colors",
                 viewMode === "kanban"
-                  ? "bg-[#0052CC] text-white"
+                  ? "bg-primary text-primary-foreground"
                   : "bg-background text-muted-foreground hover:bg-muted",
               )}
             >
@@ -252,7 +252,7 @@ export function TaskToolbar({
           {/* Create button */}
           <Button
             onClick={onCreateClick}
-            className="h-9 bg-[#0052CC] hover:bg-[#0043A6] text-white text-sm gap-1.5"
+            className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5"
           >
             <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 5v14M5 12h14" />
