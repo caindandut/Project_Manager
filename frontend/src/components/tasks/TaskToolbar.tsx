@@ -81,8 +81,8 @@ interface TaskToolbarProps {
   onCreateClick: () => void
   columns: TaskColumn[]
   onColumnsChange: (columns: TaskColumn[]) => void
-  viewMode: "flat" | "grouped" | "kanban"
-  onViewModeChange: (mode: "flat" | "grouped" | "kanban") => void
+  viewMode: "flat" | "grouped" | "kanban" | "calendar" | "gantt"
+  onViewModeChange: (mode: "flat" | "grouped" | "kanban" | "calendar" | "gantt") => void
   totalTasks: number
 }
 
@@ -243,6 +243,28 @@ export function TaskToolbar({
               )}
             >
               Bảng
+            </button>
+            <button
+              onClick={() => onViewModeChange("calendar")}
+              className={cn(
+                "px-3 h-9 text-xs font-medium transition-colors",
+                viewMode === "calendar"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-muted",
+              )}
+            >
+              Lịch
+            </button>
+            <button
+              onClick={() => onViewModeChange("gantt")}
+              className={cn(
+                "px-3 h-9 text-xs font-medium transition-colors",
+                viewMode === "gantt"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-muted",
+              )}
+            >
+              Gantt
             </button>
           </div>
 

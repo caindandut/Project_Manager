@@ -1,18 +1,15 @@
 import { useState } from "react"
 import { Link, useLocation } from "react-router-dom"
 import {
-  Calendar,
   CheckSquare,
   ChevronDown,
   ChevronRight,
   Folder,
   Home,
   LayoutDashboard,
-  LayoutGrid,
   List,
   Plus,
   Settings,
-  TrendingUp,
   Users,
 } from "lucide-react"
 
@@ -204,10 +201,7 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
 
   const viewItems = [
     { label: "Tổng quan", href: `${projectPath}/overview`, icon: LayoutDashboard },
-    { label: "Bảng", href: `${projectPath}/kanban`, icon: LayoutGrid },
-    { label: "Danh sách", href: `${projectPath}/list`, icon: List },
-    { label: "Lịch", href: `${projectPath}/calendar`, icon: Calendar },
-    { label: "Gantt", href: `${projectPath}/gantt`, icon: TrendingUp },
+    { label: "Danh sách công việc", href: `${projectPath}/kanban`, icon: List },
   ]
 
   if (isCollapsed) {
@@ -229,16 +223,21 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
         </CollapsedTooltip>
         {isExpanded && (
           <div className="space-y-0.5">
-            {viewItems.map((item) => (
-              <ProjectViewItem
-                key={item.href}
-                label={item.label}
-                href={item.href}
-                icon={item.icon}
-                isActive={location.pathname === item.href}
-                isCollapsed={true}
-              />
-            ))}
+            {viewItems.map((item) => {
+              const active = item.href.endsWith("/kanban")
+                ? location.pathname.includes(`/projects/${project.id}/`) && !location.pathname.endsWith("/overview") && !location.pathname.endsWith("/settings")
+                : location.pathname === item.href
+              return (
+                <ProjectViewItem
+                  key={item.href}
+                  label={item.label}
+                  href={item.href}
+                  icon={item.icon}
+                  isActive={active}
+                  isCollapsed={true}
+                />
+              )
+            })}
           </div>
         )}
       </div>
@@ -267,15 +266,20 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
 
       {isExpanded && (
         <div className="mt-1 space-y-0.5">
-          {viewItems.map((item) => (
-            <ProjectViewItem
-              key={item.href}
-              label={item.label}
-              href={item.href}
-              icon={item.icon}
-              isActive={location.pathname === item.href}
-            />
-          ))}
+          {viewItems.map((item) => {
+            const active = item.href.endsWith("/kanban")
+              ? location.pathname.includes(`/projects/${project.id}/`) && !location.pathname.endsWith("/overview") && !location.pathname.endsWith("/settings")
+              : location.pathname === item.href
+            return (
+              <ProjectViewItem
+                key={item.href}
+                label={item.label}
+                href={item.href}
+                icon={item.icon}
+                isActive={active}
+              />
+            )
+          })}
         </div>
       )}
     </div>

@@ -6,6 +6,8 @@ import CreateTaskDialog from "@/components/tasks/CreateTaskDialog"
 import TaskDetailPanel from "@/components/tasks/TaskDetailPanel"
 import { TaskTable } from "@/components/tasks/TaskTable"
 import { TaskToolbar, DEFAULT_COLUMNS } from "@/components/tasks/TaskToolbar"
+import { CalendarView } from "@/components/calendar/CalendarView"
+import { GanttView } from "@/components/gantt/GanttView"
 import type { TaskFilter } from "@/components/tasks/task.types"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useProjectDetailQuery } from "@/hooks/useProject"
@@ -17,8 +19,10 @@ import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import type { Task } from "@/types/task"
 import { TASK_STATUS_LABELS } from "@/types/task"
 
+type ViewMode = "flat" | "grouped" | "kanban" | "calendar" | "gantt"
+
 interface ProjectTaskListPageProps {
-  initialViewMode?: "flat" | "grouped" | "kanban"
+  initialViewMode?: ViewMode
 }
 
 export default function ProjectTaskListPage({ initialViewMode = "kanban" }: ProjectTaskListPageProps) {
@@ -30,7 +34,7 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
   const [filters, setFilters] = useState<TaskFilter>({})
   const [search, setSearch] = useState("")
   const [columns, setColumns] = useState(DEFAULT_COLUMNS)
-  const [viewMode, setViewMode] = useState<"flat" | "grouped" | "kanban">(initialViewMode)
+  const [viewMode, setViewMode] = useState<ViewMode>(initialViewMode)
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [sortField, setSortField] = useState<string | undefined>()
@@ -162,28 +166,34 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
           columns={columns}
           onColumnsChange={setColumns}
           viewMode={viewMode}
-          onViewModeChange={setViewMode}
+          onViewModeChange={setViewMode as (mode: "flat" | "grouped" | "kanban" | "calendar" | "gantt") => void}
           totalTasks={totalTasks}
         />
       </div>
 
-      {/* Table */}
+      {/* Content */}
       <div className="flex-1 overflow-auto px-6 pb-6">
-        <TaskTable
-          tasks={tasks}
-          isLoading={tasksQuery.isLoading}
-          columns={columns}
-          viewMode={viewMode}
-          projectKey={project?.key ?? "PRJ"}
-          projectId={projectId}
-          onTaskClick={handleTaskClick}
-          onTaskDelete={handleTaskDelete}
-          onStatusChange={handleStatusChange}
-          onSort={handleSort}
-          onTasksChange={() => tasksQuery.refetch()}
-          sortField={sortField as "title" | "priority" | "dueDate" | "createdAt" | undefined}
-          sortDir={sortDir}
-        />
+        {viewMode === "calendar" ? (
+          <CalendarView />
+        ) : viewMode === "gantt" ? (
+          <GanttView />
+        ) : (
+          <TaskTable
+            tasks={tasks}
+            isLoading={tasksQuery.isLoading}
+            columns={columns}
+            viewMode={viewMode}
+            projectKey={project?.key ?? "PRJ"}
+            projectId={projectId}
+            onTaskClick={handleTaskClick}
+            onTaskDelete={handleTaskDelete}
+            onStatusChange={handleStatusChange}
+            onSort={handleSort}
+            onTasksChange={() => tasksQuery.refetch()}
+            sortField={sortField as "title" | "priority" | "dueDate" | "createdAt" | undefined}
+            sortDir={sortDir}
+          />
+        )}
       </div>
 
       {/* Detail panel */}
