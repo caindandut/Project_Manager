@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import CreateTaskDialog from "@/components/tasks/CreateTaskDialog"
@@ -25,6 +25,7 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
   const params = useParams<{ workspaceId: string; projectId: string }>()
   const workspaceId = params.workspaceId || ""
   const projectId = Number(params.projectId || "0")
+  const [searchParams, setSearchParams] = useSearchParams()
 
   const [filters, setFilters] = useState<TaskFilter>({})
   const [search, setSearch] = useState("")
@@ -49,11 +50,28 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
   const tasks: Task[] = tasksQuery.data?.data ?? []
   const totalTasks = tasksQuery.data?.meta?.total ?? 0
 
+  useEffect(() => {
+    const taskIdParam = searchParams.get("task")
+    if (taskIdParam) {
+      const idNum = Number(taskIdParam)
+      if (!isNaN(idNum) && idNum !== selectedTaskId) {
+        setSelectedTaskId(idNum)
+      }
+    } else if (selectedTaskId !== null) {
+      setSelectedTaskId(null)
+    }
+  }, [searchParams])
+
   // Listen for subtask detail open event from TaskDetailPanel
   useEffect(() => {
     const handleOpenTaskDetail = (e: Event) => {
       const customEvent = e as CustomEvent<{ taskId: number }>
-      setSelectedTaskId(customEvent.detail.taskId)
+      const newId = customEvent.detail.taskId
+      setSelectedTaskId(newId)
+      setSearchParams((prev) => {
+        prev.set("task", String(newId))
+        return prev
+      })
     }
     window.addEventListener("openTaskDetail", handleOpenTaskDetail)
     return () => window.removeEventListener("openTaskDetail", handleOpenTaskDetail)
@@ -61,6 +79,10 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
 
   const handleTaskClick = (task: Task) => {
     setSelectedTaskId(task.id)
+    setSearchParams((prev) => {
+      prev.set("task", String(task.id))
+      return prev
+    })
   }
 
   const handleTaskDelete = async (taskId: number) => {
@@ -170,7 +192,13 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
         projectId={projectId}
         projectKey={project?.key ?? "PRJ"}
         open={selectedTaskId !== null}
-        onClose={() => setSelectedTaskId(null)}
+        onClose={() => {
+          setSelectedTaskId(null)
+          setSearchParams((prev) => {
+            prev.delete("task")
+            return prev
+          })
+        }}
         projectMembers={(membersQuery.data?.data ?? []).map((m) => m.user)}
       />
 

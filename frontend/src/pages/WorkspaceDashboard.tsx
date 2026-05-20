@@ -63,9 +63,16 @@ function EmptyState({ title, description }: { title: string; description: string
   )
 }
 
-function RecentTaskItem({ task }: { task: RecentTask }) {
-  return (
-    <div className="flex items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50">
+function RecentTaskItem({ task, workspaceSlug }: { task: RecentTask; workspaceSlug: string }) {
+  const taskLink = task.project
+    ? `/workspaces/${workspaceSlug}/projects/${task.project.id}/kanban?task=${task.id}`
+    : null
+
+  const content = (
+    <div className={cn(
+      "flex items-start gap-3 rounded-md border p-3 transition-colors",
+      taskLink ? "hover:bg-muted/50 cursor-pointer hover:border-primary/20 hover:shadow-sm" : ""
+    )}>
       <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       <div className="min-w-0 flex-1 space-y-1">
         <p className="truncate text-sm font-medium">{task.title}</p>
@@ -93,6 +100,12 @@ function RecentTaskItem({ task }: { task: RecentTask }) {
       </div>
     </div>
   )
+
+  return taskLink ? (
+    <Link to={taskLink} className="block">
+      {content}
+    </Link>
+  ) : content
 }
 
 export default function WorkspaceDashboard() {
@@ -171,41 +184,47 @@ export default function WorkspaceDashboard() {
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-3">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Thành viên
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{workspace.stats.memberCount}</div>
-                </CardContent>
-              </Card>
+              <Link to={`/workspaces/${workspaceSlug}/members`} className="block">
+                <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:bg-muted/10 cursor-pointer">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Thành viên
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{workspace.stats.memberCount}</div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <FolderKanban className="h-4 w-4" />
-                    Dự án
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{workspace.stats.projectCount}</div>
-                </CardContent>
-              </Card>
+              <Link to={`/workspaces/${workspaceSlug}/projects`} className="block">
+                <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:bg-muted/10 cursor-pointer">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <FolderKanban className="h-4 w-4" />
+                      Dự án
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{workspace.stats.projectCount}</div>
+                  </CardContent>
+                </Card>
+              </Link>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardDescription className="flex items-center gap-2">
-                    <ListChecks className="h-4 w-4" />
-                    Công việc
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{workspace.stats.taskCount}</div>
-                </CardContent>
-              </Card>
+              <Link to={`/workspaces/${workspaceSlug}/my-tasks`} className="block">
+                <Card className="h-full transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:bg-muted/10 cursor-pointer">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardDescription className="flex items-center gap-2">
+                      <ListChecks className="h-4 w-4" />
+                      Công việc
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{workspace.stats.taskCount}</div>
+                  </CardContent>
+                </Card>
+              </Link>
             </div>
 
             <Card>
@@ -219,25 +238,43 @@ export default function WorkspaceDashboard() {
               <CardContent>
                 {workspace.recentActivities && workspace.recentActivities.length > 0 ? (
                   <div className="space-y-3">
-                    {workspace.recentActivities.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex items-start gap-3 rounded-md border p-3 transition-colors hover:bg-muted/50"
-                      >
-                        <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <p className="line-clamp-2 text-sm font-medium">{formatActivity(activity)}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true, locale: vi })}
-                          </p>
+                    {workspace.recentActivities.map((activity) => {
+                      const activityLink = activity.task && activity.task.project
+                        ? `/workspaces/${workspaceSlug}/projects/${activity.task.project.id}/kanban?task=${activity.task.id}`
+                        : activity.entityType === "PROJECT"
+                        ? `/workspaces/${workspaceSlug}/projects/${activity.entityId}`
+                        : activity.entityType === "MEMBER" || activity.entityType === "WORKSPACE_MEMBER"
+                        ? `/workspaces/${workspaceSlug}/members`
+                        : null;
+
+                      const content = (
+                        <div className={cn(
+                          "flex items-start gap-3 rounded-md border p-3 transition-colors",
+                          activityLink ? "hover:bg-muted/50 cursor-pointer hover:border-primary/20 hover:shadow-sm" : ""
+                        )}>
+                          <Clock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <p className="line-clamp-2 text-sm font-medium">{formatActivity(activity)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(activity.createdAt), { addSuffix: true, locale: vi })}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      )
+
+                      return activityLink ? (
+                        <Link key={activity.id} to={activityLink} className="block">
+                          {content}
+                        </Link>
+                      ) : (
+                        <div key={activity.id}>{content}</div>
+                      )
+                    })}
                   </div>
                 ) : workspace.recentTasks && workspace.recentTasks.length > 0 ? (
                   <div className="space-y-3">
                     {workspace.recentTasks.map((task) => (
-                      <RecentTaskItem key={task.id} task={task} />
+                      <RecentTaskItem key={task.id} task={task} workspaceSlug={workspaceSlug} />
                     ))}
                   </div>
                 ) : (
