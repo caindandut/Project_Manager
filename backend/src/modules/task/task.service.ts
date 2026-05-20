@@ -6,6 +6,7 @@ import { ErrorCode } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { prisma } from '../../config';
+import { notificationEmitter } from '../notification/notification-emitter';
 
 export interface CreateTaskInput {
   title: string;
@@ -104,6 +105,12 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     });
 
     logger.info(`Task created: ${task.id} in project ${data.projectId}`);
+
+    // Emit notification if task has an assignee
+    if (data.assigneeId) {
+      notificationEmitter.onTaskAssigned(task.id, data.assigneeId, data.assigneeId).catch(() => {});
+    }
+
     const created = await taskRepository.findListItemById(task.id);
     return created
       ? this.formatTaskWithCounts(created, created.assignee, created._count.subTasks, created._count.comments)
@@ -206,6 +213,22 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     // Log activity
     if (userId) {
       await this.logTaskActivity(updated, task, userId);
+
+      // Emit notifications
+      if (data.assigneeId !== undefined && data.assigneeId !== null && data.assigneeId !== task.assigneeId) {
+        notificationEmitter.onTaskAssigned(id, data.assigneeId, userId).catch(() => {});
+      }
+      if (data.status && data.status !== task.status) {
+        notificationEmitter.onTaskStatusChanged(id, task.status, data.status, userId).catch(() => {});
+      }
+      // Emit general update notification for other field changes
+      const changes: Record<string, { old: unknown; new: unknown }> = {};
+      if (updated.title !== task.title) changes['title'] = { old: task.title, new: updated.title };
+      if (updated.priority !== task.priority) changes['priority'] = { old: task.priority, new: updated.priority };
+      if (updated.dueDate?.getTime() !== task.dueDate?.getTime()) changes['dueDate'] = { old: task.dueDate, new: updated.dueDate };
+      if (Object.keys(changes).length > 0) {
+        notificationEmitter.onTaskUpdated(id, userId, changes).catch(() => {});
+      }
     }
 
     return {
@@ -240,6 +263,9 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
           } as Prisma.InputJsonValue,
         },
       });
+
+      // Emit notification
+      notificationEmitter.onTaskStatusChanged(id, previousStatus, status, userId).catch(() => {});
     }
 
     return updated;
@@ -271,6 +297,11 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
           } as Prisma.InputJsonValue,
         },
       });
+
+      // Emit notification
+      if (assigneeId !== null) {
+        notificationEmitter.onTaskAssigned(id, assigneeId, userId).catch(() => {});
+      }
     }
 
     return {

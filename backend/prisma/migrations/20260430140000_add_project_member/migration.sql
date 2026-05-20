@@ -1,8 +1,3 @@
--- CreateEnum
-ALTER TABLE `project_members` MODIFY COLUMN `role` ENUM('ADMIN', 'MEMBER', 'GUEST') NOT NULL DEFAULT 'MEMBER';
-
--- AlterTable (add relation to users and projects - handled via FK in CreateTable)
-
 -- CreateTable
 CREATE TABLE `project_members` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,

@@ -24,6 +24,14 @@ import WorkspaceSettingsPage from '@/pages/WorkspaceSettings';
 import WorkspacesPage from '@/pages/Workspaces';
 import MyTasksPage from '@/pages/MyTasks';
 import CreateProjectPage from '@/pages/CreateProjectPage';
+import AdminDashboard from '@/pages/admin/AdminDashboard';
+import AdminUsers from '@/pages/admin/AdminUsers';
+import AdminSettings from '@/pages/admin/AdminSettings';
+import AdminAuditLog from '@/pages/admin/AdminAuditLog';
+import AdminLayout from '@/components/admin/AdminLayout';
+import AdminProtectedRoute from '@/components/AdminProtectedRoute';
+import NotificationSettingsPage from '@/pages/NotificationSettings';
+import NotificationsPage from '@/pages/NotificationsPage';
 import { getLastWorkspaceSlug } from '@/stores/authStore';
 
 function RootRedirect() {
@@ -104,7 +112,19 @@ function App() {
             
             {/* Global settings */}
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/my-invitations" element={<WorkspaceInvitationPage />} />
+          </Route>
+        </Route>
+
+        {/* Admin routes - require OWNER role */}
+        <Route element={<AdminProtectedRoute />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/audit-logs" element={<AdminAuditLog />} />
           </Route>
         </Route>
 

@@ -8,6 +8,7 @@ import { ErrorCode } from '../../types/enums';
 export interface JwtPayload {
   userId: number;
   email: string;
+  systemRole?: string;
   iat: number;
   exp: number;
 }
@@ -39,6 +40,7 @@ export const authMiddleware = async (
         req.user = {
           id: decoded.userId,
           email: decoded.email,
+          systemRole: decoded.systemRole,
         };
         next();
         return;
@@ -85,6 +87,7 @@ export const optionalAuth = async (
         req.user = {
           id: decoded.userId,
           email: decoded.email,
+          systemRole: decoded.systemRole,
         };
       } catch {
         // Ignore invalid tokens for optional auth

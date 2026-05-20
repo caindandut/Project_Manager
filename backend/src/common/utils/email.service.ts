@@ -55,6 +55,44 @@ export async function sendWorkspaceInvitationEmail(options: {
   });
 }
 
+export async function sendNotificationEmail(options: {
+  to: string;
+  userName: string;
+  subject: string;
+  message: string;
+  taskTitle: string;
+  taskId: number;
+}): Promise<void> {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px;">
+      <div style="margin-bottom: 16px;">
+        <h1 style="color: #111827; font-size: 20px; margin: 0;">Project Manager</h1>
+      </div>
+      <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin-bottom: 16px;">
+        <p style="color: #111827; font-size: 15px; font-weight: 600; margin: 0 0 8px 0;">
+          ${options.subject}
+        </p>
+        <p style="color: #374151; font-size: 14px; line-height: 1.6; margin: 0;">
+          ${options.message}
+        </p>
+      </div>
+      <div style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+        <p style="color: #6b7280; font-size: 12px; margin: 0 0 4px 0;">Công việc liên quan:</p>
+        <p style="color: #111827; font-size: 14px; font-weight: 600; margin: 0;">${options.taskTitle}</p>
+      </div>
+      <p style="color: #9ca3af; font-size: 12px; margin: 0; text-align: center;">
+        Bạn nhận email này vì đã bật thông báo qua email trong cài đặt Project Manager.
+      </p>
+    </div>
+  `;
+
+  await sendEmail({
+    to: options.to,
+    subject: '[PM] ' + options.subject,
+    html,
+  });
+}
+
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
   await transporter.sendMail({
     from: config.EMAIL_FROM,

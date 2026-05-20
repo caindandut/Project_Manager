@@ -26,6 +26,7 @@ export interface AuthenticatedUser {
   id: number;
   email: string;
   name?: string;
+  systemRole?: string;
 }
 
 export interface AuthenticatedRequest extends Request {

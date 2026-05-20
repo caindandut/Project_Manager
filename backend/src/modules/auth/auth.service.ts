@@ -89,6 +89,10 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       throw ApiError.forbidden(ErrorCode.USER_DELETED, 'This account has been deactivated');
     }
 
+    if (user.isBlocked) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Your account has been blocked. Please contact the administrator.');
+    }
+
     if (!user.password) {
       throw ApiError.unauthorized(ErrorCode.AUTH_INVALID_CREDENTIALS, 'This account uses Google sign-in. Please log in with Google.');
     }
@@ -110,6 +114,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
         name: user.name,
         avatar: user.avatar,
         bio: user.bio,
+        systemRole: user.systemRole,
       },
       accessToken,
       refreshToken,
@@ -138,6 +143,8 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       }
     } else if (user.deletedAt) {
       throw ApiError.forbidden(ErrorCode.USER_DELETED, 'This account has been deactivated');
+    } else if (user.isBlocked) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Your account has been blocked. Please contact the administrator.');
     }
 
     // Check if user has any workspaces
@@ -155,6 +162,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
         name: user.name,
         avatar: user.avatar,
         bio: user.bio,
+        systemRole: user.systemRole,
       },
       accessToken,
       refreshToken,
@@ -357,6 +365,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       name: user.name,
       avatar: user.avatar,
       bio: user.bio,
+      systemRole: user.systemRole,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -556,9 +565,9 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     return slug;
   }
 
-  private generateAccessToken(user: { id: number; email: string }): string {
+  private generateAccessToken(user: { id: number; email: string; systemRole?: string }): string {
     return jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, systemRole: user.systemRole || 'USER' },
       config.JWT_SECRET,
       { expiresIn: '15m' as jwt.SignOptions['expiresIn'] },
     );

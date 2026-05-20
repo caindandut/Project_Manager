@@ -60,6 +60,14 @@ const MODEL_ALLOWED_FIELDS: Record<string, Set<string>> = {
     'projectId', 'userId',
     'createdAt', 'updatedAt', 'deletedAt',
   ]),
+  SystemSetting: new Set([
+    'id', 'key', 'value', 'category',
+    'createdAt', 'updatedAt',
+  ]),
+  AdminAuditLog: new Set([
+    'id', 'action', 'targetType', 'targetId', 'description', 'metadata',
+    'performedById', 'createdAt',
+  ]),
 };
 
 // ---------------------------------------------------------------------------

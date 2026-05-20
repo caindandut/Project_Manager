@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import { Menu, Search, Settings, X } from "lucide-react"
+import { Menu, Search, Settings, ShieldCheck, X } from "lucide-react"
 import { useState } from "react"
 
 import NotificationBell from "@/components/NotificationBell"
@@ -7,6 +7,7 @@ import UserDropdown from "./UserDropdown"
 import WorkspaceDropdown from "./WorkspaceDropdown"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useAuthStore } from "@/stores/authStore"
 
 interface AppHeaderProps {
   onMenuClick?: () => void
@@ -14,6 +15,7 @@ interface AppHeaderProps {
 
 export default function AppHeader({ onMenuClick }: AppHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const user = useAuthStore((s) => s.user)
 
   return (
     <header className="sticky top-0 z-50 flex h-14 w-full items-center gap-4 border-b border-border bg-card px-4 shadow-sm dark:shadow-jira-card-dark">
@@ -66,7 +68,19 @@ export default function AppHeader({ onMenuClick }: AppHeaderProps) {
 
       {/* Right side actions */}
       <div className="ml-auto flex items-center gap-1">
-        <NotificationBell unreadCount={0} />
+        <NotificationBell />
+
+        {/* Admin Panel - only visible for OWNER */}
+        {user?.systemRole === 'OWNER' && (
+          <Link
+            to="/admin"
+            className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Quản trị hệ thống"
+            title="Quản trị hệ thống"
+          >
+            <ShieldCheck className="h-4 w-4" />
+          </Link>
+        )}
         
         <Link
           to="/settings"

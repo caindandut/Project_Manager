@@ -6,6 +6,7 @@ import { ErrorCode } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { prisma } from '../../config';
+import { notificationEmitter } from '../notification/notification-emitter';
 
 export interface CreateCommentInput {
   content: string;
@@ -56,6 +57,9 @@ export class CommentService extends BaseService<
 
     // Log activity
     await this.logActivity(comment.id, data.taskId, data.userId, 'COMMENT_CREATE');
+
+    // Emit notification (also parses @mentions)
+    notificationEmitter.onTaskCommented(data.taskId, data.userId, data.content).catch(() => {});
 
     return this.formatComment(fullComment);
   }

@@ -57,6 +57,11 @@ enum InvitationStatus {
   EXPIRED
 }
 
+enum SystemRole {
+  OWNER
+  USER
+}
+
 // ============================================================
 // MODELS
 // ============================================================
@@ -72,6 +77,8 @@ model User {
   googleId  String?    @unique @map("google_id") @db.VarChar(255)
   avatar    String?    @db.VarChar(500)
   bio       String?    @db.Text
+  systemRole SystemRole @default(USER) @map("system_role")
+  isBlocked  Boolean    @default(false) @map("is_blocked")
 
   refreshTokens RefreshToken[]
   resetTokens   ResetToken[]
@@ -84,6 +91,9 @@ model User {
   uploadedAttachments Attachment[] @relation("AttachmentUploader")
   invitations Invitation[] @relation("InvitationInviter")
   notifications Notification[]
+  triggeredNotifications Notification[] @relation("NotificationActor")
+  notificationPreferences NotificationPreference[]
+  performedAuditLogs AdminAuditLog[] @relation("AuditLogPerformer")
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt        @map("updated_at")
@@ -91,6 +101,7 @@ model User {
 
   @@index([deletedAt], name: "idx_user_deleted")
   @@index([googleId], name: "idx_user_google_id")
+  @@index([systemRole], name: "idx_user_system_role")
   @@map("users")
 }
 
@@ -379,11 +390,14 @@ model ActivityLog {
 // Notification
 // ------------------------------------------------------------
 model Notification {
-  id      Int     @id @default(autoincrement())
-  type    String  @db.VarChar(50)
-  title   String  @db.VarChar(255)
-  message String  @db.Text
-  isRead  Boolean @default(false) @map("is_read")
+  id       Int     @id @default(autoincrement())
+  type     String  @db.VarChar(50)
+  category String  @default("DIRECT") @db.VarChar(20) // DIRECT | WATCHING
+  title    String  @db.VarChar(255)
+  message  String  @db.Text
+  isRead   Boolean @default(false) @map("is_read")
+  groupKey String? @map("group_key") @db.VarChar(100) // e.g. "task:42"
+  metadata Json?   @db.Json
 
   userId Int   @map("user_id")
   user   User  @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -391,14 +405,40 @@ model Notification {
   taskId Int?   @map("task_id")
   task   Task?  @relation(fields: [taskId], references: [id], onDelete: SetNull, onUpdate: Cascade)
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt      @map("updated_at")
-  deletedAt DateTime?                  @map("deleted_at")
+  actorId Int?  @map("actor_id")
+  actor   User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt      @map("updated_at")
+  deletedAt DateTime?                 @map("deleted_at")
 
   @@index([userId, isRead], name: "idx_notification_user_read")
+  @@index([userId, category], name: "idx_notification_user_category")
+  @@index([groupKey], name: "idx_notification_group_key")
   @@index([deletedAt], name: "idx_notification_deleted")
   @@index([taskId], name: "idx_notification_task")
   @@map("notifications")
+}
+
+// ------------------------------------------------------------
+// NotificationPreference
+// ------------------------------------------------------------
+model NotificationPreference {
+  id        Int    @id @default(autoincrement())
+  userId    Int    @map("user_id")
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  eventType String @map("event_type") @db.VarChar(50)
+
+  inApp Boolean @default(true)  @map("in_app")
+  email Boolean @default(false) @map("email")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@unique([userId, eventType], name: "uq_notification_pref_user_event")
+  @@index([userId], name: "idx_notification_pref_user")
+  @@map("notification_preferences")
 }
 
 // ------------------------------------------------------------
@@ -419,4 +459,42 @@ model OtpCode {
   @@index([email], name: "idx_otp_email")
   @@index([expiresAt], name: "idx_otp_expires")
   @@map("otp_codes")
+}
+
+// ------------------------------------------------------------
+// SystemSetting (Admin configuration key-value store)
+// ------------------------------------------------------------
+model SystemSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique @db.VarChar(100)
+  value     String   @db.Text
+  category  String   @default("general") @db.VarChar(50)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt      @map("updated_at")
+
+  @@index([category], name: "idx_system_setting_category")
+  @@map("system_settings")
+}
+
+// ------------------------------------------------------------
+// AdminAuditLog (Admin action history)
+// ------------------------------------------------------------
+model AdminAuditLog {
+  id          Int     @id @default(autoincrement())
+  action      String  @db.VarChar(50)
+  targetType  String  @map("target_type") @db.VarChar(50)
+  targetId    Int?    @map("target_id")
+  description String  @db.Text
+  metadata    Json?   @db.Json
+
+  performedById Int  @map("performed_by_id")
+  performedBy   User @relation("AuditLogPerformer", fields: [performedById], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([performedById], name: "idx_audit_log_performer")
+  @@index([action], name: "idx_audit_log_action")
+  @@index([createdAt], name: "idx_audit_log_created")
+  @@map("admin_audit_logs")
 }

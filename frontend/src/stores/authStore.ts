@@ -6,6 +6,7 @@ export interface AuthUser {
   name?: string | null;
   avatar?: string | null;
   bio?: string | null;
+  systemRole?: 'OWNER' | 'USER';
   requireOnboarding?: boolean;
 }
 
