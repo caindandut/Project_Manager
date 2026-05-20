@@ -128,6 +128,7 @@ router.post(
     body('password').optional().isLength({ min: 8, max: 100 }),
     body('workspaceName').trim().isLength({ min: 1, max: 100 }),
     body('workspaceSlug').trim().isLength({ min: 1, max: 50 }).matches(/^[a-z0-9-]+$/),
+    body('teamSize').optional().trim().isLength({ max: 50 }),
   ]),
   authController.completeOnboarding,
 );

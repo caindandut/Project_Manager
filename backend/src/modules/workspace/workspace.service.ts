@@ -1,5 +1,7 @@
 import crypto from 'crypto';
-import { Workspace, WorkspaceMember } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
+import { Prisma, Workspace, WorkspaceMember } from '@prisma/client';
 import {
   workspaceRepository,
   WorkspaceInvitationWithDetails,
@@ -18,12 +20,14 @@ export interface CreateWorkspaceInput {
   name: string;
   description?: string;
   logo?: string;
+  teamSize?: string;
 }
 
 export interface UpdateWorkspaceInput {
   name?: string;
   description?: string;
   logo?: string;
+  teamSize?: string;
 }
 
 export interface InviteMemberInput {
@@ -50,6 +54,7 @@ type FormattedWorkspace = {
   slug: string;
   description: string | null;
   logo: string | null;
+  teamSize: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -67,6 +72,7 @@ export class WorkspaceService extends BaseService<
         name: data.name,
         description: data.description,
         logo: data.logo,
+        teamSize: data.teamSize,
       },
       userId,
     );
@@ -128,7 +134,59 @@ export class WorkspaceService extends BaseService<
 
   async update(id: string | number, data: UpdateWorkspaceInput) {
     const workspace = await this.findWorkspaceOrThrow(id);
-    const updated = await workspaceRepository.update(workspace.id, data);
+    const updateData: Prisma.WorkspaceUpdateInput = { ...data };
+
+    if (data.name && data.name !== workspace.name) {
+      let baseSlug = workspaceRepository.generateSlug(data.name);
+      let slug = baseSlug;
+      let counter = 1;
+      while (await workspaceRepository.isSlugTaken(slug, workspace.id)) {
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      updateData.slug = slug;
+    }
+
+    // Process base64 logo image and save to disk
+    if (data.logo && data.logo.startsWith('data:image/')) {
+      try {
+        const matches = data.logo.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const mimeType = matches[1];
+          const base64Data = matches[2];
+          const buffer = Buffer.from(base64Data, 'base64');
+          
+          let ext = '.png';
+          if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') ext = '.jpg';
+          else if (mimeType === 'image/gif') ext = '.gif';
+          else if (mimeType === 'image/webp') ext = '.webp';
+          
+          // Clean up old logo
+          if (workspace.logo && workspace.logo.startsWith('/uploads/logos/')) {
+            const oldPath = path.join(process.cwd(), workspace.logo);
+            if (fs.existsSync(oldPath)) {
+              fs.unlinkSync(oldPath);
+            }
+          }
+
+          // Create logos folder
+          const logosDir = path.join(process.cwd(), 'uploads', 'logos');
+          if (!fs.existsSync(logosDir)) {
+            fs.mkdirSync(logosDir, { recursive: true });
+          }
+
+          const filename = `logo-${workspace.id}-${Date.now()}${ext}`;
+          const filePath = path.join(logosDir, filename);
+          fs.writeFileSync(filePath, buffer);
+
+          updateData.logo = `/uploads/logos/${filename}`;
+        }
+      } catch (err) {
+        logger.error(`Failed to upload workspace logo: ${err}`);
+      }
+    }
+
+    const updated = await workspaceRepository.update(workspace.id, updateData);
     return {
       ...this.formatWorkspace(updated),
       updatedAt: updated.updatedAt,
@@ -472,6 +530,7 @@ export class WorkspaceService extends BaseService<
       slug: workspace.slug,
       description: workspace.description,
       logo: workspace.logo,
+      teamSize: workspace.teamSize,
       createdAt: workspace.createdAt,
       updatedAt: workspace.updatedAt,
     };

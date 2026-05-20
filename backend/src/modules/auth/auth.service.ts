@@ -453,6 +453,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     password?: string;
     workspaceName: string;
     workspaceSlug: string;
+    teamSize?: string;
   }) {
     const user = await authRepository.findById(userId);
     if (!user) {
@@ -492,7 +493,10 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
 
     // 3. Create workspace with a temporary slug first
     const workspace = await workspaceService.createForUser(
-      { name: data.workspaceName },
+      { 
+        name: data.workspaceName,
+        teamSize: data.teamSize,
+      },
       userId,
     );
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { LoaderCircle, Settings, Upload } from "lucide-react"
 import { toast } from "sonner"
 
@@ -10,9 +10,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   useUpdateWorkspaceMutation,
   useWorkspaceDetailQuery,
 } from "@/hooks/useWorkspaces"
+import { setLastWorkspaceSlug } from "@/stores/authStore"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 
 function getInitials(text: string): string {
@@ -26,22 +34,30 @@ function getInitials(text: string): string {
   )
 }
 
+const TEAM_SIZES = [
+  { value: "solo", label: "Chỉ mình tôi" },
+  { value: "2-10", label: "2-10 người" },
+  { value: "11-50", label: "11-50 người" },
+  { value: "51+", label: "Hơn 50 người" },
+]
+
 export default function WorkspaceGeneralSettings() {
   const params = useParams()
+  const navigate = useNavigate()
   const workspaceSlug = params.workspaceId || ""
 
   const { data: workspace, isLoading } = useWorkspaceDetailQuery(workspaceSlug)
   const updateMutation = useUpdateWorkspaceMutation(workspaceSlug)
 
   const [name, setName] = useState("")
-  const [description, setDescription] = useState("")
+  const [teamSize, setTeamSize] = useState("solo")
   const [isDirty, setIsDirty] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (workspace) {
       setName(workspace.name || "")
-      setDescription(workspace.description || "")
+      setTeamSize(workspace.teamSize || "solo")
     }
   }, [workspace])
 
@@ -52,11 +68,6 @@ export default function WorkspaceGeneralSettings() {
     setIsDirty(true)
   }
 
-  const handleDescriptionChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setDescription(e.target.value)
-    setIsDirty(true)
-  }
-
   const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Tên không gian làm việc không được để trống.")
@@ -64,12 +75,17 @@ export default function WorkspaceGeneralSettings() {
     }
 
     try {
-      await updateMutation.mutateAsync({
+      const updatedWorkspace = await updateMutation.mutateAsync({
         name: name.trim(),
-        description: description.trim() || undefined,
+        teamSize,
       })
       toast.success("Đã lưu thay đổi.")
       setIsDirty(false)
+
+      if (updatedWorkspace && updatedWorkspace.slug && updatedWorkspace.slug !== workspaceSlug) {
+        setLastWorkspaceSlug(updatedWorkspace.slug)
+        navigate(`/workspaces/${updatedWorkspace.slug}/settings`, { replace: true })
+      }
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, "Không thể lưu thay đổi."))
     }
@@ -215,16 +231,26 @@ export default function WorkspaceGeneralSettings() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="workspace-description">Mô tả</Label>
-            <textarea
-              id="workspace-description"
-              value={description}
-              onChange={handleDescriptionChange}
-              placeholder="Mô tả ngắn về không gian làm việc (tùy chọn)"
-              maxLength={500}
+            <Label htmlFor="workspace-team-size">Quy mô thành viên</Label>
+            <Select
+              value={teamSize}
+              onValueChange={(val) => {
+                setTeamSize(val)
+                setIsDirty(true)
+              }}
               disabled={!canEdit || isSaving}
-              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            />
+            >
+              <SelectTrigger id="workspace-team-size" className="w-full">
+                <SelectValue placeholder="Chọn quy mô thành viên" />
+              </SelectTrigger>
+              <SelectContent>
+                {TEAM_SIZES.map((size) => (
+                  <SelectItem key={size.value} value={size.value}>
+                    {size.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="flex items-center gap-3 border-t pt-4">

@@ -151,6 +151,7 @@ model Workspace {
   slug        String    @unique @db.VarChar(50)
   description String?   @db.Text
   logo        String?   @db.VarChar(500)
+  teamSize    String?   @db.VarChar(50)  @map("team_size")
 
   members WorkspaceMember[]
   invitations Invitation[]

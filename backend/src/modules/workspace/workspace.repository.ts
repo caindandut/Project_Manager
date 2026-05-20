@@ -94,7 +94,7 @@ export class WorkspaceRepository extends BaseRepository<
   }
 
   async createWithOwner(
-    data: { name: string; description?: string; logo?: string },
+    data: { name: string; description?: string; logo?: string; teamSize?: string },
     ownerId: number,
   ): Promise<Workspace> {
     // Generate unique slug from name
@@ -114,6 +114,7 @@ export class WorkspaceRepository extends BaseRepository<
         slug,
         description: data.description,
         logo: data.logo,
+        teamSize: data.teamSize,
         members: {
           create: {
             userId: ownerId,
@@ -124,7 +125,7 @@ export class WorkspaceRepository extends BaseRepository<
     });
   }
 
-  private generateSlug(name: string): string {
+  generateSlug(name: string): string {
     let slug = name.toLowerCase();
     slug = slug.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     slug = slug.replace(/\s+/g, '-');

@@ -68,7 +68,10 @@ export const useUpdateWorkspaceMutation = (workspaceId: string | number) => {
   return useMutation({
     mutationFn: (payload: UpdateWorkspacePayload) => updateWorkspace(workspaceId, payload),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: workspaceQueryKeys.detail(workspaceId) })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+        queryClient.invalidateQueries({ queryKey: ["workspace"] }),
+      ])
     },
   })
 }

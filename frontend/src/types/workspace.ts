@@ -8,6 +8,7 @@ export interface WorkspaceListItem {
   slug: string
   description: string | null
   logo: string | null
+  teamSize?: string | null
   role: WorkspaceRole
   memberCount: number
   projectCount: number
@@ -74,6 +75,7 @@ export interface WorkspaceDetail {
   slug: string
   description: string | null
   logo: string | null
+  teamSize?: string | null
   role: WorkspaceRole
   createdAt: string
   updatedAt: string
@@ -99,12 +101,14 @@ export interface WorkspaceMember {
 export interface CreateWorkspacePayload {
   name: string
   description?: string
+  teamSize?: string
 }
 
 export interface UpdateWorkspacePayload {
   name?: string
   description?: string
   logo?: string
+  teamSize?: string
 }
 
 export interface InviteWorkspaceMemberPayload {

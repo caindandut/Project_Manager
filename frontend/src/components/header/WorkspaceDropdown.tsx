@@ -5,7 +5,7 @@ import {
   Settings,
 } from "lucide-react"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,11 +46,16 @@ export default function WorkspaceDropdown() {
           className="flex h-9 items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
         >
           {currentWorkspaceQuery.isLoading ? (
-            <Skeleton className="h-8 w-8 rounded" />
+            <Skeleton className="h-8 w-8 rounded-lg" />
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded bg-primary text-primary-foreground text-sm font-semibold">
-              {currentWorkspace ? getInitials(currentWorkspace.name) : "?"}
-            </div>
+            <Avatar className="h-8 w-8 rounded-lg">
+              {currentWorkspace?.logo && (
+                <AvatarImage src={currentWorkspace.logo} alt={currentWorkspace.name} />
+              )}
+              <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
+                {currentWorkspace ? getInitials(currentWorkspace.name) : "?"}
+              </AvatarFallback>
+            </Avatar>
           )}
 
           <span className={cn(
@@ -70,8 +75,11 @@ export default function WorkspaceDropdown() {
           <>
             <div className="px-3 py-3">
               <div className="flex items-start gap-3">
-                <Avatar className="h-10 w-10 rounded">
-                  <AvatarFallback className="rounded bg-primary text-primary-foreground text-sm font-semibold">
+                <Avatar className="h-10 w-10 rounded-lg">
+                  {currentWorkspace.logo && (
+                    <AvatarImage src={currentWorkspace.logo} alt={currentWorkspace.name} />
+                  )}
+                  <AvatarFallback className="rounded-lg bg-primary text-primary-foreground text-sm font-semibold">
                     {getInitials(currentWorkspace.name)}
                   </AvatarFallback>
                 </Avatar>
@@ -107,9 +115,14 @@ export default function WorkspaceDropdown() {
                     to={`/workspaces/${ws.slug}`}
                     className="flex items-center gap-3 cursor-pointer rounded-md mx-1"
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded bg-muted text-foreground text-xs font-semibold">
-                      {getInitials(ws.name)}
-                    </div>
+                    <Avatar className="h-8 w-8 rounded-lg">
+                      {ws.logo && (
+                        <AvatarImage src={ws.logo} alt={ws.name} />
+                      )}
+                      <AvatarFallback className="rounded-lg bg-muted text-foreground text-xs font-semibold">
+                        {getInitials(ws.name)}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-sm text-foreground truncate">{ws.name}</p>
                       <p className="text-xs text-muted-foreground">

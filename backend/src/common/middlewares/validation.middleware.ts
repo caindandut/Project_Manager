@@ -127,8 +127,13 @@ export const validationRules = {
     body('logo')
       .optional()
       .trim()
-      .isURL()
-      .withMessage('Logo must be a valid URL'),
+      .isString()
+      .withMessage('Logo must be a string'),
+    body('teamSize')
+      .optional()
+      .trim()
+      .isLength({ max: 50 })
+      .withMessage('Team size must be at most 50 characters'),
   ],
 
   updateWorkspace: [
@@ -145,8 +150,13 @@ export const validationRules = {
     body('logo')
       .optional()
       .trim()
-      .isURL()
-      .withMessage('Logo must be a valid URL'),
+      .isString()
+      .withMessage('Logo must be a string'),
+    body('teamSize')
+      .optional()
+      .trim()
+      .isLength({ max: 50 })
+      .withMessage('Team size must be at most 50 characters'),
   ],
 
   inviteMember: [
