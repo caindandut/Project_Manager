@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useProjectDetailQuery, useUpdateProjectMutation } from "@/hooks/useProject"
+import { useProjectDetailQuery } from "@/hooks/useProject"
 import { useWorkspaceDetailQuery } from "@/hooks/useWorkspaces"
 
 import OverviewHeader from "@/components/project/OverviewHeader"
@@ -21,7 +21,6 @@ export default function ProjectOverview() {
 
   const workspaceQuery = useWorkspaceDetailQuery(workspaceSlug)
   const projectQuery = useProjectDetailQuery(workspaceSlug, projectId)
-  const updateProjectMutation = useUpdateProjectMutation(workspaceSlug, projectId)
   const project = projectQuery.data
 
   useEffect(() => {
@@ -35,13 +34,6 @@ export default function ProjectOverview() {
   const canManageMembers =
     workspaceRole === "OWNER" || workspaceRole === "ADMIN"
   const workspaceId = workspaceQuery.data?.id
-
-  const handleUpdateProject = async (payload: {
-    name?: string
-    description?: string
-  }) => {
-    await updateProjectMutation.mutateAsync(payload)
-  }
 
   // ─── Invalid params ────────────────────────────────────────
   if (!workspaceSlug || !projectId) {
@@ -132,7 +124,6 @@ export default function ProjectOverview() {
         workspaceName={workspaceQuery.data?.name || "Workspace"}
         workspaceId={workspaceId}
         canManage={canManageMembers}
-        onUpdateProject={handleUpdateProject}
       />
 
       {/* ── Section 2: Stats Row ───────────────────────────── */}

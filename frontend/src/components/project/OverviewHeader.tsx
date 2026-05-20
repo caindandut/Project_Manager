@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect } from "react"
 import { Link } from "react-router-dom"
 import {
   Calendar,
@@ -8,7 +7,6 @@ import {
   Settings,
   Trash2,
 } from "lucide-react"
-import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -31,7 +29,6 @@ interface OverviewHeaderProps {
   workspaceName: string
   workspaceId?: number
   canManage: boolean
-  onUpdateProject: (payload: { name?: string; description?: string }) => Promise<void>
 }
 
 export default function OverviewHeader({
@@ -41,46 +38,7 @@ export default function OverviewHeader({
   workspaceName,
   workspaceId,
   canManage,
-  onUpdateProject,
 }: OverviewHeaderProps) {
-  const [editingName, setEditingName] = useState(false)
-  const [editingDesc, setEditingDesc] = useState(false)
-  const [nameValue, setNameValue] = useState("")
-  const [descValue, setDescValue] = useState("")
-  const nameRef = useRef<HTMLInputElement>(null)
-  const descRef = useRef<HTMLTextAreaElement>(null)
-
-  useEffect(() => {
-    if (editingName && nameRef.current) nameRef.current.focus()
-  }, [editingName])
-  useEffect(() => {
-    if (editingDesc && descRef.current) descRef.current.focus()
-  }, [editingDesc])
-
-  const handleNameSave = async () => {
-    setEditingName(false)
-    if (nameValue.trim() && nameValue.trim() !== project?.name) {
-      try {
-        await onUpdateProject({ name: nameValue.trim() })
-        toast.success("Đã cập nhật tên dự án")
-      } catch {
-        toast.error("Không thể cập nhật tên dự án")
-      }
-    }
-  }
-
-  const handleDescSave = async () => {
-    setEditingDesc(false)
-    if (descValue !== (project?.description || "")) {
-      try {
-        await onUpdateProject({ description: descValue })
-        toast.success("Đã cập nhật mô tả")
-      } catch {
-        toast.error("Không thể cập nhật mô tả")
-      }
-    }
-  }
-
   if (isLoading) {
     return (
       <div className="space-y-3">
@@ -109,55 +67,17 @@ export default function OverviewHeader({
             <FolderKanban className="h-5 w-5 text-primary" />
           </div>
           <div className="min-w-0 flex-1 space-y-1">
-            {editingName ? (
-              <input
-                ref={nameRef}
-                value={nameValue}
-                onChange={(e) => setNameValue(e.target.value)}
-                onBlur={() => void handleNameSave()}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleNameSave()
-                  if (e.key === "Escape") setEditingName(false)
-                }}
-                className="w-full rounded-md border bg-background px-2 py-1 text-2xl font-semibold outline-none ring-2 ring-primary/30"
-              />
-            ) : (
-              <h1
-                className="text-2xl font-semibold text-foreground cursor-pointer hover:text-primary/80 transition-colors"
-                onClick={() => {
-                  if (!canManage) return
-                  setNameValue(project?.name || "")
-                  setEditingName(true)
-                }}
-                title={canManage ? "Nhấn để sửa tên" : undefined}
-              >
-                {project?.name}
-              </h1>
-            )}
+            <h1 className="text-2xl font-semibold text-foreground">
+              {project?.name}
+            </h1>
 
-            {editingDesc ? (
-              <textarea
-                ref={descRef}
-                value={descValue}
-                onChange={(e) => setDescValue(e.target.value)}
-                onBlur={() => void handleDescSave()}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape") setEditingDesc(false)
-                }}
-                rows={2}
-                className="w-full rounded-md border bg-background px-2 py-1 text-sm text-muted-foreground outline-none ring-2 ring-primary/30 resize-none"
-              />
+            {project?.description ? (
+              <p className="text-sm text-muted-foreground max-w-2xl">
+                {project.description}
+              </p>
             ) : (
-              <p
-                className="text-sm text-muted-foreground cursor-pointer hover:text-foreground/70 transition-colors max-w-2xl"
-                onClick={() => {
-                  if (!canManage) return
-                  setDescValue(project?.description || "")
-                  setEditingDesc(true)
-                }}
-                title={canManage ? "Nhấn để sửa mô tả" : undefined}
-              >
-                {project?.description || "Chưa có mô tả. Nhấn để thêm mô tả cho dự án."}
+              <p className="text-sm text-muted-foreground/60 italic max-w-2xl">
+                Chưa có mô tả cho dự án.
               </p>
             )}
 
@@ -217,3 +137,4 @@ export default function OverviewHeader({
     </div>
   )
 }
+

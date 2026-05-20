@@ -10,7 +10,7 @@ import {
   Trash2,
   UserPlus,
 } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
+import { format, formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
 import type { ProjectActivity } from "@/lib/project-api"
 
@@ -66,6 +66,16 @@ function humanizeValue(field: string | undefined, value: string | null | undefin
   if (!value || value === "null") return "trống"
   if (field === "status") return STATUS_LABELS[value] || value
   if (field === "priority") return PRIORITY_LABELS[value] || value
+  if (field === "dueDate" || field === "startDate") {
+    try {
+      const d = new Date(value)
+      if (!isNaN(d.getTime())) {
+        return format(d, "dd/MM/yyyy", { locale: vi })
+      }
+    } catch {
+      // fallback
+    }
+  }
   return value
 }
 
