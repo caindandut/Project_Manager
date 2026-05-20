@@ -245,6 +245,7 @@ export class ProjectService extends BaseService<
       taskCount: project._count.tasks,
       completedTaskCount: project.completedTaskCount,
       createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
     };
   }
 

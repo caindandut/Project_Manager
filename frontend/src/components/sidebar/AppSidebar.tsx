@@ -7,7 +7,8 @@ import { useParams } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { setLastWorkspaceSlug } from "@/stores/authStore"
+import { getLastWorkspaceSlug, setLastWorkspaceSlug } from "@/stores/authStore"
+import { useWorkspacesQuery } from "@/hooks/useWorkspaces"
 import { ProjectNavigator } from "./ProjectNavigator"
 
 interface AppSidebarProps {
@@ -17,14 +18,30 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) {
   const params = useParams()
-  const workspaceSlug = params.workspaceId || ""
+  const urlWorkspaceSlug = params.workspaceId || ""
   const [isCollapsed, setIsCollapsed] = useState(false)
+  const [fallbackSlug, setFallbackSlug] = useState("")
+
+  const workspacesQuery = useWorkspacesQuery(1, 20, {
+    enabled: !urlWorkspaceSlug && !fallbackSlug
+  })
+
+  let activeWorkspaceSlug = urlWorkspaceSlug
+  if (!activeWorkspaceSlug) {
+    activeWorkspaceSlug = getLastWorkspaceSlug() || fallbackSlug
+  }
 
   useEffect(() => {
-    if (workspaceSlug) {
-      setLastWorkspaceSlug(workspaceSlug)
+    if (!urlWorkspaceSlug && !getLastWorkspaceSlug() && workspacesQuery.data?.data?.length) {
+      setFallbackSlug(workspacesQuery.data.data[0].slug)
     }
-  }, [workspaceSlug])
+  }, [urlWorkspaceSlug, workspacesQuery.data])
+
+  useEffect(() => {
+    if (urlWorkspaceSlug) {
+      setLastWorkspaceSlug(urlWorkspaceSlug)
+    }
+  }, [urlWorkspaceSlug])
 
   return (
     <>
@@ -60,16 +77,9 @@ export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) 
             </Button>
           </div>
 
-          {workspaceSlug && <ProjectNavigator workspaceId={workspaceSlug} isCollapsed={isCollapsed} />}
+          {activeWorkspaceSlug && <ProjectNavigator workspaceId={activeWorkspaceSlug} isCollapsed={isCollapsed} />}
         </nav>
 
-        {!isCollapsed && (
-          <div className="border-t border-sidebar-border p-3">
-            <p className="text-center text-[10px] text-muted-foreground">
-              Jira Mini v1.0
-            </p>
-          </div>
-        )}
       </aside>
     </>
   )

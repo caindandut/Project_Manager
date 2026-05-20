@@ -8,6 +8,8 @@ export interface Project {
   workspaceId: number
   createdAt: string
   updatedAt: string
+  taskCount?: number
+  completedTaskCount?: number
 }
 
 export interface ProjectStats {

@@ -8,6 +8,9 @@ export interface AuthUser {
   bio?: string | null;
   systemRole?: 'OWNER' | 'USER';
   requireOnboarding?: boolean;
+  googleId?: string | null;
+  googleAvatar?: string | null;
+  hasPassword?: boolean;
 }
 
 interface AuthState {

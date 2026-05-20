@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom"
-import { Menu, Search, Settings, ShieldCheck, X } from "lucide-react"
+import { Menu, Moon, Search, ShieldCheck, Sun, X } from "lucide-react"
 import { useState } from "react"
+import { useTheme } from "next-themes"
 
 import NotificationBell from "@/components/NotificationBell"
 import UserDropdown from "./UserDropdown"
@@ -16,6 +17,7 @@ interface AppHeaderProps {
 export default function AppHeader({ onMenuClick }: AppHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const user = useAuthStore((s) => s.user)
+  const { theme, setTheme } = useTheme()
 
   return (
     <header className="sticky top-0 z-50 flex h-14 w-full items-center gap-4 border-b border-border bg-card px-4 shadow-sm dark:shadow-jira-card-dark">
@@ -68,6 +70,21 @@ export default function AppHeader({ onMenuClick }: AppHeaderProps) {
 
       {/* Right side actions */}
       <div className="ml-auto flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 text-muted-foreground hover:bg-muted hover:text-foreground"
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          aria-label="Toggle theme"
+          title={theme === "dark" ? "Chế độ sáng" : "Chế độ tối"}
+        >
+          {theme === "dark" ? (
+            <Sun className="h-4 w-4" />
+          ) : (
+            <Moon className="h-4 w-4" />
+          )}
+        </Button>
+
         <NotificationBell />
 
         {/* Admin Panel - only visible for OWNER */}
@@ -81,14 +98,6 @@ export default function AppHeader({ onMenuClick }: AppHeaderProps) {
             <ShieldCheck className="h-4 w-4" />
           </Link>
         )}
-        
-        <Link
-          to="/settings"
-          className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          aria-label="Cài đặt"
-        >
-          <Settings className="h-4 w-4" />
-        </Link>
         
         <UserDropdown />
       </div>

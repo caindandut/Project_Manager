@@ -13,6 +13,13 @@ export default function WorkspaceProjectsPage() {
   const projectsQuery = useProjectsQuery(workspaceId)
   const projects = projectsQuery.data?.data ?? []
 
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return "Chưa có cập nhật"
+    const date = new Date(dateStr)
+    if (isNaN(date.getTime())) return "Chưa có cập nhật"
+    return date.toLocaleDateString("vi-VN")
+  }
+
   return (
     <div className="space-y-6 p-6 md:p-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -75,39 +82,78 @@ export default function WorkspaceProjectsPage() {
       ) : null}
 
       {!projectsQuery.isLoading && !projectsQuery.isError && projects.length > 0 ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Card key={project.id} className="h-full">
-              <CardHeader>
-                <div className="flex items-start gap-3">
+            <Card key={project.id} className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20 dark:hover:bg-slate-900/40">
+              <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: project.color || "hsl(var(--primary))" }} />
+              <CardHeader className="pb-3">
+                <div className="flex items-start gap-4">
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md text-sm font-semibold text-white"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-inner transition-transform group-hover:scale-105"
                     style={{ backgroundColor: project.color || "hsl(var(--primary))" }}
                   >
                     {(project.key || project.name.slice(0, 2)).toUpperCase()}
                   </div>
-                  <div className="min-w-0">
-                    <CardTitle className="truncate">{project.name}</CardTitle>
-                    <CardDescription className="mt-1 truncate">
-                      {project.key || `Project #${project.id}`}
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="truncate text-lg font-bold group-hover:text-primary transition-colors">{project.name}</CardTitle>
+                    <CardDescription className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      <span>Mã: {project.key || `Project #${project.id}`}</span>
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent className="flex h-full flex-col gap-4">
-                <p className="min-h-10 text-sm text-muted-foreground">
+              
+              <CardContent className="space-y-4">
+                <p className="line-clamp-2 text-sm text-muted-foreground min-h-[40px] leading-relaxed">
                   {project.description || "Dự án này chưa có mô tả."}
                 </p>
-                <div className="mt-auto flex items-center justify-between border-t pt-4">
-                  <span className="text-xs text-muted-foreground">
-                    Cập nhật {new Date(project.updatedAt).toLocaleDateString("vi-VN")}
+
+                {/* Progress bar section */}
+                {typeof project.taskCount === "number" && project.taskCount > 0 ? (
+                  (() => {
+                    const taskCount = project.taskCount || 0;
+                    const completedCount = project.completedTaskCount || 0;
+                    const percentage = Math.round((completedCount / taskCount) * 100);
+                    return (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground font-medium">Tiến độ công việc</span>
+                          <span className="font-semibold text-primary">{completedCount}/{taskCount} ({percentage}%)</span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="h-full rounded-full transition-all duration-500 ease-out" 
+                            style={{ 
+                              width: `${percentage}%`,
+                              backgroundColor: project.color || "hsl(var(--primary))"
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()
+                ) : (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground font-medium">Tiến độ công việc</span>
+                      <span className="text-muted-foreground italic font-medium">Chưa có công việc nào</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                      <div className="h-full rounded-full w-0 bg-primary/40" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between border-t border-border/60 pt-4 mt-2">
+                  <span className="text-[11px] font-medium text-muted-foreground">
+                    Cập nhật {formatDate(project.updatedAt)}
                   </span>
                   <Link
                     to={`/workspaces/${workspaceId}/projects/${project.id}/overview`}
-                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1.5")}
+                    className={cn(buttonVariants({ variant: "outline", size: "sm" }), "gap-1 px-3.5 transition-all hover:bg-primary hover:text-primary-foreground group-hover:border-primary/40")}
                   >
-                    Mở
-                    <ArrowRight className="h-3.5 w-3.5" />
+                    <span>Mở</span>
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                   </Link>
                 </div>
               </CardContent>

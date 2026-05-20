@@ -115,6 +115,9 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
         avatar: user.avatar,
         bio: user.bio,
         systemRole: user.systemRole,
+        googleId: user.googleId,
+        googleAvatar: user.googleAvatar,
+        hasPassword: user.password !== null,
       },
       accessToken,
       refreshToken,
@@ -122,26 +125,47 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     };
   }
 
-  async googleLogin(payload: GoogleUserPayload) {
-    let user = await authRepository.findByGoogleId(payload.sub);
+  async googleLogin(payload: GoogleUserPayload, currentUserId?: number) {
+    let user;
 
-    if (!user) {
-      user = await authRepository.findByEmail(payload.email);
-      if (user) {
-        user = await authRepository.linkGoogleId(user.id, payload.sub);
-      } else {
-        user = await authRepository.create({
-          email: payload.email,
-          name: payload.name || payload.email.split('@')[0],
-          googleId: payload.sub,
-          avatar: payload.picture,
-        });
-
-        await workspaceRepository.acceptPendingInvitationsForUser(user);
-
-        logger.info(`New user registered via Google OAuth: ${user.email}`);
+    if (currentUserId) {
+      user = await authRepository.findById(currentUserId);
+      if (!user) {
+        throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
       }
-    } else if (user.deletedAt) {
+
+      const existingGoogleUser = await authRepository.findByGoogleId(payload.sub);
+      if (existingGoogleUser && existingGoogleUser.id !== currentUserId) {
+        throw ApiError.conflict(ErrorCode.VALIDATION_ERROR, 'Tài khoản Google này đã được liên kết với một người dùng khác');
+      }
+
+      if (!user.googleId) {
+        user = await authRepository.linkGoogleId(currentUserId, payload.sub, payload.picture);
+      }
+    } else {
+      user = await authRepository.findByGoogleId(payload.sub);
+
+      if (!user) {
+        user = await authRepository.findByEmail(payload.email);
+        if (user) {
+          user = await authRepository.linkGoogleId(user.id, payload.sub, payload.picture);
+        } else {
+          user = await authRepository.create({
+            email: payload.email,
+            name: payload.name || payload.email.split('@')[0],
+            googleId: payload.sub,
+            avatar: payload.picture,
+            googleAvatar: payload.picture,
+          });
+
+          await workspaceRepository.acceptPendingInvitationsForUser(user);
+
+          logger.info(`New user registered via Google OAuth: ${user.email}`);
+        }
+      }
+    }
+
+    if (user.deletedAt) {
       throw ApiError.forbidden(ErrorCode.USER_DELETED, 'This account has been deactivated');
     } else if (user.isBlocked) {
       throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Your account has been blocked. Please contact the administrator.');
@@ -163,6 +187,9 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
         avatar: user.avatar,
         bio: user.bio,
         systemRole: user.systemRole,
+        googleId: user.googleId,
+        googleAvatar: user.googleAvatar,
+        hasPassword: user.password !== null,
       },
       accessToken,
       refreshToken,
@@ -315,6 +342,9 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
         name: user.name,
         avatar: user.avatar,
         bio: user.bio,
+        googleId: user.googleId,
+        googleAvatar: user.googleAvatar,
+        hasPassword: user.password !== null,
       },
       accessToken,
       refreshToken,
@@ -366,6 +396,9 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       avatar: user.avatar,
       bio: user.bio,
       systemRole: user.systemRole,
+      googleId: user.googleId,
+      googleAvatar: user.googleAvatar,
+      hasPassword: user.password !== null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     };
@@ -385,6 +418,9 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       name: updated.name,
       avatar: updated.avatar,
       bio: updated.bio,
+      googleId: updated.googleId,
+      googleAvatar: updated.googleAvatar,
+      hasPassword: updated.password !== null,
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     };
@@ -481,6 +517,9 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
         name: updatedUser!.name,
         avatar: updatedUser!.avatar,
         bio: updatedUser!.bio,
+        googleId: updatedUser!.googleId,
+        googleAvatar: updatedUser!.googleAvatar,
+        hasPassword: updatedUser!.password !== null,
       },
       accessToken,
       refreshToken,

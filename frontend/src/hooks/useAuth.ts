@@ -30,6 +30,17 @@ interface RegisterWithOtpInput {
   password: string
 }
 
+export interface UpdateProfileInput {
+  name?: string
+  bio?: string
+  avatar?: string | null
+}
+
+export interface ChangePasswordInput {
+  currentPassword?: string
+  newPassword?: string
+}
+
 interface AuthSuccessPayload {
   user: AuthUser
   accessToken: string
@@ -177,6 +188,56 @@ export const useAuth = () => {
     },
   })
 
+  const updateProfileMutation = useMutation({
+    mutationFn: async (payload: UpdateProfileInput) => {
+      try {
+        const response = await apiClient.patch<ApiResponse<AuthUser>>('/auth/me', payload)
+        return unwrapResponse(response)
+      } catch (error) {
+        throw normalizeApiError(error)
+      }
+    },
+    onSuccess: (data) => {
+      setUser(data)
+      queryClient.setQueryData(AUTH_ME_QUERY_KEY, data)
+    },
+  })
+
+  const uploadAvatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      try {
+        const formData = new FormData()
+        formData.append('avatar', file)
+        const response = await apiClient.post<ApiResponse<{ avatar: string }>>('/auth/me/avatar', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+        return unwrapResponse(response)
+      } catch (error) {
+        throw normalizeApiError(error)
+      }
+    },
+    onSuccess: (data) => {
+      if (user) {
+        const updatedUser = { ...user, avatar: data.avatar }
+        setUser(updatedUser)
+        queryClient.setQueryData(AUTH_ME_QUERY_KEY, updatedUser)
+      }
+    },
+  })
+
+  const changePasswordMutation = useMutation({
+    mutationFn: async (payload: ChangePasswordInput) => {
+      try {
+        const response = await apiClient.post<ApiResponse<{ message: string }>>('/auth/change-password', payload)
+        return unwrapResponse(response)
+      } catch (error) {
+        throw normalizeApiError(error)
+      }
+    },
+  })
+
   return {
     user,
     isAuthenticated,
@@ -197,5 +258,11 @@ export const useAuth = () => {
     isSendOtpPending: sendOtpMutation.isPending,
     isVerifyOtpPending: verifyOtpMutation.isPending,
     isRegisterWithOtpPending: registerWithOtpMutation.isPending,
+    updateProfile: updateProfileMutation.mutateAsync,
+    isUpdateProfilePending: updateProfileMutation.isPending,
+    uploadAvatar: uploadAvatarMutation.mutateAsync,
+    isUploadAvatarPending: uploadAvatarMutation.isPending,
+    changePassword: changePasswordMutation.mutateAsync,
+    isChangePasswordPending: changePasswordMutation.isPending,
   }
 }

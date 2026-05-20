@@ -1,4 +1,6 @@
 import { Request, Response } from 'express';
+import jwt, { JwtPayload } from 'jsonwebtoken';
+import { logger } from '../../common/utils/logger';
 import { authService } from './auth.service';
 import { BaseController } from '../../common/base/BaseController';
 import { AuthenticatedRequest } from '../../types/interfaces';
@@ -23,7 +25,7 @@ export class AuthController extends BaseController {
   };
 
   googleCallback = async (req: Request, res: Response): Promise<void> => {
-    await this.tryCatch(res, async () => {
+    try {
       const { code, id_token } = req.query;
 
       let payload;
@@ -45,7 +47,18 @@ export class AuthController extends BaseController {
         throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Missing code or id_token parameter');
       }
 
-      const result = await authService.googleLogin(payload);
+      let currentUserId: number | undefined;
+      const refreshToken = req.cookies?.refreshToken;
+      if (refreshToken) {
+        try {
+          const decoded = jwt.verify(refreshToken, config.REFRESH_TOKEN_SECRET) as JwtPayload;
+          currentUserId = decoded.userId;
+        } catch (err) {
+          // Ignore invalid refresh token
+        }
+      }
+
+      const result = await authService.googleLogin(payload, currentUserId);
 
       res.cookie('refreshToken', result.refreshToken, {
         httpOnly: true,
@@ -60,7 +73,13 @@ export class AuthController extends BaseController {
       frontendUrl.searchParams.set('requireOnboarding', String(result.requireOnboarding));
       frontendUrl.searchParams.set('user', JSON.stringify(result.user));
       res.redirect(frontendUrl.toString());
-    });
+    } catch (error: any) {
+      logger.error(`Google OAuth Callback error: ${error.message || error}`);
+      const frontendUrl = new URL('/google/callback', config.CLIENT_URL);
+      const errorMessage = error.message || 'Đăng nhập Google thất bại';
+      frontendUrl.searchParams.set('error', errorMessage);
+      res.redirect(frontendUrl.toString());
+    }
   };
 
   // ─── Credentials ──────────────────────────────────────────────────────────

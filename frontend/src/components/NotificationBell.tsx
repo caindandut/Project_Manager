@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react"
-import { Bell, Check, CheckCheck, ChevronRight, ExternalLink, Loader2, User2 } from "lucide-react"
+import { Bell, Check, CheckCheck, ChevronRight, ExternalLink, Loader2, User2, Settings } from "lucide-react"
+import NotificationSettingsDialog from "@/components/NotificationSettingsDialog"
 import { useNavigate } from "react-router-dom"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
@@ -33,6 +34,7 @@ export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<"DIRECT" | "WATCHING">("DIRECT")
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
 
   const unreadCountQuery = useUnreadCountQuery()
   const groupedQuery = useGroupedNotificationsQuery(activeTab, 10)
@@ -84,7 +86,8 @@ export default function NotificationBell() {
   }, [markAllAsReadMutation, activeTab])
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <>
+      <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -112,16 +115,30 @@ export default function NotificationBell() {
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border/50 px-4 py-3">
           <h3 className="text-sm font-semibold text-foreground">Thông báo</h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-            onClick={handleMarkAllRead}
-            disabled={markAllAsReadMutation.isPending}
-          >
-            <CheckCheck className="h-3.5 w-3.5" />
-            Đọc tất cả
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+              onClick={handleMarkAllRead}
+              disabled={markAllAsReadMutation.isPending}
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              Đọc tất cả
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground p-0"
+              onClick={() => {
+                setIsOpen(false);
+                setSettingsOpen(true);
+              }}
+              title="Cài đặt thông báo"
+            >
+              <Settings className="h-3.5 w-3.5" />
+            </Button>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -189,7 +206,10 @@ export default function NotificationBell() {
         </div>
       </PopoverContent>
     </Popover>
-  )
+
+    <NotificationSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+  </>
+)
 }
 
 // ── Sub-components ────────────────────────────────────────────────

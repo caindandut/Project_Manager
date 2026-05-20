@@ -68,7 +68,7 @@ export default function WorkspaceInvitationPage() {
   const pendingCount = invitations.filter((invitation) => invitation.status === "PENDING").length
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
           <Mail className="h-5 w-5 text-primary" />

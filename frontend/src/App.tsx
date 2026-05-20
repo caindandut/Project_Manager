@@ -15,7 +15,6 @@ import OnboardingWorkspacePage from '@/pages/OnboardingWorkspace';
 import { ProjectCalendarPage, ProjectGanttPage, ProjectKanbanPage, ProjectListPage } from '@/pages/ProjectViews';
 import ProjectOverview from '@/pages/ProjectOverview';
 import RegisterPage from '@/pages/Register';
-import SettingsPage from '@/pages/Settings';
 import WorkspaceDashboard from '@/pages/WorkspaceDashboard';
 import WorkspaceInvitationPage from '@/pages/WorkspaceInvitation';
 import WorkspaceMembersPage from '@/pages/WorkspaceMembers';
@@ -30,7 +29,6 @@ import AdminSettings from '@/pages/admin/AdminSettings';
 import AdminAuditLog from '@/pages/admin/AdminAuditLog';
 import AdminLayout from '@/components/admin/AdminLayout';
 import AdminProtectedRoute from '@/components/AdminProtectedRoute';
-import NotificationSettingsPage from '@/pages/NotificationSettings';
 import NotificationsPage from '@/pages/NotificationsPage';
 import { getLastWorkspaceSlug } from '@/stores/authStore';
 
@@ -111,8 +109,6 @@ function App() {
             <Route path="/workspaces/:workspaceId/projects/:projectId/calendar" element={<ProjectCalendarPage />} />
             
             {/* Global settings */}
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/settings/notifications" element={<NotificationSettingsPage />} />
             <Route path="/notifications" element={<NotificationsPage />} />
             <Route path="/my-invitations" element={<WorkspaceInvitationPage />} />
           </Route>

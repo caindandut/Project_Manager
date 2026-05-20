@@ -15,10 +15,13 @@ export class AuthRepository extends BaseRepository<User, Prisma.UserCreateInput,
     return prisma.user.findUnique({ where: { googleId } });
   }
 
-  async linkGoogleId(userId: number, googleId: string): Promise<User> {
+  async linkGoogleId(userId: number, googleId: string, googleAvatar?: string): Promise<User> {
     return prisma.user.update({
       where: { id: userId },
-      data: { googleId },
+      data: { 
+        googleId,
+        ...(googleAvatar ? { googleAvatar } : {}),
+      },
     });
   }
 

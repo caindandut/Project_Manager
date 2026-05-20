@@ -30,12 +30,34 @@ export default function GoogleCallbackPage() {
 
     const run = async () => {
       const searchParams = new URLSearchParams(window.location.search);
+      const errorParam = searchParams.get('error');
+      const isLinkingGoogle = window.localStorage.getItem('isLinkingGoogle') === 'true';
+
+      if (errorParam) {
+        toast.error(decodeURIComponent(errorParam));
+        if (isLinkingGoogle) {
+          window.localStorage.removeItem('isLinkingGoogle');
+          const lastSlug = getLastWorkspaceSlug();
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/workspaces', { replace: true });
+        } else {
+          logout();
+          navigate('/login', { replace: true });
+        }
+        return;
+      }
+
       const accessToken = searchParams.get('accessToken');
 
       if (!accessToken) {
         toast.error('Không nhận được mã truy cập từ Google.');
-        logout();
-        navigate('/login', { replace: true });
+        if (isLinkingGoogle) {
+          window.localStorage.removeItem('isLinkingGoogle');
+          const lastSlug = getLastWorkspaceSlug();
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/workspaces', { replace: true });
+        } else {
+          logout();
+          navigate('/login', { replace: true });
+        }
         return;
       }
 
@@ -64,6 +86,15 @@ export default function GoogleCallbackPage() {
         // Use the requireOnboarding from API response, fallback to URL param
         const needsOnboarding = userData.requireOnboarding ?? requireOnboardingParam;
         setRequireOnboarding(needsOnboarding);
+
+        const isLinkingGoogle = window.localStorage.getItem('isLinkingGoogle') === 'true';
+        if (isLinkingGoogle) {
+          window.localStorage.removeItem('isLinkingGoogle');
+          toast.success('Liên kết tài khoản Google thành công!');
+          const lastSlug = getLastWorkspaceSlug();
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/workspaces', { replace: true });
+          return;
+        }
 
         if (needsOnboarding) {
           toast.success('Chào mừng bạn đến với Project Manager!');

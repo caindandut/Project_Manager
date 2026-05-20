@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Camera, LoaderCircle, X } from 'lucide-react';
@@ -19,6 +19,20 @@ export default function OnboardingProfilePage() {
   const navigate = useNavigate();
   const { user, setUser } = useAuthStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // If user registered/logged in via Google, they don't need display name input,
+  // we take the Google account name or email prefix and bypass this profile step.
+  useEffect(() => {
+    if (user?.googleId) {
+      navigate('/onboarding/workspace', {
+        replace: true,
+        state: {
+          name: user.name || user.email.split('@')[0],
+          avatar: user.avatar,
+        } as OnboardingProfileState,
+      });
+    }
+  }, [user, navigate]);
 
   const [name, setName] = useState(user?.name || '');
   const [password, setPassword] = useState('');
