@@ -94,6 +94,55 @@ export class ProjectMemberService extends BaseService<
     return this.formatMember(created!);
   }
 
+  async getMyInvitations(userId: number) {
+    const invitations = await prisma.projectMember.findMany({
+      where: {
+        userId,
+        deletedAt: null,
+        project: {
+          ownerId: { not: userId },
+          deletedAt: null,
+          workspace: {
+            deletedAt: null,
+          },
+        },
+      },
+      include: {
+        project: {
+          select: {
+            id: true,
+            name: true,
+            key: true,
+            workspaceId: true,
+            workspace: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return invitations.map((invitation) => ({
+      id: invitation.id,
+      role: invitation.role,
+      status: invitation.status,
+      invitedAt: invitation.createdAt,
+      joinedAt: invitation.joinedAt,
+      project: {
+        id: invitation.project.id,
+        name: invitation.project.name,
+        key: invitation.project.key,
+        workspaceId: invitation.project.workspaceId,
+        workspace: invitation.project.workspace,
+      },
+    }));
+  }
+
   // -----------------------------------------------------------------
   // ACCEPT / DECLINE INVITATION
   // -----------------------------------------------------------------

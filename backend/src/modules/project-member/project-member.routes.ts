@@ -8,6 +8,12 @@ const router = Router();
 // All routes require authentication
 router.use(authMiddleware);
 
+// GET /api/v1/projects/invitations/me
+router.get(
+  '/invitations/me',
+  projectMemberController.getMyInvitations,
+);
+
 // GET /api/v1/projects/:projectId/members
 router.get(
   '/:projectId/members',

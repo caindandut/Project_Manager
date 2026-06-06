@@ -33,6 +33,21 @@ const typeIcons: Record<string, string> = {
   INVITATION_RECEIVED: "🤝",
 }
 
+const getProjectInvitationMeta = (metadata: NotificationItem["metadata"]) => {
+  if (
+    metadata?.type === "project" &&
+    typeof metadata.projectId === "number" &&
+    typeof metadata.memberId === "number"
+  ) {
+    return {
+      projectId: metadata.projectId,
+      memberId: metadata.memberId,
+    }
+  }
+
+  return null
+}
+
 // ── Main Component ────────────────────────────────────────────────
 export default function NotificationBell() {
   const navigate = useNavigate()
@@ -99,7 +114,12 @@ export default function NotificationBell() {
         )
       } else if (notification.type === "INVITATION_RECEIVED") {
         setIsOpen(false)
-        navigate("/my-invitations")
+        const projectInvitationMeta = getProjectInvitationMeta(notification.metadata)
+        if (projectInvitationMeta) {
+          navigate(`/my-invitations?tab=projects&projectInvitation=${projectInvitationMeta.memberId}`)
+        } else {
+          navigate("/my-invitations")
+        }
       }
     },
     [markAsReadMutation, navigate],

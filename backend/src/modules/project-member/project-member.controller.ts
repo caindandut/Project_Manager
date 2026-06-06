@@ -32,6 +32,18 @@ export class ProjectMemberController extends BaseController {
   };
 
   /**
+   * GET /api/v1/projects/invitations/me
+   */
+  getMyInvitations = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const result = await projectMemberService.getMyInvitations(authReq.user.id);
+
+      res.json(success(result));
+    });
+  };
+
+  /**
    * POST /api/v1/projects/:projectId/members
    */
   addMember = async (req: Request, res: Response): Promise<void> => {

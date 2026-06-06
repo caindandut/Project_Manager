@@ -25,6 +25,25 @@ export interface ProjectMemberListResponse {
   meta: PaginatedMeta
 }
 
+export interface ProjectInvitation {
+  id: number
+  role: ProjectRole
+  status: "PENDING" | "ACCEPTED" | "DECLINED" | "EXPIRED"
+  invitedAt: string
+  joinedAt: string
+  project: {
+    id: number
+    name: string
+    key: string
+    workspaceId: number
+    workspace: {
+      id: number
+      name: string
+      slug: string
+    }
+  }
+}
+
 export interface AddProjectMemberPayload {
   userId: number
   role?: "MEMBER" | "GUEST"
@@ -57,6 +76,17 @@ export const getProjectMembers = async (
       data: response.data.data,
       meta: response.data.meta ?? { page, limit, total: response.data.data.length, totalPages: 1 },
     }
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const getMyProjectInvitations = async (): Promise<ProjectInvitation[]> => {
+  try {
+    const response = await apiClient.get<ApiResponse<ProjectInvitation[]>>(
+      "/projects/invitations/me",
+    )
+    return unwrapResponse(response)
   } catch (error) {
     throw normalizeApiError(error)
   }

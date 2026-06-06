@@ -6,13 +6,21 @@ import {
   removeProjectMember,
   acceptProjectInvitation,
   declineProjectInvitation,
+  getMyProjectInvitations,
   type AddProjectMemberPayload,
   type UpdateProjectMemberRolePayload,
 } from "@/lib/project-member-api"
 
 export const projectMemberQueryKeys = {
   list: (projectId: number) => ["project-members", projectId] as const,
+  myInvitations: ["my-project-invitations"] as const,
 }
+
+export const useMyProjectInvitationsQuery = () =>
+  useQuery({
+    queryKey: projectMemberQueryKeys.myInvitations,
+    queryFn: getMyProjectInvitations,
+  })
 
 /**
  * Fetch and cache the project member list.
@@ -85,13 +93,20 @@ export const useAcceptProjectInvitationMutation = () => {
     mutationFn: ({ projectId, memberId }: { projectId: number; memberId: number }) =>
       acceptProjectInvitation(projectId, memberId),
     onSuccess: async (_, { projectId }) => {
-      await queryClient.invalidateQueries({
-        queryKey: projectMemberQueryKeys.list(projectId),
-      })
-      // invalidate project list to refresh sidebar
-      await queryClient.invalidateQueries({
-        queryKey: ["projects"],
-      })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectMemberQueryKeys.list(projectId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: projectMemberQueryKeys.myInvitations,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["projects"],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications"],
+        }),
+      ])
     },
   })
 }
@@ -103,9 +118,17 @@ export const useDeclineProjectInvitationMutation = () => {
     mutationFn: ({ projectId, memberId }: { projectId: number; memberId: number }) =>
       declineProjectInvitation(projectId, memberId),
     onSuccess: async (_, { projectId }) => {
-      await queryClient.invalidateQueries({
-        queryKey: projectMemberQueryKeys.list(projectId),
-      })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: projectMemberQueryKeys.list(projectId),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: projectMemberQueryKeys.myInvitations,
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["notifications"],
+        }),
+      ])
     },
   })
 }
