@@ -45,7 +45,7 @@ router.get(
 // Upload attachment to task
 router.post(
   '/tasks/:taskId/attachments',
-  requireTaskRole('GUEST'),
+  requireTaskRole('MEMBER'),
   upload.single('file'),
   handleMulterError,
   attachmentController.upload
@@ -61,7 +61,7 @@ router.get(
 // Delete attachment
 router.delete(
   '/attachments/:attachmentId',
-  requireAttachmentRole('GUEST'),
+  requireAttachmentRole('MEMBER'),
   attachmentController.delete
 );
 

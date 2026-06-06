@@ -86,9 +86,9 @@ export class WorkspaceService extends BaseService<
     const workspace = await this.findWorkspaceOrThrow(workspaceId);
     const [member, stats, recentTasks, recentActivities] = await Promise.all([
       workspaceRepository.findMemberByUserId(workspace.id, userId),
-      workspaceRepository.getStats(workspace.id),
-      workspaceRepository.getRecentTasks(workspace.id),
-      workspaceRepository.getRecentActivities(workspace.id),
+      workspaceRepository.getStats(workspace.id, userId),
+      workspaceRepository.getRecentTasks(workspace.id, userId),
+      workspaceRepository.getRecentActivities(workspace.id, userId),
     ]);
 
     if (!member) {
@@ -293,13 +293,6 @@ export class WorkspaceService extends BaseService<
       );
     }
 
-    if (member.role === WorkspaceRole.OWNER) {
-      throw ApiError.badRequest(
-        ErrorCode.MEMBER_CANNOT_CHANGE_OWNER_ROLE,
-        'Cannot change the owner role',
-      );
-    }
-
     if (member.userId === requesterId) {
       throw ApiError.badRequest(
         ErrorCode.MEMBER_CANNOT_CHANGE_OWNER_ROLE,
@@ -319,13 +312,6 @@ export class WorkspaceService extends BaseService<
     const workspace = await this.findWorkspaceOrThrow(id);
     const member = await this.findMemberOrThrow(workspace.id, memberId);
 
-    if (member.role === WorkspaceRole.OWNER) {
-      throw ApiError.badRequest(
-        ErrorCode.WORKSPACE_CANNOT_REMOVE_OWNER,
-        'Cannot remove workspace owner',
-      );
-    }
-
     if (member.userId === requesterId) {
       throw ApiError.badRequest(
         ErrorCode.MEMBER_CANNOT_REMOVE_SELF,
@@ -344,13 +330,6 @@ export class WorkspaceService extends BaseService<
     const member = await workspaceRepository.findMemberByUserId(workspace.id, userId);
     if (!member) {
       throw ApiError.notFound(ErrorCode.MEMBER_NOT_FOUND, 'Member not found');
-    }
-
-    if (member.role === WorkspaceRole.OWNER) {
-      throw ApiError.badRequest(
-        ErrorCode.WORKSPACE_LEAVE_FORBIDDEN,
-        'Owner cannot leave the workspace. Transfer ownership first.',
-      );
     }
 
     await workspaceRepository.removeMemberById(member.id);
@@ -446,8 +425,8 @@ export class WorkspaceService extends BaseService<
   async cancelInvitation(id: string | number, invitationId: number, userId: number) {
     const workspace = await this.findWorkspaceOrThrow(id);
     const member = await workspaceRepository.findMemberByUserId(workspace.id, userId);
-    if (!member || (member.role !== WorkspaceRole.OWNER && member.role !== WorkspaceRole.ADMIN)) {
-      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Only owner or admin can cancel invitations');
+    if (!member || member.role !== WorkspaceRole.ADMIN) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Only workspace admin can cancel invitations');
     }
 
     const invitation = await prisma.invitation.findFirst({

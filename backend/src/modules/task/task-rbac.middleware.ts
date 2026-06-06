@@ -1,11 +1,15 @@
 import { NextFunction, Response } from 'express';
+import { ProjectRole } from '@prisma/client';
 import { prisma } from '../../config';
-import { WORKSPACE_ROLES_HIERARCHY } from '../../config/constants';
 import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
 import { AuthenticatedRequest, WorkspaceRole } from '../../types/interfaces';
 
-const roleHierarchy: Record<WorkspaceRole, number> = WORKSPACE_ROLES_HIERARCHY;
+const projectRoleHierarchy: Record<ProjectRole, number> = {
+  ADMIN: 3,
+  MEMBER: 2,
+  GUEST: 1,
+};
 
 /**
  * Checks workspace membership and returns the workspace role + workspaceId.
@@ -33,21 +37,24 @@ const getWorkspaceMembership = async (
 };
 
 /**
- * Checks if the user is a project member (or workspace OWNER/ADMIN).
+ * Checks if the user owns the project or is an accepted project member.
  * Returns true if the user has access to the project.
  */
 const assertProjectAccess = async (
   userId: number,
   projectId: number,
-  workspaceId: number,
-  workspaceRole: WorkspaceRole,
-): Promise<void> => {
-  // Workspace OWNER/ADMIN can access all projects
-  if (workspaceRole === 'OWNER' || workspaceRole === 'ADMIN') {
-    return;
+): Promise<ProjectRole> => {
+  const project = await prisma.project.findFirst({
+    where: { id: projectId, deletedAt: null },
+    select: { ownerId: true },
+  });
+
+  if (!project) {
+    throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
   }
 
-  // Check ProjectMember
+  if (project.ownerId === userId) return 'ADMIN';
+
   const projectMember = await prisma.projectMember.findFirst({
     where: {
       projectId,
@@ -63,13 +70,15 @@ const assertProjectAccess = async (
       'You are not a member of this project',
     );
   }
+
+  return projectMember.role as ProjectRole;
 };
 
 /**
  * Middleware for routes with :projectId param (e.g. /projects/:projectId/tasks).
- * Checks workspace membership role AND project membership.
+ * Checks workspace membership and project role.
  */
-export const requireProjectTaskRole = (requiredRole: WorkspaceRole) => {
+export const requireProjectTaskRole = (requiredRole: ProjectRole) => {
   return async (
     req: AuthenticatedRequest,
     _res: Response,
@@ -94,20 +103,18 @@ export const requireProjectTaskRole = (requiredRole: WorkspaceRole) => {
         throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
       }
 
-      const { role: userRole } = await getWorkspaceMembership(req.user.id, project.workspaceId);
+      const { role: workspaceRole } = await getWorkspaceMembership(req.user.id, project.workspaceId);
+      const projectRole = await assertProjectAccess(req.user.id, projectId);
 
-      if (roleHierarchy[userRole] < roleHierarchy[requiredRole]) {
+      if (projectRoleHierarchy[projectRole] < projectRoleHierarchy[requiredRole]) {
         throw ApiError.forbidden(
           ErrorCode.FORBIDDEN_ACCESS,
-          `This action requires ${requiredRole} role`,
+          `This action requires ${requiredRole} project role`,
         );
       }
 
-      // Check project membership (workspace OWNER/ADMIN bypass)
-      await assertProjectAccess(req.user.id, projectId, project.workspaceId, userRole);
-
       req.workspaceId = project.workspaceId;
-      req.workspaceRole = userRole;
+      req.workspaceRole = workspaceRole;
       next();
     } catch (error) {
       next(error);
@@ -120,7 +127,7 @@ export const requireProjectTaskRole = (requiredRole: WorkspaceRole) => {
  * Resolves the task → project → workspace chain, then checks both
  * workspace role and project membership.
  */
-export const requireTaskRole = (requiredRole: WorkspaceRole) => {
+export const requireTaskRole = (requiredRole: ProjectRole) => {
   return async (
     req: AuthenticatedRequest,
     _res: Response,
@@ -153,20 +160,18 @@ export const requireTaskRole = (requiredRole: WorkspaceRole) => {
         throw ApiError.notFound(ErrorCode.TASK_NOT_FOUND, 'Task not found');
       }
 
-      const { role: userRole } = await getWorkspaceMembership(req.user.id, task.project.workspaceId);
+      const { role: workspaceRole } = await getWorkspaceMembership(req.user.id, task.project.workspaceId);
+      const projectRole = await assertProjectAccess(req.user.id, task.projectId);
 
-      if (roleHierarchy[userRole] < roleHierarchy[requiredRole]) {
+      if (projectRoleHierarchy[projectRole] < projectRoleHierarchy[requiredRole]) {
         throw ApiError.forbidden(
           ErrorCode.FORBIDDEN_ACCESS,
-          `This action requires ${requiredRole} role`,
+          `This action requires ${requiredRole} project role`,
         );
       }
 
-      // Check project membership (workspace OWNER/ADMIN bypass)
-      await assertProjectAccess(req.user.id, task.projectId, task.project.workspaceId, userRole);
-
       req.workspaceId = task.project.workspaceId;
-      req.workspaceRole = userRole;
+      req.workspaceRole = workspaceRole;
       next();
     } catch (error) {
       next(error);

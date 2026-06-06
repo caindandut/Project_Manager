@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { useProjectDetailQuery, useUpdateProjectMutation } from "@/hooks/useProject"
 import { useWorkspaceDetailQuery } from "@/hooks/useWorkspaces"
+import { useProjectMembersQuery } from "@/hooks/useProjectMembers"
+import { useAuth } from "@/hooks/useAuth"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 
 export default function ProjectSettingsPage() {
@@ -20,6 +22,8 @@ export default function ProjectSettingsPage() {
 
   const workspaceQuery = useWorkspaceDetailQuery(workspaceSlug)
   const projectQuery = useProjectDetailQuery(workspaceSlug, projectId)
+  const projectMembersQuery = useProjectMembersQuery(projectId)
+  const { user } = useAuth()
   const updateMutation = useUpdateProjectMutation(workspaceSlug, projectId)
   const project = projectQuery.data
 
@@ -40,9 +44,10 @@ export default function ProjectSettingsPage() {
     }
   }, [project])
 
-  const workspaceRole = workspaceQuery.data?.role
-  const canEdit =
-    workspaceRole === "OWNER" || workspaceRole === "ADMIN" || workspaceRole === "MEMBER"
+  const currentProjectMember = projectMembersQuery.data?.data?.find(
+    (member) => member.user.id === user?.id,
+  )
+  const canEdit = currentProjectMember?.role === "ADMIN" && currentProjectMember.status === "ACCEPTED"
   const isSaving = updateMutation.isPending
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -214,7 +219,7 @@ export default function ProjectSettingsPage() {
             </Button>
             {!canEdit && (
               <span className="text-xs text-muted-foreground">
-                Chỉ thành viên trở lên mới có thể chỉnh sửa
+                Chỉ admin dự án mới có thể chỉnh sửa
               </span>
             )}
           </div>

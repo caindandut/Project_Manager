@@ -26,7 +26,7 @@ export class ProjectMemberService extends BaseService<
     // Verify project exists
     await this.findProjectOrThrow(projectId);
 
-    // Check requester is a member of the project (or workspace admin)
+    // Check requester has accepted access to the project.
     await this.assertCanViewProject(projectId, requesterId);
 
     const result = await projectMemberRepository.findByProject(projectId, options);
@@ -44,7 +44,7 @@ export class ProjectMemberService extends BaseService<
   async addMember(projectId: number, data: AddProjectMemberInput, requesterId: number) {
     const project = await this.findProjectOrThrow(projectId);
 
-    // RBAC: requester must be workspace Admin/Owner OR project ADMIN
+    // RBAC: requester must be project ADMIN.
     await this.assertCanManageMembers(projectId, project.workspaceId, requesterId);
 
     // Target user must be a workspace member
@@ -256,30 +256,23 @@ export class ProjectMemberService extends BaseService<
 
   /**
    * Asserts the requester can view the project members.
-   * Allowed: project member OR workspace admin/owner.
+   * Allowed: accepted project member or project owner.
    */
   private async assertCanViewProject(projectId: number, userId: number): Promise<void> {
-    const projectMember = await projectMemberRepository.findByProjectAndUser(projectId, userId);
-    if (projectMember) return;
-
-    // Fallback: check if workspace admin/owner
     const project = await prisma.project.findFirst({
       where: { id: projectId, deletedAt: null },
-      select: { workspaceId: true },
+      select: { ownerId: true },
     });
     if (!project) {
       throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
     }
 
-    const wsMember = await prisma.workspaceMember.findFirst({
-      where: {
-        userId,
-        workspaceId: project.workspaceId,
-        deletedAt: null,
-        role: { in: ['OWNER', 'ADMIN'] },
-      },
+    if (project.ownerId === userId) return;
+
+    const projectMember = await prisma.projectMember.findFirst({
+      where: { projectId, userId, status: 'ACCEPTED', deletedAt: null },
     });
-    if (!wsMember) {
+    if (!projectMember) {
       throw ApiError.forbidden(
         ErrorCode.FORBIDDEN_ACCESS,
         'You are not a member of this project',
@@ -289,31 +282,29 @@ export class ProjectMemberService extends BaseService<
 
   /**
    * Asserts the requester can manage project members (add/update/remove).
-   * Allowed: workspace OWNER/ADMIN or project ADMIN.
+   * Allowed: accepted project ADMIN or project owner.
    */
   private async assertCanManageMembers(
     projectId: number,
-    workspaceId: number,
+    _workspaceId: number,
     userId: number,
   ): Promise<void> {
-    // Check workspace-level admin
-    const wsMember = await prisma.workspaceMember.findFirst({
-      where: {
-        userId,
-        workspaceId,
-        deletedAt: null,
-        role: { in: ['OWNER', 'ADMIN'] },
-      },
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, deletedAt: null },
+      select: { ownerId: true },
     });
-    if (wsMember) return;
+    if (!project) {
+      throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
+    }
 
-    // Check project-level ADMIN
+    if (project.ownerId === userId) return;
+
     const projectMember = await projectMemberRepository.findByProjectAndUser(projectId, userId);
-    if (projectMember && projectMember.role === 'ADMIN') return;
+    if (projectMember && projectMember.role === 'ADMIN' && projectMember.status === 'ACCEPTED') return;
 
     throw ApiError.forbidden(
       ErrorCode.FORBIDDEN_ACCESS,
-      'Only workspace admin or project admin can manage project members',
+      'Only project admin can manage project members',
     );
   }
 

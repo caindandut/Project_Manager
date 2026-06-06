@@ -78,6 +78,30 @@ export class TaskRepository extends BaseRepository<
     return member !== null;
   }
 
+  async isProjectParticipant(projectId: number, userId: number): Promise<boolean> {
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        deletedAt: null,
+        OR: [
+          { ownerId: userId },
+          {
+            projectMembers: {
+              some: {
+                userId,
+                status: 'ACCEPTED',
+                deletedAt: null,
+              },
+            },
+          },
+        ],
+      },
+      select: { id: true },
+    });
+
+    return project !== null;
+  }
+
   async findByIdWithProject(
     taskId: number,
   ): Promise<(Task & { project: Pick<Project, 'id' | 'workspaceId'> }) | null> {
@@ -277,10 +301,16 @@ export class TaskRepository extends BaseRepository<
           FROM task_assignees ta
           INNER JOIN tasks t ON t.id = ta.task_id
           INNER JOIN projects p ON p.id = t.project_id
+          LEFT JOIN project_members pm
+            ON pm.project_id = p.id
+            AND pm.user_id = ${userId}
+            AND pm.status = 'ACCEPTED'
+            AND pm.deleted_at IS NULL
           WHERE ta.user_id = ${userId}
             AND t.deleted_at IS NULL
             AND p.deleted_at IS NULL
             AND p.workspace_id = ${workspaceId}
+            AND (p.owner_id = ${userId} OR pm.id IS NOT NULL)
         `
       : await prisma.$queryRaw<Array<{ taskId: number }>>`
           SELECT ta.task_id AS taskId

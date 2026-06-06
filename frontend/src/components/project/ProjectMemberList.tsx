@@ -45,7 +45,7 @@ const ROLE_CONFIG: Record<ProjectRole, { label: string; variant: "default" | "se
 
 interface ProjectMemberListProps {
   projectId: number
-  /** Whether the current user can manage members (workspace admin or project admin) */
+  /** Whether the current user can manage project members. */
   canManage: boolean
 }
 

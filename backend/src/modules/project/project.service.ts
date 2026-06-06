@@ -4,7 +4,7 @@ import { BaseService } from '../../common/base/BaseService';
 import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
-import { PaginationMeta, ListOptions, WorkspaceRole } from '../../types/interfaces';
+import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { projectMemberRepository } from '../project-member/project-member.repository';
 import { prisma } from '../../config';
 
@@ -76,18 +76,10 @@ export class ProjectService extends BaseService<
     projectId: number,
     workspaceId: number,
     userId: number,
-    workspaceRole: WorkspaceRole,
   ) {
     const project = await this.findProjectWithDetailsOrThrow(projectId, workspaceId);
 
-    // RBAC: workspace OWNER/ADMIN can see any project;
-    // project owner can also see their own project;
-    // others must be an ACCEPTED ProjectMember
-    if (
-      workspaceRole !== 'OWNER' &&
-      workspaceRole !== 'ADMIN' &&
-      project.ownerId !== userId
-    ) {
+    if (project.ownerId !== userId) {
       const membership = await prisma.projectMember.findFirst({
         where: { projectId, userId, status: 'ACCEPTED', deletedAt: null },
       });
@@ -117,14 +109,9 @@ export class ProjectService extends BaseService<
   async getAllInWorkspace(
     workspaceId: number,
     userId: number,
-    workspaceRole: WorkspaceRole,
     options?: ProjectListOptions,
   ) {
-    // Workspace OWNER/ADMIN see all projects; MEMBER/GUEST see only their projects
-    const result =
-      workspaceRole === 'OWNER' || workspaceRole === 'ADMIN'
-        ? await projectRepository.findAllInWorkspace(workspaceId, options)
-        : await projectRepository.findAllInWorkspaceForUser(workspaceId, userId, options);
+    const result = await projectRepository.findAllInWorkspaceForUser(workspaceId, userId, options);
 
     return {
       data: result.data.map((project) => this.formatProjectListItem(project)),

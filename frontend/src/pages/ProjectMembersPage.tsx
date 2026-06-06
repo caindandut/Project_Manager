@@ -33,6 +33,7 @@ import {
 } from "@/hooks/useProjectMembers"
 import { useProjectDetailQuery } from "@/hooks/useProject"
 import { useWorkspaceDetailQuery } from "@/hooks/useWorkspaces"
+import { useAuth } from "@/hooks/useAuth"
 import type { ProjectMember, ProjectRole } from "@/lib/project-member-api"
 
 // ============================================================
@@ -59,6 +60,7 @@ export default function ProjectMembersPage() {
   const workspaceQuery = useWorkspaceDetailQuery(workspaceSlug)
   const projectQuery = useProjectDetailQuery(workspaceSlug, projectId)
   const membersQuery = useProjectMembersQuery(projectId)
+  const { user } = useAuth()
 
   const updateRoleMutation = useUpdateProjectMemberRoleMutation(projectId)
   const removeMutation = useRemoveProjectMemberMutation(projectId)
@@ -74,10 +76,8 @@ export default function ProjectMembersPage() {
       : "Thành viên | Project Manager"
   }, [project])
 
-  const workspaceRole = workspaceQuery.data?.role
-  // We don't have projectRole in projectQuery directly, but we can check if current user is ADMIN in members
-  const isWorkspaceAdmin = workspaceRole === "OWNER" || workspaceRole === "ADMIN"
-  const canManage = isWorkspaceAdmin || true // For now, let's allow since the backend will block if not allowed
+  const currentProjectMember = members.find((member) => member.user.id === user?.id)
+  const canManage = currentProjectMember?.role === "ADMIN" && currentProjectMember.status === "ACCEPTED"
 
   const handleChangeRole = (memberId: number, newRole: "MEMBER" | "GUEST") => {
     updateRoleMutation.mutate({ memberId, payload: { role: newRole } })

@@ -79,7 +79,7 @@ export class WorkspaceRepository extends BaseRepository<
           _count: {
             select: {
               members: { where: { deletedAt: null } },
-              projects: { where: { deletedAt: null } },
+              projects: { where: this.buildAccessibleProjectWhereForCount(userId) },
             },
           },
         },
@@ -118,7 +118,7 @@ export class WorkspaceRepository extends BaseRepository<
         members: {
           create: {
             userId: ownerId,
-            role: WorkspaceRole.OWNER,
+            role: WorkspaceRole.ADMIN,
           },
         },
       },
@@ -263,10 +263,14 @@ export class WorkspaceRepository extends BaseRepository<
     return { data, total };
   }
 
-  async getStats(workspaceId: number): Promise<WorkspaceStats> {
+  async getStats(workspaceId: number, userId: number): Promise<WorkspaceStats> {
+    const accessibleProjectWhere: Prisma.ProjectWhereInput = this.buildAccessibleProjectWhere(
+      workspaceId,
+      userId,
+    );
     const taskWhere: Prisma.TaskWhereInput = {
       deletedAt: null,
-      project: { workspaceId, deletedAt: null },
+      project: accessibleProjectWhere,
     };
 
     const [memberCount, projectCount, taskCount, statusCounts] = await Promise.all([
@@ -274,7 +278,7 @@ export class WorkspaceRepository extends BaseRepository<
         where: { workspaceId, deletedAt: null },
       }),
       prisma.project.count({
-        where: { workspaceId, deletedAt: null },
+        where: accessibleProjectWhere,
       }),
       prisma.task.count({
         where: taskWhere,
@@ -299,11 +303,11 @@ export class WorkspaceRepository extends BaseRepository<
     };
   }
 
-  async getRecentTasks(workspaceId: number, take = 8) {
+  async getRecentTasks(workspaceId: number, userId: number, take = 8) {
     return prisma.task.findMany({
       where: {
         deletedAt: null,
-        project: { workspaceId, deletedAt: null },
+        project: this.buildAccessibleProjectWhere(workspaceId, userId),
       },
       include: {
         project: {
@@ -318,13 +322,13 @@ export class WorkspaceRepository extends BaseRepository<
     });
   }
 
-  async getRecentActivities(workspaceId: number, take = 8) {
+  async getRecentActivities(workspaceId: number, userId: number, take = 8) {
     return prisma.activityLog.findMany({
       where: {
         OR: [
           {
             task: {
-              project: { workspaceId, deletedAt: null },
+              project: this.buildAccessibleProjectWhere(workspaceId, userId),
             },
           },
           {
@@ -351,6 +355,46 @@ export class WorkspaceRepository extends BaseRepository<
       orderBy: { createdAt: 'desc' },
       take,
     });
+  }
+
+  private buildAccessibleProjectWhere(
+    workspaceId: number,
+    userId: number,
+  ): Prisma.ProjectWhereInput {
+    return {
+      workspaceId,
+      deletedAt: null,
+      OR: [
+        { ownerId: userId },
+        {
+          projectMembers: {
+            some: {
+              userId,
+              status: InvitationStatus.ACCEPTED,
+              deletedAt: null,
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  private buildAccessibleProjectWhereForCount(userId: number): Prisma.ProjectWhereInput {
+    return {
+      deletedAt: null,
+      OR: [
+        { ownerId: userId },
+        {
+          projectMembers: {
+            some: {
+              userId,
+              status: InvitationStatus.ACCEPTED,
+              deletedAt: null,
+            },
+          },
+        },
+      ],
+    };
   }
 
   async findBySlug(slug: string): Promise<Workspace | null> {

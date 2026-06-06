@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { useProjectDetailQuery } from "@/hooks/useProject"
 import { useTasksQuery, useDeleteTaskMutation } from "@/hooks/useTasks"
 import { useProjectMembersQuery } from "@/hooks/useProjectMembers"
+import { useAuth } from "@/hooks/useAuth"
 import { createTask as createTaskApi, updateTaskStatus as updateTaskStatusApi } from "@/lib/task-api"
 import { queryClient, taskQueryKeys } from "@/lib/query-client"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
@@ -49,10 +50,15 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
   })
 
   const membersQuery = useProjectMembersQuery(projectId)
+  const { user } = useAuth()
   const deleteMutation = useDeleteTaskMutation(projectId)
 
   const tasks: Task[] = tasksQuery.data?.data ?? []
   const totalTasks = tasksQuery.data?.meta?.total ?? 0
+  const currentProjectMember = membersQuery.data?.data?.find((member) => member.user.id === user?.id)
+  const canEditTasks =
+    currentProjectMember?.status === "ACCEPTED" &&
+    (currentProjectMember.role === "ADMIN" || currentProjectMember.role === "MEMBER")
 
   useEffect(() => {
     const taskIdParam = searchParams.get("task")
@@ -168,6 +174,7 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
           viewMode={viewMode}
           onViewModeChange={setViewMode as (mode: "flat" | "grouped" | "kanban" | "calendar" | "gantt") => void}
           totalTasks={totalTasks}
+          canCreate={canEditTasks}
         />
       </div>
 

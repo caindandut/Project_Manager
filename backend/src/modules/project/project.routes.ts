@@ -3,7 +3,6 @@ import { projectController } from './project.controller';
 import { authMiddleware } from '../../common/middlewares/auth.middleware';
 import {
   requireGuest,
-  requireOwner,
   requireMember,
 } from '../../common/middlewares/rbac.middleware';
 import { requireProjectAdmin } from '../../common/middlewares/project-rbac.middleware';
@@ -39,7 +38,7 @@ router.post(
 // Update project (Owner or Member)
 router.patch(
   '/:workspaceId/projects/:projectId',
-  requireMember,
+  requireGuest,
   requireProjectAdmin,
   validate(validationRules.updateProject),
   projectController.update
@@ -48,7 +47,7 @@ router.patch(
 // Delete project (Owner only)
 router.delete(
   '/:workspaceId/projects/:projectId',
-  requireMember,
+  requireGuest,
   requireProjectAdmin,
   projectController.delete
 );

@@ -37,17 +37,14 @@ export default function ProjectOverview() {
       : "Tổng quan dự án | Project Manager"
   }, [project])
 
-  // Determine if the current user can manage members
-  const workspaceRole = workspaceQuery.data?.role
-  const canManageMembers =
-    workspaceRole === "OWNER" || workspaceRole === "ADMIN"
   const workspaceId = workspaceQuery.data?.id
 
   // Determine if the current user is project ADMIN (creator)
   const currentProjectMember = projectMembersQuery.data?.data?.find(
     (m) => m.user.id === user?.id
   )
-  const isProjectAdmin = currentProjectMember?.role === "ADMIN"
+  const isProjectAdmin = currentProjectMember?.role === "ADMIN" && currentProjectMember.status === "ACCEPTED"
+  const canManageMembers = isProjectAdmin
 
   const handleDeleteProject = async () => {
     if (!project) return
@@ -116,6 +113,11 @@ export default function ProjectOverview() {
 
   // ─── Error state ───────────────────────────────────────────
   if (projectQuery.isError) {
+    const message = toVietnameseErrorMessage(
+      projectQuery.error,
+      "Đã xảy ra lỗi khi tải thông tin dự án.",
+    )
+
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-sm text-center">
@@ -125,7 +127,14 @@ export default function ProjectOverview() {
               Đã xảy ra lỗi khi tải thông tin dự án.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">{message}</p>
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/workspaces/${workspaceSlug}/projects`)}
+            >
+              Về danh sách dự án
+            </Button>
             <Button
               variant="outline"
               onClick={() => void projectQuery.refetch()}

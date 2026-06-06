@@ -37,7 +37,6 @@ export class ProjectController extends BaseController {
       const result = await projectService.getAllInWorkspace(
         workspaceId,
         authReq.user.id,
-        authReq.workspaceRole || 'GUEST',
         { page, limit, sort },
       );
       res.json(success(result.data, result.meta));
@@ -53,7 +52,6 @@ export class ProjectController extends BaseController {
         projectId,
         workspaceId,
         authReq.user.id,
-        authReq.workspaceRole || 'GUEST',
       );
       res.json(success(result));
     });

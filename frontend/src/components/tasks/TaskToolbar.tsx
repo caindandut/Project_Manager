@@ -79,6 +79,7 @@ interface TaskToolbarProps {
   filters: TaskFilter
   onFiltersChange: (filters: TaskFilter) => void
   onCreateClick: () => void
+  canCreate?: boolean
   columns: TaskColumn[]
   onColumnsChange: (columns: TaskColumn[]) => void
   viewMode: "flat" | "grouped" | "kanban" | "calendar" | "gantt"
@@ -110,6 +111,7 @@ export function TaskToolbar({
   filters,
   onFiltersChange,
   onCreateClick,
+  canCreate = true,
   columns,
   onColumnsChange,
   viewMode,
@@ -272,15 +274,17 @@ export function TaskToolbar({
           <ColumnToggle columns={columns} onChange={onColumnsChange} />
 
           {/* Create button */}
-          <Button
-            onClick={onCreateClick}
-            className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5"
-          >
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 5v14M5 12h14" />
-            </svg>
-            Tạo công việc mới
-          </Button>
+          {canCreate && (
+            <Button
+              onClick={onCreateClick}
+              className="h-9 bg-primary hover:bg-primary/90 text-primary-foreground text-sm gap-1.5"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              Tạo công việc mới
+            </Button>
+          )}
         </div>
       </div>
 

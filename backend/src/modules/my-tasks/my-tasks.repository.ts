@@ -51,7 +51,7 @@ export class MyTasksRepository {
         entityType: 'TASK',
         task: {
           deletedAt: null,
-          project: { workspaceId, deletedAt: null },
+          project: this.buildAccessibleProjectWhere(workspaceId, userId),
         },
       },
       select: { entityId: true },
@@ -91,7 +91,7 @@ export class MyTasksRepository {
         userId,
         task: {
           deletedAt: null,
-          project: { workspaceId, deletedAt: null },
+          project: this.buildAccessibleProjectWhere(workspaceId, userId),
         },
       },
       include: activityInclude,
@@ -107,8 +107,7 @@ export class MyTasksRepository {
 
     return prisma.project.findMany({
       where: {
-        workspaceId,
-        deletedAt: null,
+        ...this.buildAccessibleProjectWhere(workspaceId, userId),
         tasks: {
           some: {
             deletedAt: null,
@@ -138,7 +137,7 @@ export class MyTasksRepository {
             { assigneeId: userId },
             ...(assignedTaskIds.length > 0 ? [{ id: { in: assignedTaskIds } }] : []),
           ],
-          project: { workspaceId, deletedAt: null },
+          project: this.buildAccessibleProjectWhere(workspaceId, userId),
         },
       }),
       createdTaskIds.length > 0
@@ -146,7 +145,7 @@ export class MyTasksRepository {
             where: {
               deletedAt: null,
               id: { in: createdTaskIds },
-              project: { workspaceId, deletedAt: null },
+              project: this.buildAccessibleProjectWhere(workspaceId, userId),
             },
           })
         : Promise.resolve(0),
@@ -207,10 +206,16 @@ export class MyTasksRepository {
         FROM task_assignees ta
         INNER JOIN tasks t ON t.id = ta.task_id
         INNER JOIN projects p ON p.id = t.project_id
+        LEFT JOIN project_members pm
+          ON pm.project_id = p.id
+          AND pm.user_id = ${userId}
+          AND pm.status = 'ACCEPTED'
+          AND pm.deleted_at IS NULL
         WHERE ta.user_id = ${userId}
           AND t.deleted_at IS NULL
           AND p.deleted_at IS NULL
           AND p.workspace_id = ${workspaceId}
+          AND (p.owner_id = ${userId} OR pm.id IS NOT NULL)
       `;
 
       return rows.map((row) => row.taskId);
@@ -226,7 +231,7 @@ export class MyTasksRepository {
   buildRelatedWhere(workspaceId: number, userId: number, createdTaskIds: number[], assignedTaskIds: number[]): Prisma.TaskWhereInput {
     return {
       deletedAt: null,
-      project: { workspaceId, deletedAt: null },
+      project: this.buildAccessibleProjectWhere(workspaceId, userId),
       OR: [
         { assigneeId: userId },
         ...(assignedTaskIds.length > 0 ? [{ id: { in: assignedTaskIds } }] : []),
@@ -242,6 +247,28 @@ export class MyTasksRepository {
     end.setDate(end.getDate() + 1);
     end.setMilliseconds(end.getMilliseconds() - 1);
     return { start, end };
+  }
+
+  private buildAccessibleProjectWhere(
+    workspaceId: number,
+    userId: number,
+  ): Prisma.ProjectWhereInput {
+    return {
+      workspaceId,
+      deletedAt: null,
+      OR: [
+        { ownerId: userId },
+        {
+          projectMembers: {
+            some: {
+              userId,
+              status: 'ACCEPTED',
+              deletedAt: null,
+            },
+          },
+        },
+      ],
+    };
   }
 
   private async findAssigneesByTaskIds(taskIds: number[]) {

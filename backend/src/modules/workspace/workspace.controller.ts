@@ -208,7 +208,6 @@ export class WorkspaceController extends BaseController {
     const role = req.query.role;
     if (role === undefined) return undefined;
     if (
-      role === WorkspaceRole.OWNER ||
       role === WorkspaceRole.ADMIN ||
       role === WorkspaceRole.MEMBER ||
       role === WorkspaceRole.GUEST

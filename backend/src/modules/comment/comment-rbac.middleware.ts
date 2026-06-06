@@ -11,7 +11,7 @@ const projectRoleHierarchy: Record<ProjectRole, number> = {
   GUEST: 1,
 };
 
-export const requireAttachmentRole = (requiredRole: ProjectRole) => {
+export const requireCommentRole = (requiredRole: ProjectRole) => {
   return async (
     req: AuthenticatedRequest,
     _res: Response,
@@ -22,17 +22,16 @@ export const requireAttachmentRole = (requiredRole: ProjectRole) => {
         throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
       }
 
-      const attachmentId = parseInt(req.params.attachmentId || '0', 10);
-      if (!attachmentId || Number.isNaN(attachmentId)) {
-        throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Invalid attachment ID');
+      const commentId = parseInt(req.params.commentId || req.params.id || '0', 10);
+      if (!commentId || Number.isNaN(commentId)) {
+        throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Invalid comment ID');
       }
 
-      const attachment = await prisma.attachment.findFirst({
-        where: { id: attachmentId, deletedAt: null },
+      const comment = await prisma.comment.findFirst({
+        where: { id: commentId, deletedAt: null },
         select: {
           task: {
             select: {
-              projectId: true,
               project: {
                 select: {
                   id: true,
@@ -46,29 +45,28 @@ export const requireAttachmentRole = (requiredRole: ProjectRole) => {
         },
       });
 
-      if (!attachment || attachment.task.project.deletedAt) {
-        throw ApiError.notFound(ErrorCode.ATTACHMENT_NOT_FOUND, 'Attachment not found');
+      if (!comment || comment.task.project.deletedAt) {
+        throw ApiError.notFound(ErrorCode.COMMENT_NOT_FOUND, 'Comment not found');
       }
 
-      const membership = await prisma.workspaceMember.findFirst({
+      const workspaceMember = await prisma.workspaceMember.findFirst({
         where: {
-          workspaceId: attachment.task.project.workspaceId,
+          workspaceId: comment.task.project.workspaceId,
           userId: req.user.id,
           deletedAt: null,
         },
       });
 
-      if (!membership) {
+      if (!workspaceMember) {
         throw ApiError.forbidden(
           ErrorCode.FORBIDDEN_ACCESS,
           'You are not a member of this workspace',
         );
       }
 
-      const userRole = membership.role as WorkspaceRole;
       const projectRole = await getProjectRole(
-        attachment.task.project.id,
-        attachment.task.project.ownerId,
+        comment.task.project.id,
+        comment.task.project.ownerId,
         req.user.id,
       );
 
@@ -79,9 +77,8 @@ export const requireAttachmentRole = (requiredRole: ProjectRole) => {
         );
       }
 
-      req.workspaceId = attachment.task.project.workspaceId;
-      req.workspaceRole = userRole;
-
+      req.workspaceId = comment.task.project.workspaceId;
+      req.workspaceRole = workspaceMember.role as WorkspaceRole;
       next();
     } catch (error) {
       next(error);

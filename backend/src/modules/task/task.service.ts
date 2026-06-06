@@ -432,10 +432,8 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
   }
 
   private async ensureAssigneeInProject(projectId: number, assigneeId: number): Promise<void> {
-    const isMember = await prisma.projectMember.findFirst({
-      where: { projectId, userId: assigneeId, deletedAt: null },
-    });
-    if (!isMember) {
+    const canAccessProject = await taskRepository.isProjectParticipant(projectId, assigneeId);
+    if (!canAccessProject) {
       throw ApiError.badRequest(
         ErrorCode.MEMBER_NOT_FOUND,
         'Assignee must be a member of this project',
