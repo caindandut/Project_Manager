@@ -2,17 +2,8 @@ import nodemailer from 'nodemailer';
 import { config } from '../../config';
 import { logger } from './logger';
 
-const transporter = nodemailer.createTransport({
-  host: config.EMAIL_HOST,
-  port: config.EMAIL_PORT,
-  secure: false,
-  auth: {
-    user: config.EMAIL_USER,
-    pass: config.EMAIL_PASS,
-  },
-});
-
 let missingEmailConfigWarned = false;
+
 
 interface SendEmailOptions {
   to: string;
@@ -167,6 +158,20 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
     throw new Error('Email is not configured');
   }
 
+  const transporter = nodemailer.createTransport({
+    pool: true,
+    host: config.EMAIL_HOST,
+    port: config.EMAIL_PORT,
+    secure: config.EMAIL_PORT === 465,
+    auth: {
+      user: config.EMAIL_USER,
+      pass: config.EMAIL_PASS,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+
   await transporter.sendMail({
     from: config.EMAIL_FROM,
     to: options.to,
@@ -182,12 +187,25 @@ export async function verifyEmailTransport(): Promise<void> {
   }
 
   try {
+    const transporter = nodemailer.createTransport({
+      host: config.EMAIL_HOST,
+      port: config.EMAIL_PORT,
+      secure: config.EMAIL_PORT === 465,
+      auth: {
+        user: config.EMAIL_USER,
+        pass: config.EMAIL_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
     await transporter.verify();
     logger.info('Email transport verified successfully.');
   } catch (error) {
     logger.error('Email transport verification failed', error);
   }
 }
+
 
 export async function sendOTPEmail(to: string, code: string): Promise<void> {
   const html = `
