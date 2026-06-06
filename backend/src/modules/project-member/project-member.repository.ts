@@ -79,12 +79,14 @@ export class ProjectMemberRepository extends BaseRepository<
     projectId: number,
     userId: number,
     role: ProjectRole = 'MEMBER',
+    status: import('@prisma/client').InvitationStatus = 'PENDING',
   ): Promise<ProjectMember> {
     return prisma.projectMember.create({
       data: {
         project: { connect: { id: projectId } },
         user: { connect: { id: userId } },
         role,
+        status,
       },
     });
   }

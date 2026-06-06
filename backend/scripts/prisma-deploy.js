@@ -70,6 +70,19 @@ if (firstDeploy.output.includes('P3005') || firstDeploy.output.includes('P3018')
         console.log("Failed to modify due_date:", e.message);
       }
       
+      // Backfill: Set status to ACCEPTED for project members who are the project owner
+      try {
+        await prisma.$executeRawUnsafe(`
+          UPDATE project_members pm
+          INNER JOIN projects p ON pm.project_id = p.id
+          SET pm.status = 'ACCEPTED'
+          WHERE pm.user_id = p.owner_id AND pm.status = 'PENDING'
+        `);
+        console.log("Backfilled ACCEPTED status for project owners");
+      } catch (e) {
+        console.log("Failed to backfill status:", e.message);
+      }
+      
       await prisma.$disconnect();
       process.exit(0);
     } catch (err) {

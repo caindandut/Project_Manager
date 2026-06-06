@@ -56,8 +56,8 @@ export class ProjectService extends BaseService<
       owner: { connect: { id: data.ownerId } },
     });
 
-    // Auto-add project creator as ADMIN member
-    await projectMemberRepository.addMember(project.id, data.ownerId, 'ADMIN');
+    // Auto-add project creator as ADMIN member with ACCEPTED status
+    await projectMemberRepository.addMember(project.id, data.ownerId, 'ADMIN', 'ACCEPTED');
 
     const created = await projectRepository.findByIdWithDetails(project.id, data.workspaceId);
     if (!created) {
