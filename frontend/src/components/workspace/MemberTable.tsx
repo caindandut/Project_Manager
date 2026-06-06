@@ -86,12 +86,6 @@ export default function MemberTable({
   }
 
   const handleCancelInvitation = async (invitation: PendingInvitation) => {
-    const confirmed = window.confirm(
-      `Bạn có chắc muốn thu hồi lời mời tới ${invitation.email} không?`,
-    )
-
-    if (!confirmed) return
-
     try {
       await cancelInvitationMutation.mutateAsync(invitation.id)
       toast.success("Đã thu hồi lời mời.")
