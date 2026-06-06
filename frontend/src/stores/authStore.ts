@@ -116,6 +116,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     if (workspaceSlug) {
       window.localStorage.setItem(WORKSPACE_SLUG_KEY, workspaceSlug);
+      window.localStorage.setItem(LAST_WORKSPACE_SLUG_KEY, workspaceSlug);
     }
     set({
       user,
