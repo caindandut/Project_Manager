@@ -19,7 +19,7 @@ interface MeResponse {
 
 export default function GoogleCallbackPage() {
   const navigate = useNavigate();
-  const { setAccessToken, setUser, setRequireOnboarding, logout } = useAuthStore();
+  const { setAccessToken, setRefreshToken, setUser, setRequireOnboarding, logout } = useAuthStore();
   const hasRun = useRef(false);
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export default function GoogleCallbackPage() {
         if (isLinkingGoogle) {
           window.localStorage.removeItem('isLinkingGoogle');
           const lastSlug = getLastWorkspaceSlug();
-          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/workspaces', { replace: true });
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
         } else {
           logout();
           navigate('/login', { replace: true });
@@ -47,13 +47,14 @@ export default function GoogleCallbackPage() {
       }
 
       const accessToken = searchParams.get('accessToken');
+      const refreshToken = searchParams.get('refreshToken');
 
       if (!accessToken) {
         toast.error('Không nhận được mã truy cập từ Google.');
         if (isLinkingGoogle) {
           window.localStorage.removeItem('isLinkingGoogle');
           const lastSlug = getLastWorkspaceSlug();
-          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/workspaces', { replace: true });
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
         } else {
           logout();
           navigate('/login', { replace: true });
@@ -62,6 +63,9 @@ export default function GoogleCallbackPage() {
       }
 
       setAccessToken(accessToken);
+      if (refreshToken) {
+        setRefreshToken(refreshToken);
+      }
 
       // Get requireOnboarding from URL params
       const requireOnboardingParam = searchParams.get('requireOnboarding') === 'true';
@@ -92,7 +96,7 @@ export default function GoogleCallbackPage() {
           window.localStorage.removeItem('isLinkingGoogle');
           toast.success('Liên kết tài khoản Google thành công!');
           const lastSlug = getLastWorkspaceSlug();
-          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/workspaces', { replace: true });
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
           return;
         }
 
@@ -102,7 +106,7 @@ export default function GoogleCallbackPage() {
         } else {
           toast.success('Đăng nhập Google thành công.');
           const lastSlug = getLastWorkspaceSlug();
-          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/workspaces', { replace: true });
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
         }
       } catch (error) {
         logout();
@@ -117,7 +121,7 @@ export default function GoogleCallbackPage() {
     };
 
     void run();
-  }, [logout, navigate, setAccessToken, setUser, setRequireOnboarding]);
+  }, [logout, navigate, setAccessToken, setRefreshToken, setUser, setRequireOnboarding]);
 
   return (
     <div className="relative flex min-h-screen items-center justify-center bg-muted/30 p-6">

@@ -6,6 +6,7 @@ import { config } from './config';
 import routes from './routes';
 import { errorMiddleware, notFoundMiddleware } from './common/middlewares/error.middleware';
 import { logger } from './common/utils/logger';
+import { verifyEmailTransport } from './common/utils/email.service';
 import { prisma } from './config';
 
 const app = express();
@@ -57,6 +58,9 @@ app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   logger.info(`Environment: ${config.NODE_ENV}`);
   logger.info(`API: http://localhost:${PORT}/api/v1`);
+  verifyEmailTransport().catch((error) => {
+    logger.error('Email transport startup verification failed', error);
+  });
 });
 
 export default app;

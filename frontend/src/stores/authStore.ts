@@ -17,18 +17,21 @@ interface AuthState {
   user: AuthUser | null;
   isAuthenticated: boolean;
   accessToken: string | null;
+  refreshToken: string | null;
   hasHydratedAuth: boolean;
   requireOnboarding: boolean;
-  login: (payload: { user: AuthUser; accessToken: string }) => void;
+  login: (payload: { user: AuthUser; accessToken: string; refreshToken?: string }) => void;
   logout: () => void;
   setUser: (user: AuthUser | null) => void;
   setAccessToken: (accessToken: string | null) => void;
+  setRefreshToken: (refreshToken: string | null) => void;
   setHydratedAuth: (hasHydratedAuth: boolean) => void;
   setRequireOnboarding: (value: boolean) => void;
-  completeOnboarding: (payload: { user: AuthUser; accessToken: string; workspaceSlug?: string }) => void;
+  completeOnboarding: (payload: { user: AuthUser; accessToken: string; refreshToken?: string; workspaceSlug?: string }) => void;
 }
 
 const ACCESS_TOKEN_KEY = 'accessToken';
+const REFRESH_TOKEN_KEY = 'refreshToken';
 const WORKSPACE_SLUG_KEY = 'onboardingWorkspaceSlug';
 const LAST_WORKSPACE_SLUG_KEY = 'lastWorkspaceSlug';
 
@@ -38,6 +41,14 @@ const getInitialAccessToken = (): string | null => {
   }
 
   return window.localStorage.getItem(ACCESS_TOKEN_KEY);
+};
+
+const getInitialRefreshToken = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  return window.localStorage.getItem(REFRESH_TOKEN_KEY);
 };
 
 const getInitialOnboardingSlug = (): string | null => {
@@ -52,15 +63,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: Boolean(getInitialAccessToken()),
   accessToken: getInitialAccessToken(),
+  refreshToken: getInitialRefreshToken(),
   hasHydratedAuth: false,
   requireOnboarding: false,
 
-  login: ({ user, accessToken }) => {
+  login: ({ user, accessToken, refreshToken }) => {
     window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    if (refreshToken) {
+      window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
 
     set({
       user,
       accessToken,
+      refreshToken: refreshToken ?? getInitialRefreshToken(),
       isAuthenticated: true,
       hasHydratedAuth: true,
       requireOnboarding: user.requireOnboarding ?? false,
@@ -69,12 +85,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: () => {
     window.localStorage.removeItem(ACCESS_TOKEN_KEY);
+    window.localStorage.removeItem(REFRESH_TOKEN_KEY);
     window.localStorage.removeItem(WORKSPACE_SLUG_KEY);
     window.localStorage.removeItem(LAST_WORKSPACE_SLUG_KEY);
 
     set({
       user: null,
       accessToken: null,
+      refreshToken: null,
       isAuthenticated: false,
       hasHydratedAuth: true,
       requireOnboarding: false,
@@ -102,6 +120,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     }));
   },
 
+  setRefreshToken: (refreshToken) => {
+    if (refreshToken) {
+      window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    } else {
+      window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+    }
+
+    set(() => ({
+      refreshToken,
+    }));
+  },
+
   setHydratedAuth: (hasHydratedAuth) =>
     set(() => ({
       hasHydratedAuth,
@@ -112,8 +142,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       requireOnboarding: value,
     })),
 
-  completeOnboarding: ({ user, accessToken, workspaceSlug }) => {
+  completeOnboarding: ({ user, accessToken, refreshToken, workspaceSlug }) => {
     window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+    if (refreshToken) {
+      window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    }
     if (workspaceSlug) {
       window.localStorage.setItem(WORKSPACE_SLUG_KEY, workspaceSlug);
       window.localStorage.setItem(LAST_WORKSPACE_SLUG_KEY, workspaceSlug);
@@ -121,6 +154,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({
       user,
       accessToken,
+      refreshToken: refreshToken ?? getInitialRefreshToken(),
       isAuthenticated: true,
       hasHydratedAuth: true,
       requireOnboarding: false,
@@ -139,4 +173,4 @@ export const setLastWorkspaceSlug = (slug: string): void => {
   }
 };
 
-export { ACCESS_TOKEN_KEY, WORKSPACE_SLUG_KEY, LAST_WORKSPACE_SLUG_KEY, getInitialOnboardingSlug };
+export { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, WORKSPACE_SLUG_KEY, LAST_WORKSPACE_SLUG_KEY, getInitialOnboardingSlug };

@@ -44,11 +44,13 @@ export interface ChangePasswordInput {
 interface AuthSuccessPayload {
   user: AuthUser
   accessToken: string
+  refreshToken?: string
   expiresIn: number
 }
 
 interface GoogleAuthResult {
   accessToken: string
+  refreshToken?: string
   user: AuthUser
 }
 
@@ -111,7 +113,7 @@ export const useAuth = () => {
       }
     },
     onSuccess: (data) => {
-      setAuthSession({ user: data.user, accessToken: data.accessToken })
+      setAuthSession({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken })
       queryClient.setQueryData(AUTH_ME_QUERY_KEY, data.user)
     },
   })
@@ -147,7 +149,7 @@ export const useAuth = () => {
   }
 
   const completeGoogleAuth = (payload: GoogleAuthResult) => {
-    setAuthSession({ user: payload.user, accessToken: payload.accessToken })
+    setAuthSession({ user: payload.user, accessToken: payload.accessToken, refreshToken: payload.refreshToken })
     queryClient.setQueryData(AUTH_ME_QUERY_KEY, payload.user)
   }
 
@@ -183,7 +185,7 @@ export const useAuth = () => {
       }
     },
     onSuccess: (data) => {
-      setAuthSession({ user: data.user, accessToken: data.accessToken })
+      setAuthSession({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken })
       queryClient.setQueryData(AUTH_ME_QUERY_KEY, data.user)
     },
   })

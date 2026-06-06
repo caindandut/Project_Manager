@@ -31,7 +31,7 @@ export default function WorkspacesPage() {
   if (lastSlug) {
     return <Navigate to={`/workspaces/${lastSlug}`} replace />
   }
-  if (!workspacesQuery.isLoading && workspaces.length > 0) {
+  if (workspacesQuery.isFetched && !workspacesQuery.isLoading && workspaces.length > 0) {
     return <Navigate to={`/workspaces/${workspaces[0].slug}`} replace />
   }
 

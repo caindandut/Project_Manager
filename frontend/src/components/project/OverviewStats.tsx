@@ -62,7 +62,7 @@ const STAT_CARDS = [
     color: "text-purple-600",
     bg: "bg-purple-50",
     getValue: (s: ProjectStats) => s.memberCount ?? 0,
-    getLink: (_ws: string, _pid: number) => "#members",
+    getLink: (ws: string, pid: number) => `/workspaces/${ws}/projects/${pid}/members`,
   },
 ]
 
@@ -97,14 +97,6 @@ export default function StatsRow({ stats, isLoading, workspaceSlug, projectId }:
             </CardContent>
           </Card>
         )
-
-        if (link === "#members") {
-          return (
-            <a key={card.key} href="#members-section" className="block">
-              {content}
-            </a>
-          )
-        }
 
         return (
           <Link key={card.key} to={link} className="block">

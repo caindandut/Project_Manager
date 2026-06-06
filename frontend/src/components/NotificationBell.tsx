@@ -110,7 +110,7 @@ export default function NotificationBell() {
         setIsOpen(false)
         // Navigate to the project task list and let the task detail panel open
         navigate(
-          `/workspaces/_/projects/${notification.task.projectId}/list?taskId=${notification.taskId}`,
+          `/workspaces/_/projects/${notification.task.projectId}/list?task=${notification.taskId}`,
         )
       } else if (notification.type === "INVITATION_RECEIVED") {
         setIsOpen(false)

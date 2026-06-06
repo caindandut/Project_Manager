@@ -79,7 +79,7 @@ export default function NotificationsPage() {
       }
 
       if (notification.taskId && notification.task) {
-        navigate(`/workspaces/_/projects/${notification.task.projectId}/list?taskId=${notification.taskId}`)
+        navigate(`/workspaces/_/projects/${notification.task.projectId}/list?task=${notification.taskId}`)
         return
       }
 

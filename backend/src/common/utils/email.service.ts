@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { config } from '../../config';
+import { logger } from './logger';
 
 const transporter = nodemailer.createTransport({
   host: config.EMAIL_HOST,
@@ -10,6 +11,8 @@ const transporter = nodemailer.createTransport({
     pass: config.EMAIL_PASS,
   },
 });
+
+let missingEmailConfigWarned = false;
 
 interface SendEmailOptions {
   to: string;
@@ -92,7 +95,9 @@ export async function sendNotificationEmail(options: {
   message: string;
   taskTitle: string;
   taskId: number;
+  taskUrl?: string;
 }): Promise<void> {
+  const taskUrl = options.taskUrl || config.CLIENT_URL;
   const html = `
     <div style="background-color: #f3f4f6; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; min-height: 100%;">
       <div style="max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e5e7eb;">
@@ -127,7 +132,7 @@ export async function sendNotificationEmail(options: {
 
           <!-- CTA Button -->
           <div style="text-align: center; margin: 32px 0 16px 0;">
-            <a href="${config.CLIENT_URL}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1); transition: background-color 0.2s;">
+            <a href="${taskUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1); transition: background-color 0.2s;">
               Đi đến ứng dụng
             </a>
           </div>
@@ -154,12 +159,34 @@ export async function sendNotificationEmail(options: {
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
+  if (!config.EMAIL_USER || !config.EMAIL_PASS || !config.EMAIL_FROM) {
+    if (!missingEmailConfigWarned) {
+      missingEmailConfigWarned = true;
+      logger.error('Email is not configured. Please set EMAIL_USER, EMAIL_PASS, and EMAIL_FROM.');
+    }
+    throw new Error('Email is not configured');
+  }
+
   await transporter.sendMail({
     from: config.EMAIL_FROM,
     to: options.to,
     subject: options.subject,
     html: options.html,
   });
+}
+
+export async function verifyEmailTransport(): Promise<void> {
+  if (!config.EMAIL_USER || !config.EMAIL_PASS || !config.EMAIL_FROM) {
+    logger.warn('Email transport verification skipped: EMAIL_USER, EMAIL_PASS, or EMAIL_FROM is missing.');
+    return;
+  }
+
+  try {
+    await transporter.verify();
+    logger.info('Email transport verified successfully.');
+  } catch (error) {
+    logger.error('Email transport verification failed', error);
+  }
 }
 
 export async function sendOTPEmail(to: string, code: string): Promise<void> {

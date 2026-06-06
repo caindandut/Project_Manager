@@ -24,7 +24,7 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loginSuccessShown, setLoginSuccessShown] = useState(false)
   const lastSlug = getLastWorkspaceSlug()
-  const defaultRedirect = lastSlug ? `/workspaces/${lastSlug}` : '/workspaces'
+  const defaultRedirect = lastSlug ? `/workspaces/${lastSlug}` : '/'
   const redirectTo = (location.state as { from?: string } | null)?.from || defaultRedirect
 
   useEffect(() => {

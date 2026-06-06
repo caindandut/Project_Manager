@@ -16,7 +16,6 @@ import StatsRow from "@/components/project/OverviewStats"
 import RecentTasksCard from "@/components/project/RecentTasksCard"
 import ActivityTimeline from "@/components/project/ActivityTimeline"
 import OverviewCharts from "@/components/project/OverviewCharts"
-import MemberAvatars from "@/components/project/MemberAvatars"
 
 export default function ProjectOverview() {
   const params = useParams<{ workspaceId: string; projectId: string }>()
@@ -184,11 +183,6 @@ export default function ProjectOverview() {
         {/* Right column — narrower */}
         <div className="lg:col-span-2 space-y-4">
           <OverviewCharts stats={project?.stats} isLoading={false} />
-          <MemberAvatars
-            projectId={projectId}
-            workspaceId={workspaceId}
-            canManage={canManageMembers}
-          />
         </div>
       </div>
     </div>

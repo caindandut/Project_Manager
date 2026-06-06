@@ -114,6 +114,7 @@ export default function OnboardingWorkspacePage() {
       completeOnboarding({
         user: data.user,
         accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
         workspaceSlug: data.workspace.slug,
       });
 

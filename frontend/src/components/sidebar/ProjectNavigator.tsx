@@ -202,7 +202,6 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
   const viewItems = [
     { label: "Tổng quan", href: `${projectPath}/overview`, icon: LayoutDashboard },
     { label: "Danh sách công việc", href: `${projectPath}/kanban`, icon: List },
-    { label: "Thành viên", href: `${projectPath}/members`, icon: Users },
   ]
 
   if (isCollapsed) {
@@ -249,12 +248,13 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
     <div>
       <div
         className={cn(
-          "flex items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors",
+          "flex min-w-0 items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors",
           isActive || isExpanded
             ? "bg-sidebar-accent text-sidebar-foreground"
             : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
         )}
         onClick={() => setIsExpanded(!isExpanded)}
+        title={project.name}
       >
         {isExpanded ? (
           <ChevronDown className="h-4 w-4 shrink-0" />
@@ -262,7 +262,7 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
           <ChevronRight className="h-4 w-4 shrink-0" />
         )}
         <Folder className="h-4 w-4 shrink-0" />
-        <span className="flex-1 truncate font-medium">{project.name}</span>
+        <span className="min-w-0 flex-1 truncate font-medium">{project.name}</span>
       </div>
 
       {isExpanded && (

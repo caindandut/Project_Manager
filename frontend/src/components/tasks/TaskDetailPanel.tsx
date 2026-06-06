@@ -331,10 +331,10 @@ export default function TaskDetailPanel({
   return (
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/70" onClick={onClose} />
+      <div className="fixed inset-0 z-[80] bg-black/30 dark:bg-black/70" onClick={onClose} />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 h-full w-full bg-card border-l border-border shadow-xl flex flex-col overflow-hidden animate-slide-in-from-right duration-300 lg:w-1/2">
+      <div className="fixed right-0 top-0 z-[90] h-full w-full bg-card border-l border-border shadow-xl flex flex-col overflow-hidden animate-slide-in-from-right duration-300 lg:w-1/2">
         {isLoading || !task ? (
           <div className="flex-1 flex items-center justify-center">
             <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />

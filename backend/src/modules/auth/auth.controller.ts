@@ -70,6 +70,7 @@ export class AuthController extends BaseController {
 
       const frontendUrl = new URL('/google/callback', config.CLIENT_URL);
       frontendUrl.searchParams.set('accessToken', result.accessToken);
+      frontendUrl.searchParams.set('refreshToken', result.refreshToken);
       frontendUrl.searchParams.set('requireOnboarding', String(result.requireOnboarding));
       frontendUrl.searchParams.set('user', JSON.stringify(result.user));
       res.redirect(frontendUrl.toString());
@@ -106,6 +107,7 @@ export class AuthController extends BaseController {
       res.json(success({
         user: result.user,
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
         expiresIn: result.expiresIn,
       }));
     });
@@ -133,7 +135,7 @@ export class AuthController extends BaseController {
 
   refresh = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
-      const refreshToken = req.cookies?.refreshToken;
+      const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
       if (!refreshToken) {
         throw ApiError.unauthorized(ErrorCode.AUTH_REFRESH_TOKEN_INVALID, 'Refresh token required');
       }
@@ -150,6 +152,7 @@ export class AuthController extends BaseController {
 
       res.json(success({
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
         expiresIn: result.expiresIn,
       }));
     });
@@ -278,6 +281,7 @@ export class AuthController extends BaseController {
       res.status(201).json(success({
         user: result.user,
         accessToken: result.accessToken,
+        refreshToken: result.refreshToken,
         expiresIn: result.expiresIn,
       }));
     });

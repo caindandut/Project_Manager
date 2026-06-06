@@ -5,7 +5,7 @@ import axios, {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from 'axios'
-import { ACCESS_TOKEN_KEY, useAuthStore } from '@/stores/authStore'
+import { ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, useAuthStore } from '@/stores/authStore'
 import type { ApiResponse } from '@/types/api'
 
 declare module 'axios' {
@@ -22,6 +22,14 @@ const getStoredAccessToken = (): string | null => {
   }
 
   return window.localStorage.getItem(ACCESS_TOKEN_KEY)
+}
+
+const getStoredRefreshToken = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  return window.localStorage.getItem(REFRESH_TOKEN_KEY)
 }
 
 const createAuthHeaders = (
@@ -43,7 +51,9 @@ let refreshTokenPromise: Promise<string> | null = null
 const refreshAccessToken = async (): Promise<string> => {
   if (!refreshTokenPromise) {
     refreshTokenPromise = refreshClient
-      .post<ApiResponse<{ accessToken: string }>>('/auth/refresh')
+      .post<ApiResponse<{ accessToken: string; refreshToken?: string }>>('/auth/refresh', {
+        refreshToken: getStoredRefreshToken(),
+      })
       .then((refreshResponse) => {
         const refreshedToken = refreshResponse.data.data?.accessToken
         if (!refreshedToken) {
@@ -51,6 +61,9 @@ const refreshAccessToken = async (): Promise<string> => {
         }
 
         useAuthStore.getState().setAccessToken(refreshedToken)
+        if (refreshResponse.data.data?.refreshToken) {
+          useAuthStore.getState().setRefreshToken(refreshResponse.data.data.refreshToken)
+        }
         return refreshedToken
       })
       .finally(() => {

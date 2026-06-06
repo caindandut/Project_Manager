@@ -1,36 +1,33 @@
 import { notificationService, CreateNotificationInput } from './notification.service';
 import { notificationPreferenceRepository } from './notification-preference.repository';
 import { NotificationType, NotificationCategory } from '../../types/enums';
-import { prisma } from '../../config';
+import { prisma, config } from '../../config';
 import { logger } from '../../common/utils/logger';
 import { sendNotificationEmail } from '../../common/utils/email.service';
 
-/**
- * NotificationEmitter — called from task/comment services to automatically
- * create in-app notifications and optionally send email notifications.
- *
- * Category rules:
- *   DIRECT:   TASK_ASSIGNED, MENTION
- *   WATCHING: TASK_STATUS_CHANGED, TASK_COMMENTED, TASK_UPDATED
- */
+type TaskNotificationData = {
+  id: number;
+  title: string;
+  assigneeId: number | null;
+  projectId: number;
+  project: {
+    workspace: {
+      slug: string;
+    };
+  };
+};
+
 export class NotificationEmitter {
-  /**
-   * Task was assigned to a user.
-   */
   async onTaskAssigned(
     taskId: number,
     assigneeId: number,
     actorId: number,
   ): Promise<void> {
-    // Don't notify yourself
     if (assigneeId === actorId) return;
 
     try {
       const [task, actor] = await Promise.all([
-        prisma.task.findUnique({
-          where: { id: taskId },
-          select: { id: true, title: true, projectId: true },
-        }),
+        this.findTaskForNotification(taskId),
         prisma.user.findUnique({
           where: { id: actorId },
           select: { id: true, name: true },
@@ -52,8 +49,6 @@ export class NotificationEmitter {
       };
 
       await notificationService.create(input);
-
-      // Check email preference
       await this.maybeSendEmail(
         assigneeId,
         NotificationType.TASK_ASSIGNED,
@@ -61,15 +56,13 @@ export class NotificationEmitter {
         input.message,
         task.title,
         taskId,
+        this.buildTaskUrl(task.project.workspace.slug, task.projectId, taskId),
       );
     } catch (err) {
       logger.error('NotificationEmitter.onTaskAssigned failed', err);
     }
   }
 
-  /**
-   * Task status changed — notify the assignee (WATCHING).
-   */
   async onTaskStatusChanged(
     taskId: number,
     oldStatus: string,
@@ -78,18 +71,14 @@ export class NotificationEmitter {
   ): Promise<void> {
     try {
       const [task, actor] = await Promise.all([
-        prisma.task.findUnique({
-          where: { id: taskId },
-          select: { id: true, title: true, assigneeId: true, projectId: true },
-        }),
+        this.findTaskForNotification(taskId),
         prisma.user.findUnique({
           where: { id: actorId },
           select: { id: true, name: true },
         }),
       ]);
 
-      if (!task || !actor || !task.assigneeId) return;
-      if (task.assigneeId === actorId) return;
+      if (!task || !actor) return;
 
       const statusLabels: Record<string, string> = {
         TODO: 'Cần làm',
@@ -98,37 +87,20 @@ export class NotificationEmitter {
         DONE: 'Hoàn thành',
         CANCELLED: 'Đã hủy',
       };
+      const message = `${actor.name} đã đổi trạng thái "${task.title}" từ ${statusLabels[oldStatus] || oldStatus} → ${statusLabels[newStatus] || newStatus}`;
 
-      const input: CreateNotificationInput = {
+      await this.notifyTaskRecipients(task, actorId, {
         type: NotificationType.TASK_STATUS_CHANGED,
         category: NotificationCategory.WATCHING,
         title: 'Trạng thái công việc thay đổi',
-        message: `${actor.name} đã đổi trạng thái "${task.title}" từ ${statusLabels[oldStatus] || oldStatus} → ${statusLabels[newStatus] || newStatus}`,
-        userId: task.assigneeId,
-        taskId,
-        actorId,
-        groupKey: `task:${taskId}`,
+        message,
         metadata: { action: 'status_changed', oldStatus, newStatus },
-      };
-
-      await notificationService.create(input);
-
-      await this.maybeSendEmail(
-        task.assigneeId,
-        NotificationType.TASK_STATUS_CHANGED,
-        input.title,
-        input.message,
-        task.title,
-        taskId,
-      );
+      });
     } catch (err) {
       logger.error('NotificationEmitter.onTaskStatusChanged failed', err);
     }
   }
 
-  /**
-   * New comment on a task — notify the assignee (WATCHING).
-   */
   async onTaskCommented(
     taskId: number,
     commenterId: number,
@@ -136,57 +108,33 @@ export class NotificationEmitter {
   ): Promise<void> {
     try {
       const [task, commenter] = await Promise.all([
-        prisma.task.findUnique({
-          where: { id: taskId },
-          select: { id: true, title: true, assigneeId: true, projectId: true },
-        }),
+        this.findTaskForNotification(taskId),
         prisma.user.findUnique({
           where: { id: commenterId },
           select: { id: true, name: true },
         }),
       ]);
 
-      if (!task || !commenter || !task.assigneeId) return;
-      if (task.assigneeId === commenterId) return;
+      if (!task || !commenter) return;
 
-      // Strip @mention format for display
       const cleanContent = commentContent
         .replace(/@\[([^\]]+)\]\(\d+\)/g, '@$1')
         .substring(0, 100);
 
-      const input: CreateNotificationInput = {
+      await this.notifyTaskRecipients(task, commenterId, {
         type: NotificationType.TASK_COMMENTED,
         category: NotificationCategory.WATCHING,
         title: 'Bình luận mới',
         message: `${commenter.name} đã bình luận trong "${task.title}": "${cleanContent}"`,
-        userId: task.assigneeId,
-        taskId,
-        actorId: commenterId,
-        groupKey: `task:${taskId}`,
         metadata: { action: 'commented', commentPreview: cleanContent },
-      };
+      });
 
-      await notificationService.create(input);
-
-      await this.maybeSendEmail(
-        task.assigneeId,
-        NotificationType.TASK_COMMENTED,
-        input.title,
-        input.message,
-        task.title,
-        taskId,
-      );
-
-      // Parse @mentions in comment content
       await this.parseMentions(taskId, commentContent, commenterId);
     } catch (err) {
       logger.error('NotificationEmitter.onTaskCommented failed', err);
     }
   }
 
-  /**
-   * Parse @[Name](userId) mentions and send DIRECT notifications.
-   */
   async parseMentions(
     taskId: number,
     content: string,
@@ -198,14 +146,10 @@ export class NotificationEmitter {
     while ((match = mentionRegex.exec(content)) !== null) {
       const mentionedName = match[1];
       const mentionedUserId = parseInt(match[2], 10);
-
       await this.onMention(taskId, mentionedUserId, mentionerId, mentionedName);
     }
   }
 
-  /**
-   * User was @mentioned — DIRECT notification.
-   */
   async onMention(
     taskId: number,
     mentionedUserId: number,
@@ -216,10 +160,7 @@ export class NotificationEmitter {
 
     try {
       const [task, mentioner] = await Promise.all([
-        prisma.task.findUnique({
-          where: { id: taskId },
-          select: { id: true, title: true, projectId: true },
-        }),
+        this.findTaskForNotification(taskId),
         prisma.user.findUnique({
           where: { id: mentionerId },
           select: { id: true, name: true },
@@ -241,7 +182,6 @@ export class NotificationEmitter {
       };
 
       await notificationService.create(input);
-
       await this.maybeSendEmail(
         mentionedUserId,
         NotificationType.MENTION,
@@ -249,15 +189,13 @@ export class NotificationEmitter {
         input.message,
         task.title,
         taskId,
+        this.buildTaskUrl(task.project.workspace.slug, task.projectId, taskId),
       );
     } catch (err) {
       logger.error('NotificationEmitter.onMention failed', err);
     }
   }
 
-  /**
-   * Task was updated (generic field change) — notify assignee (WATCHING).
-   */
   async onTaskUpdated(
     taskId: number,
     actorId: number,
@@ -265,18 +203,14 @@ export class NotificationEmitter {
   ): Promise<void> {
     try {
       const [task, actor] = await Promise.all([
-        prisma.task.findUnique({
-          where: { id: taskId },
-          select: { id: true, title: true, assigneeId: true, projectId: true },
-        }),
+        this.findTaskForNotification(taskId),
         prisma.user.findUnique({
           where: { id: actorId },
           select: { id: true, name: true },
         }),
       ]);
 
-      if (!task || !actor || !task.assigneeId) return;
-      if (task.assigneeId === actorId) return;
+      if (!task || !actor) return;
 
       const fieldLabels: Record<string, string> = {
         title: 'tiêu đề',
@@ -284,44 +218,27 @@ export class NotificationEmitter {
         priority: 'ưu tiên',
         dueDate: 'hạn chót',
         startDate: 'ngày bắt đầu',
+        assignees: 'người phụ trách',
       };
 
       const changedFields = Object.keys(changes)
-        .filter((f) => f !== 'status' && f !== 'assignee')
-        .map((f) => fieldLabels[f] || f);
+        .filter((field) => field !== 'status' && field !== 'assignee')
+        .map((field) => fieldLabels[field] || field);
 
       if (changedFields.length === 0) return;
 
-      const input: CreateNotificationInput = {
+      await this.notifyTaskRecipients(task, actorId, {
         type: NotificationType.TASK_UPDATED,
         category: NotificationCategory.WATCHING,
         title: 'Công việc được cập nhật',
         message: `${actor.name} đã cập nhật ${changedFields.join(', ')} trong "${task.title}"`,
-        userId: task.assigneeId,
-        taskId,
-        actorId,
-        groupKey: `task:${taskId}`,
         metadata: { action: 'updated', changes },
-      };
-
-      await notificationService.create(input);
-
-      await this.maybeSendEmail(
-        task.assigneeId,
-        NotificationType.TASK_UPDATED,
-        input.title,
-        input.message,
-        task.title,
-        taskId,
-      );
+      });
     } catch (err) {
       logger.error('NotificationEmitter.onTaskUpdated failed', err);
     }
   }
 
-  /**
-   * User received a workspace invitation
-   */
   async onInvitationReceived(
     invitationId: number,
     workspaceName: string,
@@ -347,7 +264,93 @@ export class NotificationEmitter {
     }
   }
 
-  // ── Private helpers ─────────────────────────────────────────
+  private async findTaskForNotification(taskId: number): Promise<TaskNotificationData | null> {
+    return prisma.task.findUnique({
+      where: { id: taskId },
+      select: {
+        id: true,
+        title: true,
+        assigneeId: true,
+        projectId: true,
+        project: {
+          select: {
+            workspace: { select: { slug: true } },
+          },
+        },
+      },
+    });
+  }
+
+  private async getTaskRecipientIds(taskId: number, fallbackAssigneeId: number | null): Promise<number[]> {
+    const ids = new Set<number>();
+
+    try {
+      const assignees = await prisma.taskAssignee.findMany({
+        where: { taskId },
+        select: { userId: true },
+      });
+
+      for (const assignee of assignees) {
+        ids.add(assignee.userId);
+      }
+    } catch (error) {
+      logger.warn(`Could not read task_assignees for task ${taskId}; falling back to assigneeId.`, error);
+    }
+
+    if (fallbackAssigneeId) {
+      ids.add(fallbackAssigneeId);
+    }
+
+    return Array.from(ids);
+  }
+
+  private async notifyTaskRecipients(
+    task: TaskNotificationData,
+    actorId: number,
+    notification: {
+      type: NotificationType;
+      category: NotificationCategory;
+      title: string;
+      message: string;
+      metadata: Record<string, unknown>;
+    },
+  ): Promise<void> {
+    const recipientIds = await this.getTaskRecipientIds(task.id, task.assigneeId);
+    const taskUrl = this.buildTaskUrl(task.project.workspace.slug, task.projectId, task.id);
+
+    for (const recipientId of recipientIds) {
+      if (recipientId === actorId) continue;
+
+      const input: CreateNotificationInput = {
+        type: notification.type,
+        category: notification.category,
+        title: notification.title,
+        message: notification.message,
+        userId: recipientId,
+        taskId: task.id,
+        actorId,
+        groupKey: `task:${task.id}`,
+        metadata: notification.metadata,
+      };
+
+      await notificationService.create(input);
+      await this.maybeSendEmail(
+        recipientId,
+        notification.type,
+        input.title,
+        input.message,
+        task.title,
+        task.id,
+        taskUrl,
+      );
+    }
+  }
+
+  private buildTaskUrl(workspaceSlug: string, projectId: number, taskId: number): string {
+    const url = new URL(`/workspaces/${workspaceSlug}/projects/${projectId}/list`, config.CLIENT_URL);
+    url.searchParams.set('task', String(taskId));
+    return url.toString();
+  }
 
   private async maybeSendEmail(
     userId: number,
@@ -356,6 +359,7 @@ export class NotificationEmitter {
     message: string,
     taskTitle: string,
     taskId: number,
+    taskUrl: string,
   ): Promise<void> {
     try {
       const wantsEmail = await notificationPreferenceRepository.isEmailEnabled(userId, eventType);
@@ -369,11 +373,12 @@ export class NotificationEmitter {
 
       await sendNotificationEmail({
         to: user.email,
-        userName: user.name,
+        userName: user.name || user.email,
         subject,
         message,
         taskTitle,
         taskId,
+        taskUrl,
       });
     } catch (err) {
       logger.error(`Failed to send notification email to user ${userId}`, err);
