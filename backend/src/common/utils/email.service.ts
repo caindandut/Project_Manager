@@ -176,89 +176,13 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
       logger.info(`Email sent via Brevo API to ${options.to}`);
       return;
     } catch (apiError: any) {
-      logger.error('Failed to send email via Brevo API, falling back to other methods...', {
+      logger.error('Failed to send email via Brevo API, falling back to SMTP...', {
         error: apiError?.message || String(apiError),
       });
     }
   }
 
-  // 2. Try SendGrid HTTP API
-  const sendgridApiKey = process.env.SENDGRID_API_KEY;
-  if (sendgridApiKey) {
-    try {
-      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${sendgridApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          personalizations: [{ to: [{ email: options.to }] }],
-          from: { email: config.EMAIL_FROM, name: 'Project Manager' },
-          subject: options.subject,
-          content: [{ type: 'text/html', value: options.html }],
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`SendGrid API returned status ${response.status}: ${errText}`);
-      }
-
-      logger.info(`Email sent via SendGrid API to ${options.to}`);
-      return;
-    } catch (apiError: any) {
-      logger.error('Failed to send email via SendGrid API, falling back to other methods...', {
-        error: apiError?.message || String(apiError),
-      });
-    }
-  }
-
-  // 3. Try Resend HTTP API
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (resendApiKey) {
-    try {
-      let fromEmail = config.EMAIL_FROM || 'onboarding@resend.dev';
-      // Resend does not allow sending from unverified public domains like gmail.com
-      if (
-        fromEmail.includes('@gmail.com') ||
-        fromEmail.includes('@yahoo.com') ||
-        fromEmail.includes('@hotmail.com') ||
-        fromEmail.includes('@outlook.com') ||
-        fromEmail === 'noreply@projectmanager.com'
-      ) {
-        fromEmail = 'onboarding@resend.dev';
-      }
-
-      const response = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: fromEmail,
-          to: options.to,
-          subject: options.subject,
-          html: options.html,
-        }),
-      });
-
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Resend API returned status ${response.status}: ${errText}`);
-      }
-
-      logger.info(`Email sent via Resend API to ${options.to}`);
-      return;
-    } catch (apiError: any) {
-      logger.error('Failed to send email via Resend API, falling back to SMTP...', {
-        error: apiError?.message || String(apiError),
-      });
-    }
-  }
-
-  // 4. Fallback to standard SMTP
+  // 2. Fallback to standard SMTP
   if (!config.EMAIL_USER || !config.EMAIL_PASS || !config.EMAIL_FROM) {
     if (!missingEmailConfigWarned) {
       missingEmailConfigWarned = true;
@@ -293,16 +217,6 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 export async function verifyEmailTransport(): Promise<void> {
   if (process.env.BREVO_API_KEY) {
     logger.info('Email transport verified successfully (using Brevo HTTP API).');
-    return;
-  }
-
-  if (process.env.SENDGRID_API_KEY) {
-    logger.info('Email transport verified successfully (using SendGrid HTTP API).');
-    return;
-  }
-
-  if (process.env.RESEND_API_KEY) {
-    logger.info('Email transport verified successfully (using Resend HTTP API).');
     return;
   }
 
