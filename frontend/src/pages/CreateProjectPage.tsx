@@ -40,7 +40,7 @@ export default function CreateProjectPage() {
       })
 
       toast.success("Tạo dự án thành công!")
-      navigate(`/workspaces/${workspaceId}/projects/${project.id}`)
+      navigate(`/workspaces/${workspaceId}/projects/${project.id}/overview`)
     } catch (error) {
       toast.error(
         toVietnameseErrorMessage(error, "Không thể tạo dự án. Vui lòng thử lại.")

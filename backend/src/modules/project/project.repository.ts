@@ -82,7 +82,7 @@ export class ProjectRepository extends BaseRepository<
     key: string,
   ): Promise<Project | null> {
     return prisma.project.findFirst({
-      where: { workspaceId, key, deletedAt: null },
+      where: { workspaceId, key },
     });
   }
 

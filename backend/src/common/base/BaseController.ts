@@ -43,6 +43,31 @@ export abstract class BaseController {
       return;
     }
 
+    // Check for Prisma Client Known Request Errors
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'PrismaClientKnownRequestError') {
+      const prismaError = error as { code?: string; message?: string };
+      switch (prismaError.code) {
+        case 'P2002':
+          res.status(409).json({
+            success: false,
+            error: {
+              code: 'DUPLICATE_ENTRY',
+              message: 'A record with this value already exists',
+            },
+          });
+          return;
+        case 'P2025':
+          res.status(404).json({
+            success: false,
+            error: {
+              code: 'RECORD_NOT_FOUND',
+              message: 'The requested record was not found',
+            },
+          });
+          return;
+      }
+    }
+
     if (error instanceof Error) {
       res.status(500).json({
         success: false,

@@ -1,6 +1,6 @@
 import { LoaderCircle } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
 import AppLayout from '@/components/AppLayout';
@@ -69,6 +69,11 @@ function RootRedirect() {
   return <Navigate to="/workspaces" replace />;
 }
 
+function ProjectRedirect() {
+  const { workspaceId, projectId } = useParams<{ workspaceId: string; projectId: string }>();
+  return <Navigate to={`/workspaces/${workspaceId}/projects/${projectId}/overview`} replace />;
+}
+
 function App() {
   const { resolvedTheme } = useTheme();
 
@@ -103,7 +108,7 @@ function App() {
             <Route path="/workspaces/:workspaceId/settings" element={<WorkspaceSettingsPage />} />
             
             {/* Project routes */}
-            <Route path="/workspaces/:workspaceId/projects/:projectId" element={<Navigate to="overview" replace />} />
+            <Route path="/workspaces/:workspaceId/projects/:projectId" element={<ProjectRedirect />} />
             <Route path="/workspaces/:workspaceId/projects/:projectId/overview" element={<ProjectOverview />} />
             <Route path="/workspaces/:workspaceId/projects/:projectId/list" element={<ProjectListPage />} />
             <Route path="/workspaces/:workspaceId/projects/:projectId/kanban" element={<ProjectKanbanPage />} />
