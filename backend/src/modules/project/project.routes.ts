@@ -40,6 +40,7 @@ router.post(
 router.patch(
   '/:workspaceId/projects/:projectId',
   requireMember,
+  requireProjectAdmin,
   validate(validationRules.updateProject),
   projectController.update
 );

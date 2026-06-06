@@ -80,18 +80,15 @@ export class ProjectService extends BaseService<
   ) {
     const project = await this.findProjectWithDetailsOrThrow(projectId, workspaceId);
 
-    // RBAC: workspace OWNER/ADMIN can see any project;
-    // others must be a ProjectMember
-    if (workspaceRole !== 'OWNER' && workspaceRole !== 'ADMIN') {
-      const membership = await prisma.projectMember.findFirst({
-        where: { projectId, userId, deletedAt: null },
-      });
-      if (!membership) {
-        throw ApiError.forbidden(
-          ErrorCode.FORBIDDEN_ACCESS,
-          'You are not a member of this project',
-        );
-      }
+    // RBAC: ALL users must be a ProjectMember to see the project
+    const membership = await prisma.projectMember.findFirst({
+      where: { projectId, userId, deletedAt: null },
+    });
+    if (!membership) {
+      throw ApiError.forbidden(
+        ErrorCode.FORBIDDEN_ACCESS,
+        'You are not a member of this project',
+      );
     }
 
     const [stats, recentTasks, recentActivities] = await Promise.all([
@@ -115,11 +112,8 @@ export class ProjectService extends BaseService<
     workspaceRole: WorkspaceRole,
     options?: ProjectListOptions,
   ) {
-    // Workspace OWNER/ADMIN see all projects; MEMBER/GUEST see only their projects
-    const result =
-      workspaceRole === 'OWNER' || workspaceRole === 'ADMIN'
-        ? await projectRepository.findAllInWorkspace(workspaceId, options)
-        : await projectRepository.findAllInWorkspaceForUser(workspaceId, userId, options);
+    // ALL users only see projects they created or are a member of.
+    const result = await projectRepository.findAllInWorkspaceForUser(workspaceId, userId, options);
 
     return {
       data: result.data.map((project) => this.formatProjectListItem(project)),
