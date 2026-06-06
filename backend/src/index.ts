@@ -14,8 +14,31 @@ const app = express();
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" },
 }));
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://project-manager-lake-eight.vercel.app',
+];
+
+if (config.CLIENT_URL) {
+  config.CLIENT_URL.split(',').forEach((url) => {
+    const trimmed = url.trim().replace(/\/$/, '');
+    if (trimmed && !allowedOrigins.includes(trimmed)) {
+      allowedOrigins.push(trimmed);
+    }
+  });
+}
+
 app.use(cors({
-  origin: config.CLIENT_URL,
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      callback(null, false);
+    }
+  },
   credentials: true,
 }));
 
