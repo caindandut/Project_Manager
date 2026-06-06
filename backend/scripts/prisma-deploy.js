@@ -43,8 +43,40 @@ if (firstDeploy.output.includes('P3005') || firstDeploy.output.includes('P3018')
     runPrisma(['migrate', 'resolve', '--applied', migrationName]);
   }
 
-  const pushResult = runPrisma(['db', 'push', '--accept-data-loss']);
-  process.exit(pushResult.status);
+  (async () => {
+    console.log("Applying manual schema patches safely...");
+    try {
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      
+      try {
+        await prisma.$executeRawUnsafe("ALTER TABLE `project_members` ADD COLUMN `status` ENUM('PENDING', 'ACCEPTED', 'DECLINED', 'EXPIRED') NOT NULL DEFAULT 'PENDING'");
+        console.log("Added status column to project_members");
+      } catch (e) {
+        console.log("Column status might already exist or error:", e.message);
+      }
+      
+      try {
+        await prisma.$executeRawUnsafe("ALTER TABLE `tasks` ADD COLUMN `start_date` DATE NULL");
+        console.log("Added start_date column to tasks");
+      } catch (e) {
+        console.log("Column start_date might already exist or error:", e.message);
+      }
+      
+      try {
+        await prisma.$executeRawUnsafe("ALTER TABLE `tasks` MODIFY `due_date` DATE NULL");
+        console.log("Modified due_date column in tasks");
+      } catch (e) {
+        console.log("Failed to modify due_date:", e.message);
+      }
+      
+      await prisma.$disconnect();
+      process.exit(0);
+    } catch (err) {
+      console.error("Manual patch failed:", err);
+      process.exit(1);
+    }
+  })();
 } else {
   process.exit(firstDeploy.status);
 }
