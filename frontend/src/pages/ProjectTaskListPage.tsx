@@ -12,7 +12,7 @@ import type { TaskFilter } from "@/components/tasks/task.types"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useProjectDetailQuery } from "@/hooks/useProject"
 import { useTasksQuery, useDeleteTaskMutation } from "@/hooks/useTasks"
-import { useWorkspaceMembersQuery } from "@/hooks/useWorkspaces"
+import { useProjectMembersQuery } from "@/hooks/useProjectMembers"
 import { createTask as createTaskApi, updateTaskStatus as updateTaskStatusApi } from "@/lib/task-api"
 import { queryClient, taskQueryKeys } from "@/lib/query-client"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
@@ -48,7 +48,7 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
     titleContains: search || undefined,
   })
 
-  const membersQuery = useWorkspaceMembersQuery(workspaceId, 1, 50)
+  const membersQuery = useProjectMembersQuery(projectId)
   const deleteMutation = useDeleteTaskMutation(projectId)
 
   const tasks: Task[] = tasksQuery.data?.data ?? []

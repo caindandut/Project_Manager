@@ -29,6 +29,8 @@ interface OverviewHeaderProps {
   workspaceName: string
   workspaceId?: number
   canManage: boolean
+  isProjectAdmin?: boolean
+  onDelete?: () => void
 }
 
 export default function OverviewHeader({
@@ -38,6 +40,8 @@ export default function OverviewHeader({
   workspaceName,
   workspaceId,
   canManage,
+  isProjectAdmin = false,
+  onDelete,
 }: OverviewHeaderProps) {
   if (isLoading) {
     return (
@@ -112,29 +116,33 @@ export default function OverviewHeader({
             />
           )}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="outline" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem asChild>
-                <Link to={`/workspaces/${workspaceSlug}/projects/${project?.id}/settings`}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Cài đặt dự án
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Xóa dự án
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isProjectAdmin && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link to={`/workspaces/${workspaceSlug}/projects/${project?.id}/settings`}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Cài đặt dự án
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={onDelete}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Xóa dự án
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </div>
   )
 }
-

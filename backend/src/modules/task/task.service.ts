@@ -90,7 +90,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     }
 
     const assigneeIds = this.normalizeAssigneeIds(data.assigneeIds, data.assigneeId);
-    await this.ensureAssigneesInWorkspace(project.workspaceId, assigneeIds);
+    await this.ensureAssigneesInProject(data.projectId, assigneeIds);
 
     const task = await taskRepository.createTask({
       title: data.title,
@@ -217,7 +217,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       : undefined;
 
     if (nextAssigneeIds) {
-      await this.ensureAssigneesInWorkspace(task.project.workspaceId, nextAssigneeIds);
+      await this.ensureAssigneesInProject(task.projectId, nextAssigneeIds);
     }
 
     const previousAssigneeIds = hasAssigneeUpdate
@@ -316,7 +316,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     const previousAssigneeId = task.assigneeId;
 
     if (assigneeId !== null) {
-      await this.ensureAssigneeInWorkspace(task.project.workspaceId, assigneeId);
+      await this.ensureAssigneeInProject(task.projectId, assigneeId);
     }
 
     const updated = await taskRepository.updateAssignee(id, assigneeId);
@@ -431,19 +431,21 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     return parent;
   }
 
-  private async ensureAssigneeInWorkspace(workspaceId: number, assigneeId: number): Promise<void> {
-    const isMember = await taskRepository.isWorkspaceMember(workspaceId, assigneeId);
+  private async ensureAssigneeInProject(projectId: number, assigneeId: number): Promise<void> {
+    const isMember = await prisma.projectMember.findFirst({
+      where: { projectId, userId: assigneeId, deletedAt: null },
+    });
     if (!isMember) {
       throw ApiError.badRequest(
         ErrorCode.MEMBER_NOT_FOUND,
-        'Assignee must be a member of this workspace',
+        'Assignee must be a member of this project',
       );
     }
   }
 
-  private async ensureAssigneesInWorkspace(workspaceId: number, assigneeIds: number[]): Promise<void> {
+  private async ensureAssigneesInProject(projectId: number, assigneeIds: number[]): Promise<void> {
     for (const assigneeId of assigneeIds) {
-      await this.ensureAssigneeInWorkspace(workspaceId, assigneeId);
+      await this.ensureAssigneeInProject(projectId, assigneeId);
     }
   }
 

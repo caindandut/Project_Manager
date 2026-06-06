@@ -149,3 +149,13 @@ export async function updateProject(
   )
   return unwrapResponse(response)
 }
+
+export async function deleteProject(
+  workspaceId: string | number,
+  projectId: number,
+): Promise<{ message: string }> {
+  const response = await apiClient.delete<ApiResponse<{ message: string }>>(
+    `/workspaces/${workspaceId}/projects/${projectId}`,
+  )
+  return unwrapResponse(response)
+}

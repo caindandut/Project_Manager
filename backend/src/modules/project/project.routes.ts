@@ -6,6 +6,7 @@ import {
   requireOwner,
   requireMember,
 } from '../../common/middlewares/rbac.middleware';
+import { requireProjectAdmin } from '../../common/middlewares/project-rbac.middleware';
 import { validate, validationRules } from '../../common/middlewares/validation.middleware';
 
 const router = Router();
@@ -46,7 +47,8 @@ router.patch(
 // Delete project (Owner only)
 router.delete(
   '/:workspaceId/projects/:projectId',
-  requireOwner,
+  requireMember,
+  requireProjectAdmin,
   projectController.delete
 );
 

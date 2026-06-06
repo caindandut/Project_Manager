@@ -1,11 +1,15 @@
 import { useEffect } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useProjectDetailQuery } from "@/hooks/useProject"
+import { useProjectDetailQuery, useDeleteProjectMutation } from "@/hooks/useProject"
 import { useWorkspaceDetailQuery } from "@/hooks/useWorkspaces"
+import { useProjectMembersQuery } from "@/hooks/useProjectMembers"
+import { useAuth } from "@/hooks/useAuth"
+import { toVietnameseErrorMessage } from "@/lib/error-messages"
 
 import OverviewHeader from "@/components/project/OverviewHeader"
 import StatsRow from "@/components/project/OverviewStats"
@@ -18,10 +22,14 @@ export default function ProjectOverview() {
   const params = useParams<{ workspaceId: string; projectId: string }>()
   const workspaceSlug = params.workspaceId || ""
   const projectId = Number(params.projectId || "0")
+  const navigate = useNavigate()
+  const { user } = useAuth()
 
   const workspaceQuery = useWorkspaceDetailQuery(workspaceSlug)
   const projectQuery = useProjectDetailQuery(workspaceSlug, projectId)
   const project = projectQuery.data
+  const projectMembersQuery = useProjectMembersQuery(projectId)
+  const deleteProjectMutation = useDeleteProjectMutation(workspaceSlug)
 
   useEffect(() => {
     document.title = project
@@ -34,6 +42,23 @@ export default function ProjectOverview() {
   const canManageMembers =
     workspaceRole === "OWNER" || workspaceRole === "ADMIN"
   const workspaceId = workspaceQuery.data?.id
+
+  // Determine if the current user is project ADMIN (creator)
+  const currentProjectMember = projectMembersQuery.data?.data?.find(
+    (m) => m.user.id === user?.id
+  )
+  const isProjectAdmin = currentProjectMember?.role === "ADMIN"
+
+  const handleDeleteProject = async () => {
+    if (!project) return
+    try {
+      await deleteProjectMutation.mutateAsync(project.id)
+      toast.success("Đã xóa dự án thành công!")
+      navigate(`/workspaces/${workspaceSlug}/projects`)
+    } catch (error) {
+      toast.error(toVietnameseErrorMessage(error, "Không thể xóa dự án."))
+    }
+  }
 
   // ─── Invalid params ────────────────────────────────────────
   if (!workspaceSlug || !projectId) {
@@ -124,6 +149,8 @@ export default function ProjectOverview() {
         workspaceName={workspaceQuery.data?.name || "Workspace"}
         workspaceId={workspaceId}
         canManage={canManageMembers}
+        isProjectAdmin={isProjectAdmin}
+        onDelete={handleDeleteProject}
       />
 
       {/* ── Section 2: Stats Row ───────────────────────────── */}

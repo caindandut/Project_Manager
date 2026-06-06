@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { getProjectDetail, updateProject, type UpdateProjectPayload } from "@/lib/project-api"
+import { getProjectDetail, updateProject, deleteProject, type UpdateProjectPayload } from "@/lib/project-api"
 
 export const projectQueryKeys = {
   detail: (workspaceId: string | number, projectId: number) =>
@@ -29,6 +29,19 @@ export const useUpdateProjectMutation = (workspaceId: string | number, projectId
           queryKey: ["projects", String(workspaceId)],
         }),
       ])
+    },
+  })
+}
+
+export const useDeleteProjectMutation = (workspaceId: string | number) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (projectId: number) => deleteProject(workspaceId, projectId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["projects", String(workspaceId)],
+      })
     },
   })
 }
