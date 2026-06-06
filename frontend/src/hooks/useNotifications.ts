@@ -11,6 +11,8 @@ import {
   updateNotificationPreference,
 } from '@/lib/notification-api'
 
+export const NOTIFICATION_REFRESH_INTERVAL_MS = 5_000
+
 // ── Query Keys ────────────────────────────────────────────────────
 
 const notificationKeys = {
@@ -25,14 +27,17 @@ const notificationKeys = {
 // ── Queries ───────────────────────────────────────────────────────
 
 /**
- * Get grouped notifications for dropdown (polls every 30s).
+ * Get grouped notifications for dropdown.
  */
 export function useGroupedNotificationsQuery(category?: string, limit = 10) {
   return useQuery({
     queryKey: notificationKeys.grouped(category, limit),
     queryFn: () => getGroupedNotifications(category, limit),
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: NOTIFICATION_REFRESH_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   })
 }
 
@@ -47,14 +52,17 @@ export function useNotificationsQuery(category?: string, limit = 20) {
 }
 
 /**
- * Get DIRECT unread count for the badge (polls every 30s).
+ * Get DIRECT unread count for the badge.
  */
 export function useUnreadCountQuery() {
   return useQuery({
     queryKey: notificationKeys.unreadCount(),
     queryFn: getUnreadCount,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: NOTIFICATION_REFRESH_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   })
 }
 

@@ -13,6 +13,7 @@ import {
   getMyWorkspaceInvitations,
 } from "@/lib/workspace-api"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
+import { NOTIFICATION_REFRESH_INTERVAL_MS } from "@/hooks/useNotifications"
 import type { PendingInvitation } from "@/types/workspace"
 
 const STATUS_LABELS: Record<PendingInvitation["status"], string> = {
@@ -37,6 +38,11 @@ export default function WorkspaceInvitationPage() {
   const invitationsQuery = useQuery({
     queryKey: ["my-workspace-invitations"],
     queryFn: getMyWorkspaceInvitations,
+    refetchInterval: NOTIFICATION_REFRESH_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   })
 
   const answerMutation = useMutation({
@@ -47,6 +53,7 @@ export default function WorkspaceInvitationPage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["my-workspace-invitations"] }),
         queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+        queryClient.invalidateQueries({ queryKey: ["notifications"] }),
       ])
     },
     onError: (error) => {

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import {
+  NOTIFICATION_REFRESH_INTERVAL_MS,
   useGroupedNotificationsQuery,
   useUnreadCountQuery,
   useMarkAsReadMutation,
@@ -47,8 +48,11 @@ export default function NotificationBell() {
   const invitationsQuery = useQuery({
     queryKey: ["my-workspace-invitations"],
     queryFn: getMyWorkspaceInvitations,
-    refetchInterval: 30_000,
-    staleTime: 15_000,
+    refetchInterval: NOTIFICATION_REFRESH_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    staleTime: 0,
   })
   const markAsReadMutation = useMarkAsReadMutation()
   const markAllAsReadMutation = useMarkAllAsReadMutation()
@@ -120,9 +124,22 @@ export default function NotificationBell() {
     markAllAsReadMutation.mutate(activeTab)
   }, [markAllAsReadMutation, activeTab])
 
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      setIsOpen(open)
+      if (open) {
+        void unreadCountQuery.refetch()
+        void directGroupedQuery.refetch()
+        void watchingGroupedQuery.refetch()
+        void invitationsQuery.refetch()
+      }
+    },
+    [directGroupedQuery, invitationsQuery, unreadCountQuery, watchingGroupedQuery],
+  )
+
   return (
     <>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           type="button"
