@@ -34,9 +34,9 @@ if (firstDeploy.status === 0) {
 
 process.stdout.write(firstDeploy.output);
 
-if (firstDeploy.output.includes('P3005') || firstDeploy.output.includes('P3018')) {
+if (firstDeploy.output.includes('P3005') || firstDeploy.output.includes('P3018') || firstDeploy.output.includes('P3009')) {
   console.warn(
-    'Prisma P3005 or P3018 detected: resolving migrations and syncing schema with db push.',
+    'Prisma P3005, P3018, or P3009 detected: resolving migrations and syncing schema with db push.',
   );
 
   for (const migrationName of getMigrationNames()) {
