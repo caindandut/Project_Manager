@@ -150,6 +150,35 @@ export async function sendNotificationEmail(options: {
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  if (resendApiKey) {
+    try {
+      const response = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: config.EMAIL_FROM || 'onboarding@resend.dev',
+          to: options.to,
+          subject: options.subject,
+          html: options.html,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Resend API returned status ${response.status}: ${errText}`);
+      }
+
+      logger.info(`Email sent via Resend API to ${options.to}`);
+      return;
+    } catch (apiError) {
+      logger.error('Failed to send email via Resend API, falling back to SMTP...', apiError);
+    }
+  }
+
   if (!config.EMAIL_USER || !config.EMAIL_PASS || !config.EMAIL_FROM) {
     if (!missingEmailConfigWarned) {
       missingEmailConfigWarned = true;
@@ -181,6 +210,11 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 }
 
 export async function verifyEmailTransport(): Promise<void> {
+  if (process.env.RESEND_API_KEY) {
+    logger.info('Email transport verified successfully (using Resend HTTP API).');
+    return;
+  }
+
   if (!config.EMAIL_USER || !config.EMAIL_PASS || !config.EMAIL_FROM) {
     logger.warn('Email transport verification skipped: EMAIL_USER, EMAIL_PASS, or EMAIL_FROM is missing.');
     return;
