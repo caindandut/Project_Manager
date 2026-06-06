@@ -260,30 +260,19 @@ export class WorkspaceService extends BaseService<
       expiresAt: new Date(Date.now() + INVITATION_EXPIRY_MS),
     });
 
-    sendWorkspaceInvitationEmail({
-      to: email,
-      workspaceName: workspace.name,
-      inviterName: inviter.name || inviter.email,
-      role,
-      acceptUrl: this.buildMyInvitationsUrl(invitation.token),
-      declineUrl: this.buildMyInvitationsUrl(invitation.token),
-      registerUrl: this.buildRegisterUrl(invitation.token, email),
-      isExistingUser: Boolean(user),
-    }).catch((err) => {
-      logger.error(`Failed to send invitation email to ${email}: ${err instanceof Error ? err.message : String(err)}`);
-    });
-
     logger.info(`Invitation ${invitation.id} sent to ${email} for workspace ${workspace.id} as ${role}`);
 
-    if (user) {
-      await notificationEmitter.onInvitationReceived(
-        invitation.id,
-        workspace.name,
-        inviter.name || inviter.email,
-        user.id,
-        inviterId,
-      );
-    }
+    this.dispatchInvitationSideEffects({
+      invitationId: invitation.id,
+      email,
+      workspaceName: workspace.name,
+      inviterName: inviter.name || inviter.email,
+      inviterId,
+      inviteeUserId: user?.id,
+      role,
+      token: invitation.token,
+      isExistingUser: Boolean(user),
+    });
 
     return this.formatInvitation(invitation);
   }
@@ -608,6 +597,52 @@ export class WorkspaceService extends BaseService<
     url.searchParams.set('invitation', token);
     url.searchParams.set('email', email);
     return url.toString();
+  }
+
+  private dispatchInvitationSideEffects(options: {
+    invitationId: number;
+    email: string;
+    workspaceName: string;
+    inviterName: string;
+    inviterId: number;
+    inviteeUserId?: number;
+    role: WorkspaceRole;
+    token: string;
+    isExistingUser: boolean;
+  }): void {
+    const acceptUrl = this.buildMyInvitationsUrl(options.token);
+    const registerUrl = this.buildRegisterUrl(options.token, options.email);
+
+    setImmediate(() => {
+      sendWorkspaceInvitationEmail({
+        to: options.email,
+        workspaceName: options.workspaceName,
+        inviterName: options.inviterName,
+        role: options.role,
+        acceptUrl,
+        declineUrl: acceptUrl,
+        registerUrl,
+        isExistingUser: options.isExistingUser,
+      }).catch((err) => {
+        logger.error(
+          `Failed to send invitation email to ${options.email}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
+      });
+
+      if (options.inviteeUserId) {
+        notificationEmitter.onInvitationReceived(
+          options.invitationId,
+          options.workspaceName,
+          options.inviterName,
+          options.inviteeUserId,
+          options.inviterId,
+        ).catch((err) => {
+          logger.error(`Failed to emit invitation notification for ${options.email}`, err);
+        });
+      }
+    });
   }
 }
 
