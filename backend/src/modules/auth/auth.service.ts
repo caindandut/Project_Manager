@@ -15,6 +15,7 @@ import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { GoogleUserPayload } from './google-auth.util';
 import { sendOTPEmail } from '../../common/utils/email.service';
+import { cloudinaryService } from '../../common/services/cloudinary.service';
 
 export interface RegisterInput {
   email: string;
@@ -561,28 +562,25 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
     }
 
-    // Delete old avatar if it's a local file
-    if (user.avatar && user.avatar.startsWith('/uploads/avatars/')) {
-      const oldPath = path.join(process.cwd(), user.avatar);
-      if (fs.existsSync(oldPath)) {
-        fs.unlinkSync(oldPath);
+    // Delete old avatar
+    if (user.avatar) {
+      if (user.avatar.startsWith('/uploads/avatars/')) {
+        const oldPath = path.join(process.cwd(), user.avatar);
+        if (fs.existsSync(oldPath)) {
+          fs.unlinkSync(oldPath);
+        }
+      } else if (user.avatar.includes('cloudinary.com')) {
+        await cloudinaryService.deleteFromUrl(user.avatar);
       }
     }
 
-    // Create avatars directory if it doesn't exist
-    const avatarsDir = path.join(process.cwd(), 'uploads', 'avatars');
-    if (!fs.existsSync(avatarsDir)) {
-      fs.mkdirSync(avatarsDir, { recursive: true });
-    }
-
-    // Generate unique filename
-    const ext = path.extname(file.originalname);
-    const filename = `avatar-${userId}-${Date.now()}${ext}`;
-    const filePath = path.join(avatarsDir, filename);
-    const avatarUrl = `/uploads/avatars/${filename}`;
-
-    // Save file
-    fs.writeFileSync(filePath, file.buffer);
+    // Upload to Cloudinary
+    const uploadResult = await cloudinaryService.uploadFromBuffer(
+      file.buffer,
+      'pm-tool/avatars',
+      `avatar-${userId}`
+    );
+    const avatarUrl = uploadResult.secure_url;
 
     // Update user avatar in database
     await authRepository.update(userId, { avatar: avatarUrl });

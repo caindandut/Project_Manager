@@ -30,6 +30,10 @@ export interface EnvConfig {
   EMAIL_USER: string;
   EMAIL_PASS: string;
   EMAIL_FROM: string;
+
+  CLOUDINARY_CLOUD_NAME: string;
+  CLOUDINARY_API_KEY: string;
+  CLOUDINARY_API_SECRET: string;
 }
 
 const IS_PROD = process.env.NODE_ENV === 'production';
@@ -73,6 +77,10 @@ const config: EnvConfig = {
   EMAIL_USER: process.env.EMAIL_USER || '',
   EMAIL_PASS: process.env.EMAIL_PASS || '',
   EMAIL_FROM: process.env.EMAIL_FROM || 'noreply@projectmanager.com',
+
+  CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME || '',
+  CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY || '',
+  CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET || '',
 };
 
 export default config;

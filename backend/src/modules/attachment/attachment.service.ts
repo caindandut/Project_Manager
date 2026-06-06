@@ -10,6 +10,7 @@ import { config } from '../../config';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { ALLOWED_MIME_TYPES, FILE_SIZE_LIMITS } from '../../config/constants';
 import { prisma } from '../../config';
+import { cloudinaryService } from '../../common/services/cloudinary.service';
 
 export interface UploadAttachmentInput {
   taskId: number;
@@ -65,17 +66,12 @@ export class AttachmentService extends BaseService<
       );
     }
 
-    const taskDir = path.join(this.UPLOAD_DIR, String(taskId));
-    if (!fs.existsSync(taskDir)) {
-      fs.mkdirSync(taskDir, { recursive: true });
-    }
-
-    const ext = path.extname(file.originalname);
-    const filename = `${Date.now()}-${Math.random().toString(36).substring(7)}${ext}`;
-    const filePath = path.join(taskDir, filename);
-    const fileUrl = `/uploads/${taskId}/${filename}`;
-
-    fs.writeFileSync(filePath, file.buffer);
+    const uploadResult = await cloudinaryService.uploadFromBuffer(
+      file.buffer,
+      `pm-tool/tasks/${taskId}`,
+      file.originalname
+    );
+    const fileUrl = uploadResult.secure_url;
 
     const attachment = await attachmentRepository.create({
       fileName: file.originalname,
@@ -148,6 +144,8 @@ export class AttachmentService extends BaseService<
     const filePath = this.getLocalPathFromUrl(attachment.fileUrl);
     if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
+    } else if (attachment.fileUrl.includes('cloudinary.com')) {
+      await cloudinaryService.deleteFromUrl(attachment.fileUrl);
     }
 
     await attachmentRepository.softDelete(id);
