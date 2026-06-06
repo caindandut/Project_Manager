@@ -3,6 +3,7 @@ import { ProjectRole } from '@prisma/client';
 export interface ProjectMemberWithUser {
   id: number;
   role: ProjectRole;
+  status: string;
   joinedAt: Date;
   projectId: number;
   userId: number;
