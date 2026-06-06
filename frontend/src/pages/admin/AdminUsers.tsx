@@ -55,6 +55,13 @@ export default function AdminUsers() {
   const debouncedSearch = useDebounce(search, 400)
   const limit = 15
 
+  const getAvatarUrl = (avatarPath?: string | null) => {
+    if (!avatarPath) return undefined
+    if (avatarPath.startsWith('http')) return avatarPath
+    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5000'
+    return `${base}${avatarPath}`
+  }
+
   const usersQuery = useAdminUsers({
     page,
     limit,
@@ -178,7 +185,7 @@ export default function AdminUsers() {
                       <TableCell>
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
-                            <AvatarImage src={user.avatar ? `http://localhost:5000${user.avatar}` : undefined} />
+                            <AvatarImage src={getAvatarUrl(user.avatar)} />
                             <AvatarFallback className="text-xs">
                               {user.name?.charAt(0)?.toUpperCase() ?? '?'}
                             </AvatarFallback>
@@ -316,7 +323,7 @@ export default function AdminUsers() {
               {/* User info */}
               <div className="flex items-center gap-4">
                 <Avatar className="h-14 w-14">
-                  <AvatarImage src={userDetailQuery.data.avatar ? `http://localhost:5000${userDetailQuery.data.avatar}` : undefined} />
+                  <AvatarImage src={getAvatarUrl(userDetailQuery.data.avatar)} />
                   <AvatarFallback className="text-lg">
                     {userDetailQuery.data.name?.charAt(0)?.toUpperCase() ?? '?'}
                   </AvatarFallback>

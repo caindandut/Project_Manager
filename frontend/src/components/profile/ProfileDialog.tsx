@@ -172,7 +172,7 @@ export default function ProfileDialog({ open, onOpenChange }: ProfileDialogProps
   // Google Linking
   const handleLinkGoogle = () => {
     localStorage.setItem('isLinkingGoogle', 'true');
-    window.location.assign('http://localhost:5000/api/v1/auth/google');
+    window.location.assign(`${import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'}/auth/google`);
   };
 
   return (

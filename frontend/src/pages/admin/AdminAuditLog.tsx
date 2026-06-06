@@ -54,6 +54,13 @@ export default function AdminAuditLog() {
   const [actionFilter, setActionFilter] = useState<string>('all')
   const limit = 20
 
+  const getAvatarUrl = (avatarPath?: string | null) => {
+    if (!avatarPath) return undefined
+    if (avatarPath.startsWith('http')) return avatarPath
+    const base = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:5000'
+    return `${base}${avatarPath}`
+  }
+
   const logsQuery = useAdminAuditLogs({
     page,
     limit,
@@ -148,7 +155,7 @@ export default function AdminAuditLog() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="h-6 w-6">
-                              <AvatarImage src={log.performedBy.avatar ? `http://localhost:5000${log.performedBy.avatar}` : undefined} />
+                              <AvatarImage src={getAvatarUrl(log.performedBy.avatar)} />
                               <AvatarFallback className="text-[10px]">
                                 {log.performedBy.name?.charAt(0)?.toUpperCase() ?? '?'}
                               </AvatarFallback>
