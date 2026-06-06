@@ -14,14 +14,15 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useRemoveWorkspaceMemberMutation } from "@/hooks/useWorkspaces"
+import { useRemoveWorkspaceMemberMutation, useCancelWorkspaceInvitationMutation } from "@/hooks/useWorkspaces"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import { workspaceRoleVariantMap } from "@/lib/workspace-role"
-import type { WorkspaceMember } from "@/types/workspace"
+import type { WorkspaceMember, PendingInvitation } from "@/types/workspace"
 
 interface MemberTableProps {
   workspaceId: string | number
   members: WorkspaceMember[]
+  invitations?: PendingInvitation[]
   isLoading: boolean
   currentUserId: number | null
   canManage: boolean
@@ -57,6 +58,7 @@ function getDisplayRole(role: string): string {
 export default function MemberTable({
   workspaceId,
   members,
+  invitations = [],
   isLoading,
   currentUserId,
   canManage,
@@ -64,6 +66,7 @@ export default function MemberTable({
   membersLimit,
 }: MemberTableProps) {
   const removeMemberMutation = useRemoveWorkspaceMemberMutation(workspaceId, membersPage, membersLimit)
+  const cancelInvitationMutation = useCancelWorkspaceInvitationMutation(workspaceId)
 
   const handleRemoveMember = async (member: WorkspaceMember) => {
     const confirmed = window.confirm(
@@ -82,6 +85,21 @@ export default function MemberTable({
     }
   }
 
+  const handleCancelInvitation = async (invitation: PendingInvitation) => {
+    const confirmed = window.confirm(
+      `Bạn có chắc muốn thu hồi lời mời tới ${invitation.email} không?`,
+    )
+
+    if (!confirmed) return
+
+    try {
+      await cancelInvitationMutation.mutateAsync(invitation.id)
+      toast.success("Đã thu hồi lời mời.")
+    } catch (error) {
+      toast.error(toVietnameseErrorMessage(error, "Không thể thu hồi lời mời."))
+    }
+  }
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -91,7 +109,8 @@ export default function MemberTable({
             <TableHead>Tên hiển thị</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Vai trò</TableHead>
-            <TableHead>Ngày tham gia</TableHead>
+            <TableHead>Trạng thái</TableHead>
+            <TableHead>Ngày</TableHead>
             {canManage ? <TableHead className="text-right">Hành động</TableHead> : null}
           </TableRow>
         </TableHeader>
@@ -111,15 +130,16 @@ export default function MemberTable({
                   <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-48" /></TableCell>
                   <TableCell><Skeleton className="h-6 w-20 rounded-md" /></TableCell>
+                  <TableCell><Skeleton className="h-6 w-24 rounded-md" /></TableCell>
                   <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                   {canManage ? <TableCell><Skeleton className="ml-auto h-8 w-20" /></TableCell> : null}
                 </TableRow>
               ))
             : null}
 
-          {!isLoading && members.length === 0 ? (
+          {!isLoading && members.length === 0 && invitations.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={canManage ? 6 : 5} className="h-32 text-center">
+              <TableCell colSpan={canManage ? 7 : 6} className="h-32 text-center">
                 <div className="flex flex-col items-center justify-center gap-2">
                   <p className="text-sm font-medium text-foreground">Không có thành viên nào.</p>
                   <p className="text-sm text-muted-foreground">
@@ -182,6 +202,11 @@ export default function MemberTable({
                       <Badge variant={badgeVariant}>{displayRole}</Badge>
                     </TableCell>
 
+                    {/* Trạng thái */}
+                    <TableCell>
+                      <Badge variant="default" className="bg-green-500 hover:bg-green-600">Đã tham gia</Badge>
+                    </TableCell>
+
                     {/* Ngày tham gia */}
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDate(member.joinedAt)}
@@ -230,6 +255,104 @@ export default function MemberTable({
                 )
               })
             : null}
+
+          {/* Hiển thị danh sách lời mời */}
+          {!isLoading &&
+            invitations.map((invitation) => {
+              const displayName = invitation.email
+              const displayRole = getDisplayRole(invitation.role)
+              const badgeVariant = workspaceRoleVariantMap[invitation.role] || "secondary"
+              
+              let statusText = ""
+              let statusVariant: "default" | "secondary" | "destructive" | "outline" = "outline"
+              
+              switch (invitation.status) {
+                case "PENDING":
+                  statusText = "Đang chờ"
+                  statusVariant = "secondary"
+                  break
+                case "DECLINED":
+                  statusText = "Từ chối"
+                  statusVariant = "destructive"
+                  break
+                case "EXPIRED":
+                  statusText = "Hết hạn"
+                  statusVariant = "outline"
+                  break
+                case "ACCEPTED":
+                  // Thường thì đã accepted sẽ vào mảng members, nhưng nếu có lọt vào thì bỏ qua
+                  return null
+              }
+
+              return (
+                <TableRow key={`invitation-${invitation.id}`} className="bg-muted/20">
+                  {/* Họ và tên (với lời mời thì chưa có) */}
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10 opacity-50">
+                        <AvatarFallback>?</AvatarFallback>
+                      </Avatar>
+                      <div className="space-y-0.5">
+                        <span className="text-xs text-muted-foreground italic">Chưa đăng ký/Chờ xác nhận</span>
+                      </div>
+                    </div>
+                  </TableCell>
+
+                  {/* Tên hiển thị */}
+                  <TableCell className="text-sm italic text-muted-foreground">
+                    {displayName}
+                  </TableCell>
+
+                  {/* Email */}
+                  <TableCell>
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="truncate max-w-[200px]">{invitation.email}</span>
+                    </div>
+                  </TableCell>
+
+                  {/* Vai trò */}
+                  <TableCell>
+                    <Badge variant={badgeVariant} className="opacity-70">{displayRole}</Badge>
+                  </TableCell>
+
+                  {/* Trạng thái */}
+                  <TableCell>
+                    <Badge variant={statusVariant}>{statusText}</Badge>
+                  </TableCell>
+
+                  {/* Ngày */}
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatDate(invitation.invitedAt)}
+                  </TableCell>
+
+                  {/* Hành động */}
+                  {canManage ? (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" disabled>
+                          <span className="sr-only">Không thể đổi vai trò</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          disabled={cancelInvitationMutation.isPending}
+                          onClick={() => void handleCancelInvitation(invitation)}
+                          title="Thu hồi lời mời"
+                        >
+                          {cancelInvitationMutation.isPending ? (
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  ) : null}
+                </TableRow>
+              )
+            })}
         </TableBody>
       </Table>
     </div>

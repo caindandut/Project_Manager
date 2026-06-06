@@ -319,6 +319,34 @@ export class NotificationEmitter {
     }
   }
 
+  /**
+   * User received a workspace invitation
+   */
+  async onInvitationReceived(
+    invitationId: number,
+    workspaceName: string,
+    inviterName: string,
+    inviteeUserId: number,
+    inviterId: number,
+  ): Promise<void> {
+    try {
+      const input: CreateNotificationInput = {
+        type: NotificationType.INVITATION_RECEIVED,
+        category: NotificationCategory.DIRECT,
+        title: 'Lời mời mới',
+        message: `${inviterName} đã mời bạn tham gia không gian làm việc "${workspaceName}"`,
+        userId: inviteeUserId,
+        actorId: inviterId,
+        groupKey: `invitation:${invitationId}`,
+        metadata: { action: 'invitation_received', invitationId, workspaceName },
+      };
+
+      await notificationService.create(input);
+    } catch (err) {
+      logger.error('NotificationEmitter.onInvitationReceived failed', err);
+    }
+  }
+
   // ── Private helpers ─────────────────────────────────────────
 
   private async maybeSendEmail(

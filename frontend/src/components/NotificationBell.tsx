@@ -26,6 +26,7 @@ const typeIcons: Record<string, string> = {
   TASK_UPDATED: "✏️",
   MENTION: "📣",
   MEMBER_JOINED: "👤",
+  INVITATION_RECEIVED: "🤝",
 }
 
 // ── Main Component ────────────────────────────────────────────────
@@ -61,6 +62,9 @@ export default function NotificationBell() {
         navigate(
           `/workspaces/_/projects/${notification.task.projectId}/list?taskId=${notification.taskId}`,
         )
+      } else if (notification.type === "INVITATION_RECEIVED") {
+        setIsOpen(false)
+        navigate("/my-invitations")
       }
     },
     [markAsReadMutation, navigate],

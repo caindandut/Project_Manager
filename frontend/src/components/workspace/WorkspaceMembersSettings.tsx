@@ -5,7 +5,7 @@ import InviteMemberDialog from "@/components/workspace/InviteMemberDialog"
 import MemberTable from "@/components/workspace/MemberTable"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuth } from "@/hooks/useAuth"
-import { useWorkspaceDetailQuery, useWorkspaceMembersQuery } from "@/hooks/useWorkspaces"
+import { useWorkspaceDetailQuery, useWorkspaceMembersQuery, useWorkspacePendingInvitationsQuery } from "@/hooks/useWorkspaces"
 
 const MEMBERS_PAGE_DEFAULT = 1
 const MEMBERS_LIMIT = 20
@@ -22,6 +22,11 @@ export default function WorkspaceMembersSettings() {
     data: membersData,
     isLoading: isLoadingMembers,
   } = useWorkspaceMembersQuery(workspaceSlug, membersPage, MEMBERS_LIMIT)
+  
+  const {
+    data: invitationsData,
+    isLoading: isLoadingInvitations,
+  } = useWorkspacePendingInvitationsQuery(workspaceSlug)
 
   const canManage = workspace?.role === "OWNER" || workspace?.role === "ADMIN"
 
@@ -65,7 +70,8 @@ export default function WorkspaceMembersSettings() {
       <MemberTable
         workspaceId={workspaceSlug}
         members={membersData?.data ?? []}
-        isLoading={isLoadingMembers}
+        invitations={invitationsData ?? []}
+        isLoading={isLoadingMembers || isLoadingInvitations}
         currentUserId={user?.id ?? null}
         canManage={canManage}
         membersPage={membersPage}

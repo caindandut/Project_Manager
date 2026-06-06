@@ -15,6 +15,7 @@ import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { config, prisma } from '../../config';
 import { sendWorkspaceInvitationEmail } from '../../common/utils/email.service';
+import { notificationEmitter } from '../notification/notification-emitter';
 
 export interface CreateWorkspaceInput {
   name: string;
@@ -273,6 +274,18 @@ export class WorkspaceService extends BaseService<
     });
 
     logger.info(`Invitation ${invitation.id} sent to ${email} for workspace ${workspace.id} as ${role}`);
+
+    if (user) {
+      notificationEmitter.onInvitationReceived(
+        invitation.id,
+        workspace.name,
+        inviter.name || inviter.email,
+        user.id,
+        inviterId,
+      ).catch((err) => {
+        logger.error(`Failed to emit invitation notification for ${email}`, err);
+      });
+    }
 
     return this.formatInvitation(invitation);
   }
