@@ -153,6 +153,18 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (resendApiKey) {
     try {
+      let fromEmail = config.EMAIL_FROM || 'onboarding@resend.dev';
+      // Resend does not allow sending from unverified public domains like gmail.com
+      if (
+        fromEmail.includes('@gmail.com') ||
+        fromEmail.includes('@yahoo.com') ||
+        fromEmail.includes('@hotmail.com') ||
+        fromEmail.includes('@outlook.com') ||
+        fromEmail === 'noreply@projectmanager.com'
+      ) {
+        fromEmail = 'onboarding@resend.dev';
+      }
+
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -160,7 +172,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          from: config.EMAIL_FROM || 'onboarding@resend.dev',
+          from: fromEmail,
           to: options.to,
           subject: options.subject,
           html: options.html,
@@ -174,8 +186,10 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 
       logger.info(`Email sent via Resend API to ${options.to}`);
       return;
-    } catch (apiError) {
-      logger.error('Failed to send email via Resend API, falling back to SMTP...', apiError);
+    } catch (apiError: any) {
+      logger.error('Failed to send email via Resend API, falling back to SMTP...', {
+        error: apiError?.message || String(apiError),
+      });
     }
   }
 
