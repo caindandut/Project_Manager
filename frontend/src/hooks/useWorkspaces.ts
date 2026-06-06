@@ -114,18 +114,16 @@ export const useInviteWorkspaceMemberMutation = (
 
   return useMutation({
     mutationFn: (payload: InviteWorkspaceMemberPayload) => inviteWorkspaceMember(workspaceId, payload),
-    onSuccess: async () => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: workspaceQueryKeys.detail(workspaceId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: workspaceQueryKeys.members(workspaceId, membersPage, membersLimit),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: workspaceQueryKeys.invitations(workspaceId),
-        }),
-      ])
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: workspaceQueryKeys.detail(workspaceId),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: workspaceQueryKeys.members(workspaceId, membersPage, membersLimit),
+      })
+      void queryClient.invalidateQueries({
+        queryKey: workspaceQueryKeys.invitations(workspaceId),
+      })
     },
   })
 }
