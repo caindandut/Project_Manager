@@ -180,9 +180,9 @@ export default function OnboardingWorkspacePage() {
             <Label>Quy mô đội nhóm</Label>
             <RadioGroup value={teamSize} onValueChange={setTeamSize} className="space-y-2">
               {TEAM_SIZES.map((size) => (
-                <div key={size.value} className="flex items-center gap-2 rounded-md border p-3 hover:bg-muted/50 cursor-pointer" onClick={() => setTeamSize(size.value)}>
-                  <RadioGroupItem value={size.value} id={`team-${size.value}`} className="mt-0.5" />
-                  <Label htmlFor={`team-${size.value}`} className="font-normal cursor-pointer flex-1 leading-none">
+                <div key={size.value} className="flex items-center space-x-3 rounded-md border p-4 hover:bg-muted/50 cursor-pointer" onClick={() => setTeamSize(size.value)}>
+                  <RadioGroupItem value={size.value} id={`team-${size.value}`} />
+                  <Label htmlFor={`team-${size.value}`} className="font-normal cursor-pointer text-sm leading-none m-0">
                     {size.label}
                   </Label>
                 </div>
