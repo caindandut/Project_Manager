@@ -150,6 +150,71 @@ export async function sendNotificationEmail(options: {
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
+  // 1. Try Brevo HTTP API
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  if (brevoApiKey) {
+    try {
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'api-key': brevoApiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender: { email: config.EMAIL_FROM, name: 'Project Manager' },
+          to: [{ email: options.to }],
+          subject: options.subject,
+          htmlContent: options.html,
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`Brevo API returned status ${response.status}: ${errText}`);
+      }
+
+      logger.info(`Email sent via Brevo API to ${options.to}`);
+      return;
+    } catch (apiError: any) {
+      logger.error('Failed to send email via Brevo API, falling back to other methods...', {
+        error: apiError?.message || String(apiError),
+      });
+    }
+  }
+
+  // 2. Try SendGrid HTTP API
+  const sendgridApiKey = process.env.SENDGRID_API_KEY;
+  if (sendgridApiKey) {
+    try {
+      const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sendgridApiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          personalizations: [{ to: [{ email: options.to }] }],
+          from: { email: config.EMAIL_FROM, name: 'Project Manager' },
+          subject: options.subject,
+          content: [{ type: 'text/html', value: options.html }],
+        }),
+      });
+
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`SendGrid API returned status ${response.status}: ${errText}`);
+      }
+
+      logger.info(`Email sent via SendGrid API to ${options.to}`);
+      return;
+    } catch (apiError: any) {
+      logger.error('Failed to send email via SendGrid API, falling back to other methods...', {
+        error: apiError?.message || String(apiError),
+      });
+    }
+  }
+
+  // 3. Try Resend HTTP API
   const resendApiKey = process.env.RESEND_API_KEY;
   if (resendApiKey) {
     try {
@@ -193,6 +258,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
     }
   }
 
+  // 4. Fallback to standard SMTP
   if (!config.EMAIL_USER || !config.EMAIL_PASS || !config.EMAIL_FROM) {
     if (!missingEmailConfigWarned) {
       missingEmailConfigWarned = true;
@@ -221,9 +287,20 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
     subject: options.subject,
     html: options.html,
   });
+  logger.info(`Email sent via SMTP to ${options.to}`);
 }
 
 export async function verifyEmailTransport(): Promise<void> {
+  if (process.env.BREVO_API_KEY) {
+    logger.info('Email transport verified successfully (using Brevo HTTP API).');
+    return;
+  }
+
+  if (process.env.SENDGRID_API_KEY) {
+    logger.info('Email transport verified successfully (using SendGrid HTTP API).');
+    return;
+  }
+
   if (process.env.RESEND_API_KEY) {
     logger.info('Email transport verified successfully (using Resend HTTP API).');
     return;
