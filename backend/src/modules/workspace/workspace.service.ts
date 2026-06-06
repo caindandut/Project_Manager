@@ -379,7 +379,7 @@ export class WorkspaceService extends BaseService<
       throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
     }
 
-    const invitations = await workspaceRepository.findInvitationsByEmail(user.email);
+    const invitations = await workspaceRepository.findInvitationsByEmail(this.normalizeEmail(user.email));
     return {
       data: invitations.map((inv) => this.formatInvitation(inv)),
     };
@@ -394,7 +394,7 @@ export class WorkspaceService extends BaseService<
       throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
     }
 
-    if (user.email !== invitation.email) {
+    if (this.normalizeEmail(user.email) !== this.normalizeEmail(invitation.email)) {
       throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'This invitation belongs to another email');
     }
 
@@ -429,7 +429,7 @@ export class WorkspaceService extends BaseService<
       throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
     }
 
-    if (user.email !== invitation.email) {
+    if (this.normalizeEmail(user.email) !== this.normalizeEmail(invitation.email)) {
       throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'This invitation belongs to another email');
     }
 
@@ -597,6 +597,10 @@ export class WorkspaceService extends BaseService<
     url.searchParams.set('invitation', token);
     url.searchParams.set('email', email);
     return url.toString();
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 
   private dispatchInvitationSideEffects(options: {

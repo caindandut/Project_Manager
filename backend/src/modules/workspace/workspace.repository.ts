@@ -136,7 +136,33 @@ export class WorkspaceRepository extends BaseRepository<
   }
 
   async findUserByEmail(email: string): Promise<User | null> {
-    return prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = this.normalizeEmail(email);
+    const directMatch = await prisma.user.findFirst({
+      where: { email: normalizedEmail, deletedAt: null },
+    });
+    if (directMatch) return directMatch;
+
+    const rows = await prisma.$queryRaw<User[]>`
+      SELECT
+        id,
+        email,
+        name,
+        password,
+        google_id AS googleId,
+        google_avatar AS googleAvatar,
+        avatar,
+        bio,
+        system_role AS systemRole,
+        is_blocked AS isBlocked,
+        created_at AS createdAt,
+        updated_at AS updatedAt,
+        deleted_at AS deletedAt
+      FROM users
+      WHERE LOWER(email) = ${normalizedEmail} AND deleted_at IS NULL
+      LIMIT 1
+    `;
+
+    return rows[0] ?? null;
   }
 
   async findMemberByUserId(
@@ -352,13 +378,15 @@ export class WorkspaceRepository extends BaseRepository<
     workspaceId: number,
     email: string,
   ): Promise<Invitation | null> {
+    const invitationIds = await this.findInvitationIdsByEmail(email, {
+      workspaceId,
+      pendingOnly: true,
+    });
+    if (invitationIds.length === 0) return null;
+
     return prisma.invitation.findFirst({
       where: {
-        workspaceId,
-        email,
-        status: InvitationStatus.PENDING,
-        expiresAt: { gt: new Date() },
-        deletedAt: null,
+        id: { in: invitationIds },
       },
     });
   }
@@ -399,10 +427,12 @@ export class WorkspaceRepository extends BaseRepository<
   }
 
   async findInvitationsByEmail(email: string): Promise<WorkspaceInvitationWithDetails[]> {
+    const invitationIds = await this.findInvitationIdsByEmail(email);
+    if (invitationIds.length === 0) return [];
+
     return prisma.invitation.findMany({
       where: {
-        email,
-        deletedAt: null,
+        id: { in: invitationIds },
       },
       include: {
         workspace: {
@@ -427,12 +457,14 @@ export class WorkspaceRepository extends BaseRepository<
   }
 
   async acceptPendingInvitationsForUser(user: Pick<User, 'id' | 'email'>): Promise<void> {
+    const invitationIds = await this.findInvitationIdsByEmail(user.email, {
+      pendingOnly: true,
+    });
+    if (invitationIds.length === 0) return;
+
     const invitations = await prisma.invitation.findMany({
       where: {
-        email: user.email,
-        status: InvitationStatus.PENDING,
-        expiresAt: { gt: new Date() },
-        deletedAt: null,
+        id: { in: invitationIds },
       },
     });
 
@@ -448,6 +480,28 @@ export class WorkspaceRepository extends BaseRepository<
 
       await this.updateInvitationStatus(invitation.id, InvitationStatus.ACCEPTED);
     }
+  }
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  private async findInvitationIdsByEmail(
+    email: string,
+    options?: { workspaceId?: number; pendingOnly?: boolean },
+  ): Promise<number[]> {
+    const normalizedEmail = this.normalizeEmail(email);
+    const rows = await prisma.$queryRaw<{ id: number }[]>`
+      SELECT id
+      FROM invitations
+      WHERE LOWER(email) = ${normalizedEmail}
+        AND deleted_at IS NULL
+        ${options?.workspaceId ? Prisma.sql`AND workspace_id = ${options.workspaceId}` : Prisma.empty}
+        ${options?.pendingOnly ? Prisma.sql`AND status = ${InvitationStatus.PENDING} AND expires_at > NOW()` : Prisma.empty}
+      ORDER BY created_at DESC
+    `;
+
+    return rows.map((row) => Number(row.id));
   }
 
   async cancelInvitation(invitationId: number): Promise<void> {
