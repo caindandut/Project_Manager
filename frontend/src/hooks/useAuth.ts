@@ -143,7 +143,7 @@ export const useAuth = () => {
   })
 
   const googleAuth = async (): Promise<void> => {
-    window.location.assign('http://localhost:5000/api/v1/auth/google')
+    window.location.assign(`${import.meta.env.VITE_API_URL}/auth/google`)
   }
 
   const completeGoogleAuth = (payload: GoogleAuthResult) => {
