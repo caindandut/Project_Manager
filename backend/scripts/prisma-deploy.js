@@ -34,20 +34,17 @@ if (firstDeploy.status === 0) {
 
 process.stdout.write(firstDeploy.output);
 
-if (!firstDeploy.output.includes('P3005')) {
+if (firstDeploy.output.includes('P3005') || firstDeploy.output.includes('P3018')) {
+  console.warn(
+    'Prisma P3005 or P3018 detected: resolving migrations and syncing schema with db push.',
+  );
+
+  for (const migrationName of getMigrationNames()) {
+    runPrisma(['migrate', 'resolve', '--applied', migrationName]);
+  }
+
+  const pushResult = runPrisma(['db', 'push', '--accept-data-loss']);
+  process.exit(pushResult.status);
+} else {
   process.exit(firstDeploy.status);
 }
-
-console.warn(
-  'Prisma P3005 detected: baselining existing non-empty database before migrate deploy.',
-);
-
-for (const migrationName of getMigrationNames()) {
-  const resolveResult = runPrisma(['migrate', 'resolve', '--applied', migrationName]);
-  if (resolveResult.status !== 0) {
-    process.exit(resolveResult.status);
-  }
-}
-
-const secondDeploy = runPrisma(['migrate', 'deploy']);
-process.exit(secondDeploy.status);
