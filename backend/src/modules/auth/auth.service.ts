@@ -103,6 +103,8 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       throw ApiError.unauthorized(ErrorCode.AUTH_INVALID_CREDENTIALS, 'Invalid email or password');
     }
 
+    const hasWorkspaces = await authRepository.hasWorkspaces(user.id);
+
     const accessToken = this.generateAccessToken(user);
     const refreshToken = this.generateRefreshToken(user);
 
@@ -123,6 +125,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       accessToken,
       refreshToken,
       expiresIn: 900, // 15 minutes
+      requireOnboarding: !hasWorkspaces,
     };
   }
 
@@ -336,6 +339,8 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     await authRepository.createRefreshToken(user.id, refreshToken, expiresAt);
 
+    const hasWorkspaces = await authRepository.hasWorkspaces(user.id);
+
     return {
       user: {
         id: user.id,
@@ -350,6 +355,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       accessToken,
       refreshToken,
       expiresIn: 900,
+      requireOnboarding: !hasWorkspaces,
     };
   }
 
@@ -390,6 +396,8 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
     }
 
+    const hasWorkspaces = await authRepository.hasWorkspaces(userId);
+
     return {
       id: user.id,
       email: user.email,
@@ -402,6 +410,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       hasPassword: user.password !== null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      requireOnboarding: !hasWorkspaces,
     };
   }
 
