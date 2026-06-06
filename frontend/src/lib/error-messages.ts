@@ -20,6 +20,7 @@ export function toVietnameseErrorMessage(error: unknown, fallback: string): stri
     ["Cannot remove workspace owner", "Không thể xóa quản trị viên của workspace."],
     ["Cannot remove yourself from workspace", "Bạn không thể tự xóa chính mình khỏi workspace này."],
     ["Member not found", "Không tìm thấy thành viên."],
+    ["A pending invitation already exists for this email", "Đã có lời mời đang chờ xử lý cho email này."],
   ]
 
   const matched = mappings.find(([source]) => message.includes(source))
