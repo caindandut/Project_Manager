@@ -3,6 +3,14 @@ import { body, param, query, validationResult, ValidationChain } from 'express-v
 import { ApiError } from '../utils/apiError';
 import { ErrorCode } from '../../types/enums';
 
+const emailNormalizationOptions = {
+  gmail_remove_dots: false,
+  gmail_remove_subaddress: false,
+  outlookdotcom_remove_subaddress: false,
+  yahoo_remove_subaddress: false,
+  icloud_remove_subaddress: false,
+};
+
 export const validate = (
   validations: ValidationChain[],
 ) => {
@@ -42,7 +50,7 @@ export const validationRules = {
     body('email')
       .isEmail()
       .withMessage('Valid email is required')
-      .normalizeEmail()
+      .normalizeEmail(emailNormalizationOptions)
       .isLength({ max: 255 })
       .withMessage('Email must be at most 255 characters'),
     body('password')
@@ -66,7 +74,7 @@ export const validationRules = {
     body('email')
       .isEmail()
       .withMessage('Valid email is required')
-      .normalizeEmail(),
+      .normalizeEmail(emailNormalizationOptions),
     body('password')
       .notEmpty()
       .withMessage('Password is required'),
@@ -93,7 +101,7 @@ export const validationRules = {
     body('email')
       .isEmail()
       .withMessage('Valid email is required')
-      .normalizeEmail(),
+      .normalizeEmail(emailNormalizationOptions),
   ],
 
   resetPassword: [
@@ -163,7 +171,7 @@ export const validationRules = {
     body('email')
       .isEmail()
       .withMessage('Valid email is required')
-      .normalizeEmail(),
+      .normalizeEmail(emailNormalizationOptions),
     body('role')
       .optional()
       .isIn(['ADMIN', 'MEMBER', 'GUEST'])

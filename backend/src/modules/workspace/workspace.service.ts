@@ -394,7 +394,7 @@ export class WorkspaceService extends BaseService<
       throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
     }
 
-    if (this.normalizeEmail(user.email) !== this.normalizeEmail(invitation.email)) {
+    if (!this.emailsMatch(user.email, invitation.email)) {
       throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'This invitation belongs to another email');
     }
 
@@ -429,7 +429,7 @@ export class WorkspaceService extends BaseService<
       throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
     }
 
-    if (this.normalizeEmail(user.email) !== this.normalizeEmail(invitation.email)) {
+    if (!this.emailsMatch(user.email, invitation.email)) {
       throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'This invitation belongs to another email');
     }
 
@@ -601,6 +601,28 @@ export class WorkspaceService extends BaseService<
 
   private normalizeEmail(email: string): string {
     return email.trim().toLowerCase();
+  }
+
+  private emailsMatch(firstEmail: string, secondEmail: string): boolean {
+    const normalizedFirstEmail = this.normalizeEmail(firstEmail);
+    const normalizedSecondEmail = this.normalizeEmail(secondEmail);
+    if (normalizedFirstEmail === normalizedSecondEmail) {
+      return true;
+    }
+
+    const firstGmailDotlessEmail = this.getGmailDotlessEmail(normalizedFirstEmail);
+    const secondGmailDotlessEmail = this.getGmailDotlessEmail(normalizedSecondEmail);
+    return Boolean(firstGmailDotlessEmail && firstGmailDotlessEmail === secondGmailDotlessEmail);
+  }
+
+  private getGmailDotlessEmail(email: string): string | null {
+    const normalizedEmail = this.normalizeEmail(email);
+    const [localPart, domain] = normalizedEmail.split('@');
+    if (!localPart || !domain || (domain !== 'gmail.com' && domain !== 'googlemail.com')) {
+      return null;
+    }
+
+    return `${localPart.replace(/\./g, '')}@gmail.com`;
   }
 
   private dispatchInvitationSideEffects(options: {

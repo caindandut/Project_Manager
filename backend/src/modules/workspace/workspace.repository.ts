@@ -137,6 +137,7 @@ export class WorkspaceRepository extends BaseRepository<
 
   async findUserByEmail(email: string): Promise<User | null> {
     const normalizedEmail = this.normalizeEmail(email);
+    const gmailDotlessEmail = this.getGmailDotlessEmail(normalizedEmail);
     const directMatch = await prisma.user.findFirst({
       where: { email: normalizedEmail, deletedAt: null },
     });
@@ -158,7 +159,20 @@ export class WorkspaceRepository extends BaseRepository<
         updated_at AS updatedAt,
         deleted_at AS deletedAt
       FROM users
-      WHERE LOWER(email) = ${normalizedEmail} AND deleted_at IS NULL
+      WHERE deleted_at IS NULL
+        AND (
+          LOWER(email) = ${normalizedEmail}
+          ${
+            gmailDotlessEmail
+              ? Prisma.sql`
+                OR (
+                  LOWER(SUBSTRING_INDEX(email, '@', -1)) IN ('gmail.com', 'googlemail.com')
+                  AND CONCAT(REPLACE(SUBSTRING_INDEX(LOWER(email), '@', 1), '.', ''), '@gmail.com') = ${gmailDotlessEmail}
+                )
+              `
+              : Prisma.empty
+          }
+        )
       LIMIT 1
     `;
 
@@ -490,16 +504,39 @@ export class WorkspaceRepository extends BaseRepository<
     return email.trim().toLowerCase();
   }
 
+  private getGmailDotlessEmail(email: string): string | null {
+    const normalizedEmail = this.normalizeEmail(email);
+    const [localPart, domain] = normalizedEmail.split('@');
+    if (!localPart || !domain || (domain !== 'gmail.com' && domain !== 'googlemail.com')) {
+      return null;
+    }
+
+    return `${localPart.replace(/\./g, '')}@gmail.com`;
+  }
+
   private async findInvitationIdsByEmail(
     email: string,
     options?: { workspaceId?: number; pendingOnly?: boolean },
   ): Promise<number[]> {
     const normalizedEmail = this.normalizeEmail(email);
+    const gmailDotlessEmail = this.getGmailDotlessEmail(normalizedEmail);
     const rows = await prisma.$queryRaw<{ id: number }[]>`
       SELECT id
       FROM invitations
-      WHERE LOWER(email) = ${normalizedEmail}
-        AND deleted_at IS NULL
+      WHERE deleted_at IS NULL
+        AND (
+          LOWER(email) = ${normalizedEmail}
+          ${
+            gmailDotlessEmail
+              ? Prisma.sql`
+                OR (
+                  LOWER(SUBSTRING_INDEX(email, '@', -1)) IN ('gmail.com', 'googlemail.com')
+                  AND CONCAT(REPLACE(SUBSTRING_INDEX(LOWER(email), '@', 1), '.', ''), '@gmail.com') = ${gmailDotlessEmail}
+                )
+              `
+              : Prisma.empty
+          }
+        )
         ${options?.workspaceId ? Prisma.sql`AND workspace_id = ${options.workspaceId}` : Prisma.empty}
         ${options?.pendingOnly ? Prisma.sql`AND status = ${InvitationStatus.PENDING} AND expires_at > NOW()` : Prisma.empty}
       ORDER BY created_at DESC
