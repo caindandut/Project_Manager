@@ -276,15 +276,13 @@ export class WorkspaceService extends BaseService<
     logger.info(`Invitation ${invitation.id} sent to ${email} for workspace ${workspace.id} as ${role}`);
 
     if (user) {
-      notificationEmitter.onInvitationReceived(
+      await notificationEmitter.onInvitationReceived(
         invitation.id,
         workspace.name,
         inviter.name || inviter.email,
         user.id,
         inviterId,
-      ).catch((err) => {
-        logger.error(`Failed to emit invitation notification for ${email}`, err);
-      });
+      );
     }
 
     return this.formatInvitation(invitation);

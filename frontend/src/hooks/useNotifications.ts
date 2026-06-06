@@ -15,7 +15,7 @@ import {
 
 const notificationKeys = {
   all: ['notifications'] as const,
-  grouped: (category?: string) => [...notificationKeys.all, 'grouped', category] as const,
+  grouped: (category?: string, limit?: number) => [...notificationKeys.all, 'grouped', category, limit] as const,
   list: (category?: string) => [...notificationKeys.all, 'list', category] as const,
   unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
   groupDetail: (groupKey: string) => [...notificationKeys.all, 'group', groupKey] as const,
@@ -29,7 +29,7 @@ const notificationKeys = {
  */
 export function useGroupedNotificationsQuery(category?: string, limit = 10) {
   return useQuery({
-    queryKey: notificationKeys.grouped(category),
+    queryKey: notificationKeys.grouped(category, limit),
     queryFn: () => getGroupedNotifications(category, limit),
     refetchInterval: 30_000,
     staleTime: 15_000,

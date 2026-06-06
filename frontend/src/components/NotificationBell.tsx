@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 import { Bell, Check, CheckCheck, ChevronRight, ExternalLink, Loader2, User2, Settings } from "lucide-react"
 import NotificationSettingsDialog from "@/components/NotificationSettingsDialog"
 import { useNavigate } from "react-router-dom"
+import { useQuery } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
 
@@ -16,7 +17,9 @@ import {
   useMarkGroupAsReadMutation,
   useGroupDetailQuery,
 } from "@/hooks/useNotifications"
+import { getMyWorkspaceInvitations } from "@/lib/workspace-api"
 import type { GroupedNotification, NotificationItem } from "@/types/notification"
+import type { PendingInvitation } from "@/types/workspace"
 
 // ── Type icon mapping ─────────────────────────────────────────────
 const typeIcons: Record<string, string> = {
@@ -38,13 +41,41 @@ export default function NotificationBell() {
   const [settingsOpen, setSettingsOpen] = useState(false)
 
   const unreadCountQuery = useUnreadCountQuery()
-  const groupedQuery = useGroupedNotificationsQuery(activeTab, 10)
+  const directGroupedQuery = useGroupedNotificationsQuery("DIRECT", 20)
+  const watchingGroupedQuery = useGroupedNotificationsQuery("WATCHING", 10)
+  const groupedQuery = activeTab === "DIRECT" ? directGroupedQuery : watchingGroupedQuery
+  const invitationsQuery = useQuery({
+    queryKey: ["my-workspace-invitations"],
+    queryFn: getMyWorkspaceInvitations,
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  })
   const markAsReadMutation = useMarkAsReadMutation()
   const markAllAsReadMutation = useMarkAllAsReadMutation()
   const markGroupAsReadMutation = useMarkGroupAsReadMutation()
   const groupDetailQuery = useGroupDetailQuery(expandedGroup)
 
-  const unreadCount = unreadCountQuery.data ?? 0
+  const invitationIdsWithNotification = useMemo(() => {
+    const ids = new Set<number>()
+    for (const group of directGroupedQuery.data?.data ?? []) {
+      const invitationId = group.notification.metadata?.invitationId
+      if (typeof invitationId === "number") {
+        ids.add(invitationId)
+      }
+    }
+    return ids
+  }, [directGroupedQuery.data])
+
+  const pendingInvitationFallbacks = useMemo(
+    () =>
+      (invitationsQuery.data ?? []).filter(
+        (invitation) =>
+          invitation.status === "PENDING" && !invitationIdsWithNotification.has(invitation.id),
+      ),
+    [invitationsQuery.data, invitationIdsWithNotification],
+  )
+
+  const unreadCount = (unreadCountQuery.data ?? 0) + pendingInvitationFallbacks.length
   const badgeLabel = unreadCount > 99 ? "99+" : String(unreadCount)
   const groups = groupedQuery.data?.data ?? []
 
@@ -168,10 +199,21 @@ export default function NotificationBell() {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
-          ) : groups.length === 0 ? (
+          ) : groups.length === 0 && (activeTab !== "DIRECT" || pendingInvitationFallbacks.length === 0) ? (
             <EmptyState tab={activeTab} />
           ) : (
             <div className="divide-y divide-border/30">
+              {activeTab === "DIRECT" &&
+                pendingInvitationFallbacks.map((invitation) => (
+                  <InvitationFallbackRow
+                    key={`invitation-${invitation.id}`}
+                    invitation={invitation}
+                    onClick={() => {
+                      setIsOpen(false)
+                      navigate(`/my-invitations?token=${invitation.token}`)
+                    }}
+                  />
+                ))}
               {groups.map((group) => (
                 <div key={group.groupKey}>
                   {/* Group header / single notification */}
@@ -328,6 +370,59 @@ function NotificationRow({
       {!hasUnread && (
         <Check className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/40" />
       )}
+    </button>
+  )
+}
+
+function InvitationFallbackRow({
+  invitation,
+  onClick,
+}: {
+  invitation: PendingInvitation
+  onClick: () => void
+}) {
+  const timeAgo = formatDistanceToNow(new Date(invitation.invitedAt), {
+    addSuffix: true,
+    locale: vi,
+  })
+  const inviterName = invitation.invitedBy.name || invitation.invitedBy.email
+  const workspaceName = invitation.workspace?.name ?? "Workspace"
+
+  return (
+    <button
+      type="button"
+      className="flex w-full items-start gap-3 bg-primary/[0.03] px-4 py-3 text-left transition-colors hover:bg-muted/50"
+      onClick={onClick}
+    >
+      <div className="relative mt-0.5 flex-shrink-0">
+        {invitation.invitedBy.avatar ? (
+          <img
+            src={invitation.invitedBy.avatar}
+            alt={inviterName}
+            className="h-8 w-8 rounded-full object-cover ring-2 ring-background"
+          />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground ring-2 ring-background">
+            <User2 className="h-4 w-4" />
+          </div>
+        )}
+        <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-primary ring-2 ring-card" />
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-[13px] font-medium leading-snug text-foreground">
+          <span className="mr-1">{typeIcons.INVITATION_RECEIVED}</span>
+          {inviterName} đã mời bạn tham gia workspace "{workspaceName}"
+        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-[11px] text-muted-foreground/70">{timeAgo}</span>
+          <span className="rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+            {invitation.role}
+          </span>
+        </div>
+      </div>
+
+      <ChevronRight className="mt-1 h-3.5 w-3.5 flex-shrink-0 text-muted-foreground/40" />
     </button>
   )
 }
