@@ -22,6 +22,7 @@ export class TaskController extends BaseController {
       const result = await taskService.create({
         ...req.body,
         projectId,
+        actorId: this.getUserId(req),
       });
       res.status(201).json(success(result));
     });
@@ -30,7 +31,10 @@ export class TaskController extends BaseController {
   createSubTask = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
       const parentId = this.getTaskId(req);
-      const result = await taskService.createSubTask(parentId, req.body);
+      const result = await taskService.createSubTask(parentId, {
+        ...req.body,
+        actorId: this.getUserId(req),
+      });
       res.status(201).json(success(result));
     });
   };

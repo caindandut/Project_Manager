@@ -1,12 +1,12 @@
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
-import { format, isPast, parseISO } from "date-fns"
-import { vi } from "date-fns/locale"
+import { isPast, parseISO } from "date-fns"
 import { Calendar, GripVertical } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { formatTaskDateTime } from "@/lib/date-time"
 import type { Task } from "@/types/task"
 import { TASK_PRIORITY_LABELS } from "@/types/task"
 
@@ -106,7 +106,7 @@ export function KanbanCard({ task, projectKey, onClick, isDragging }: KanbanCard
             isOverdue ? "text-red-500 font-medium" : "text-muted-foreground/70"
           )}>
             <Calendar className="h-3 w-3" />
-            <span>{format(parseISO(task.dueDate), "dd/MM", { locale: vi })}</span>
+            <span>{formatTaskDateTime(task.dueDate)}</span>
           </div>
         )}
       </div>

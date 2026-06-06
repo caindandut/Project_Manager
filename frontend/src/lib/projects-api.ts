@@ -33,17 +33,6 @@ export async function getProjectDetail(
   return response.data
 }
 
-export async function getMyTasks(
-  workspaceId: string | number,
-  page = 1,
-  limit = 20
-): Promise<{ data: Task[]; pagination: { page: number; limit: number; total: number; totalPages: number } }> {
-  const response = await apiClient.get(`/workspaces/${workspaceId}/tasks/me`, {
-    params: { page, limit },
-  })
-  return response.data
-}
-
 export interface CreateProjectPayload {
   name: string
   key: string

@@ -45,7 +45,7 @@ router.use('/reports', reportRoutes);
 router.use('/projects', projectMemberRoutes);
 
 // My tasks routes
-router.use('/my-tasks', myTasksRoutes);
+router.use('/workspaces', myTasksRoutes);
 
 // Admin routes (system owner only)
 router.use('/admin', adminRoutes);

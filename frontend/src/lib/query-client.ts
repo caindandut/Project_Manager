@@ -15,4 +15,9 @@ export const taskQueryKeys = {
   detail: (taskId: number) => ["task", taskId] as const,
 }
 
+export const myTasksQueryKeys = {
+  all: ["my-tasks"] as const,
+  workspace: (workspaceId: string) => ["my-tasks", workspaceId] as const,
+}
+
 export default queryClient

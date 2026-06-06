@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
@@ -41,6 +42,8 @@ import {
 } from "@/hooks/useTasks"
 import { downloadAttachment } from "@/lib/project-api"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
+import { TaskDateTimePicker } from "@/components/tasks/TaskDateTimePicker"
+import { formatTaskDateTime, fromDateTimeLocalValue } from "@/lib/date-time"
 import { cn } from "@/lib/utils"
 import type { CreateTaskPayload, TaskPriority, TaskStatus, TaskUser } from "@/types/task"
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "@/types/task"
@@ -206,10 +209,26 @@ export default function TaskDetailPanel({
     )
   }
 
+  const toggleAssignee = (assigneeId: number) => {
+    if (!task) return
+    const current = task.assignees?.map((assignee) => assignee.id) ?? (task.assigneeId ? [task.assigneeId] : [])
+    const next = current.includes(assigneeId)
+      ? current.filter((id) => id !== assigneeId)
+      : [...current, assigneeId]
+
+    updateMutation.mutate(
+      { taskId: task.id, payload: { assigneeId: next[0] ?? null, assigneeIds: next } },
+      {
+        onSuccess: () => toast.success("Đã cập nhật người phụ trách."),
+        onError: (e) => toast.error(toVietnameseErrorMessage(e, "Không thể cập nhật người phụ trách.")),
+      },
+    )
+  }
+
   const handleStartDateChange = (date: string) => {
     if (!task) return
     updateMutation.mutate(
-      { taskId: task.id, payload: { startDate: date || null } },
+      { taskId: task.id, payload: { startDate: fromDateTimeLocalValue(date) ?? null } },
       {
         onError: (e) => toast.error(toVietnameseErrorMessage(e, "Không thể cập nhật ngày bắt đầu.")),
       },
@@ -219,7 +238,7 @@ export default function TaskDetailPanel({
   const handleDueDateChange = (date: string) => {
     if (!task) return
     updateMutation.mutate(
-      { taskId: task.id, payload: { dueDate: date || null } },
+      { taskId: task.id, payload: { dueDate: fromDateTimeLocalValue(date) ?? null } },
       {
         onError: (e) => toast.error(toVietnameseErrorMessage(e, "Không thể cập nhật ngày hết hạn.")),
       },
@@ -315,7 +334,7 @@ export default function TaskDetailPanel({
       <div className="fixed inset-0 z-40 bg-black/30 dark:bg-black/70" onClick={onClose} />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 h-full w-full max-w-[520px] bg-card border-l border-border shadow-xl flex flex-col overflow-hidden animate-slide-in-from-right duration-300">
+      <div className="fixed right-0 top-0 z-50 h-full w-full bg-card border-l border-border shadow-xl flex flex-col overflow-hidden animate-slide-in-from-right duration-300 lg:w-1/2">
         {isLoading || !task ? (
           <div className="flex-1 flex items-center justify-center">
             <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -482,35 +501,39 @@ export default function TaskDetailPanel({
                     </div>
                   </div>
 
-                  {/* Assignee */}
                   <div className="space-y-1 col-span-2">
                     <span className="text-xs text-muted-foreground">Người phụ trách</span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="w-full flex items-center gap-2 text-left">
-                          {task.assignee ? (
-                            <>
-                              <Avatar className="h-5 w-5">
-                                <AvatarImage src={task.assignee.avatar ?? undefined} />
-                                <AvatarFallback className="text-[10px]">
-                                  {task.assignee.name?.[0] ?? "?"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">
-                                {task.assignee.name ?? task.assignee.email}
+                        <button className="flex w-full flex-wrap items-center gap-1.5 rounded-md border border-input bg-background px-2 py-1.5 text-left text-sm dark:bg-card">
+                          {(task.assignees && task.assignees.length > 0 ? task.assignees : task.assignee ? [task.assignee] : []).length > 0 ? (
+                            (task.assignees && task.assignees.length > 0 ? task.assignees : task.assignee ? [task.assignee] : []).map((assignee) => (
+                              <span key={assignee.id} className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-1 text-xs">
+                                <Avatar className="h-5 w-5">
+                                  <AvatarImage src={assignee.avatar ?? undefined} />
+                                  <AvatarFallback className="text-[10px]">
+                                    {assignee.name?.[0] ?? assignee.email?.[0] ?? "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                {assignee.name ?? assignee.email}
                               </span>
-                            </>
+                            ))
                           ) : (
-                            <span className="text-sm text-muted-foreground italic">Chưa giao</span>
+                            <span className="text-muted-foreground italic">Chưa giao</span>
                           )}
                         </button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" className="w-56 max-h-64 overflow-y-auto">
+                      <DropdownMenuContent align="start" className="max-h-64 w-64 overflow-y-auto">
                         <DropdownMenuItem onClick={() => handleAssigneeChange(null)}>
-                          <span className="text-sm text-muted-foreground italic">Chưa giao</span>
+                          <span className="text-sm text-muted-foreground italic">Bỏ giao tất cả</span>
                         </DropdownMenuItem>
                         {projectMembers.map((m) => (
-                          <DropdownMenuItem key={m.id} onClick={() => handleAssigneeChange(m.id)}>
+                          <DropdownMenuCheckboxItem
+                            key={m.id}
+                            checked={(task.assignees?.some((assignee) => assignee.id === m.id) ?? task.assigneeId === m.id)}
+                            onCheckedChange={() => toggleAssignee(m.id)}
+                            onSelect={(event) => event.preventDefault()}
+                          >
                             <div className="flex items-center gap-2">
                               <Avatar className="h-5 w-5">
                                 <AvatarImage src={m.avatar ?? undefined} />
@@ -520,7 +543,7 @@ export default function TaskDetailPanel({
                               </Avatar>
                               <span className="text-sm">{m.name ?? m.email}</span>
                             </div>
-                          </DropdownMenuItem>
+                          </DropdownMenuCheckboxItem>
                         ))}
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -529,23 +552,29 @@ export default function TaskDetailPanel({
                   {/* Start date */}
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground">Ngày bắt đầu</span>
-                    <input
-                      type="date"
-                      value={task.startDate ? String(task.startDate).split("T")[0] : ""}
-                      onChange={(e) => handleStartDateChange(e.target.value)}
-                    className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring dark:bg-card"
+                    <TaskDateTimePicker
+                      value={task.startDate}
+                      onChange={(value) => handleStartDateChange(value ?? "")}
+                      placeholder="Chọn ngày bắt đầu"
+                      className="h-8 text-xs"
                     />
+                    {task.startDate && (
+                      <p className="text-[11px] text-muted-foreground">{formatTaskDateTime(task.startDate)}</p>
+                    )}
                   </div>
 
                   {/* Due date */}
                   <div className="space-y-1">
                     <span className="text-xs text-muted-foreground">Ngày hết hạn</span>
-                    <input
-                      type="date"
-                      value={task.dueDate ? String(task.dueDate).split("T")[0] : ""}
-                      onChange={(e) => handleDueDateChange(e.target.value)}
-                    className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring dark:bg-card"
+                    <TaskDateTimePicker
+                      value={task.dueDate}
+                      onChange={(value) => handleDueDateChange(value ?? "")}
+                      placeholder="Chọn ngày hết hạn"
+                      className="h-8 text-xs"
                     />
+                    {task.dueDate && (
+                      <p className="text-[11px] text-muted-foreground">{formatTaskDateTime(task.dueDate)}</p>
+                    )}
                   </div>
                 </div>
               </div>

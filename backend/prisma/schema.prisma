@@ -87,6 +87,7 @@ model User {
   ownedProjects Project[]         @relation("ProjectOwner")
   projectMembers ProjectMember[]
   assignedTasks Task[]            @relation("TaskAssignee")
+  taskAssignments TaskAssignee[]  @relation("TaskAssigneeUser")
   comments      Comment[]
   activities    ActivityLog[]  @relation("ActivityLogUser")
   uploadedAttachments Attachment[] @relation("AttachmentUploader")
@@ -282,8 +283,8 @@ model Task {
   type            TaskType     @default(TASK)       @map("type")
   status          TaskStatus   @default(TODO)       @map("status")
   priority        TaskPriority @default(MEDIUM)     @map("priority")
-  startDate       DateTime?    @map("start_date")  @db.DateTime
-  dueDate         DateTime?    @map("due_date")    @db.DateTime
+  startDate       DateTime?    @map("start_date")  @db.Date
+  dueDate         DateTime?    @map("due_date")    @db.Date
   estimatedHours  Float?       @map("estimated_hours")
   loggedHours     Float        @default(0)         @map("logged_hours")
   order           Int          @default(0)
@@ -293,6 +294,7 @@ model Task {
 
   assigneeId Int?    @map("assignee_id")
   assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull, onUpdate: SetNull)
+  assignees  TaskAssignee[]
 
   parentId Int?   @map("parent_id")
   parent   Task?  @relation("TaskSubTasks", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: SetNull)
@@ -313,6 +315,21 @@ model Task {
   @@index([deletedAt], name: "idx_task_deleted")
   @@index([dueDate], name: "idx_task_due_date")
   @@map("tasks")
+}
+
+model TaskAssignee {
+  id         Int      @id @default(autoincrement())
+  taskId     Int      @map("task_id")
+  userId     Int      @map("user_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  user User @relation("TaskAssigneeUser", fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([taskId, userId], name: "uq_task_assignee_task_user")
+  @@index([taskId], name: "idx_task_assignee_task")
+  @@index([userId], name: "idx_task_assignee_user")
+  @@map("task_assignees")
 }
 
 // ------------------------------------------------------------

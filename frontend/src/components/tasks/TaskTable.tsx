@@ -8,8 +8,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { useState } from "react"
-import { format, isPast, parseISO } from "date-fns"
-import { vi } from "date-fns/locale"
+import { isPast, parseISO } from "date-fns"
 import { toast } from "sonner"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -23,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
+import { formatTaskDateTime } from "@/lib/date-time"
 import { cn } from "@/lib/utils"
 import type { Task, TaskStatus } from "@/types/task"
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "@/types/task"
@@ -158,7 +158,7 @@ function TaskRow({
                 isOverdue ? "text-red-500 font-medium" : "text-muted-foreground",
               )}
             >
-              {format(parseISO(task.dueDate), "dd/MM/yyyy", { locale: vi })}
+              {formatTaskDateTime(task.dueDate)}
             </span>
           ) : (
             <span className="text-xs text-muted-foreground italic">—</span>
@@ -327,7 +327,7 @@ function StatusGroup({
                           "text-[11px]",
                           isOverdue ? "text-red-500 font-medium" : "text-muted-foreground",
                         )}>
-                          {format(parseISO(task.dueDate), "dd/MM/yyyy", { locale: vi })}
+                          {formatTaskDateTime(task.dueDate)}
                         </span>
                       ) : (
                         <span className="text-[10px] text-muted-foreground italic">—</span>

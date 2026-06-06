@@ -19,7 +19,9 @@ export interface CreateTaskInput {
   estimatedHours?: number;
   projectId: number;
   assigneeId?: number;
+  assigneeIds?: number[];
   parentId?: number;
+  actorId?: number;
 }
 
 export interface UpdateTaskInput {
@@ -31,6 +33,7 @@ export interface UpdateTaskInput {
   dueDate?: string | Date | null;
   estimatedHours?: number;
   assigneeId?: number | null;
+  assigneeIds?: number[];
   order?: number;
 }
 
@@ -86,9 +89,8 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       );
     }
 
-    if (data.assigneeId) {
-      await this.ensureAssigneeInWorkspace(project.workspaceId, data.assigneeId);
-    }
+    const assigneeIds = this.normalizeAssigneeIds(data.assigneeIds, data.assigneeId);
+    await this.ensureAssigneesInWorkspace(project.workspaceId, assigneeIds);
 
     const task = await taskRepository.createTask({
       title: data.title,
@@ -96,25 +98,41 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       type,
       status: data.status || TaskStatus.TODO,
       priority: data.priority || TaskPriority.MEDIUM,
-      startDate: data.startDate ? new Date(data.startDate) : undefined,
-      dueDate: data.dueDate ? new Date(data.dueDate) : undefined,
+      startDate: data.startDate ? this.parseTaskDateOnly(data.startDate) : undefined,
+      dueDate: data.dueDate ? this.parseTaskDateOnly(data.dueDate) : undefined,
       estimatedHours: data.estimatedHours,
       projectId: data.projectId,
-      assigneeId: data.assigneeId,
+      assigneeId: assigneeIds[0],
       parentId,
     });
+    const assignedUsers = await taskRepository.replaceAssignees(task.id, assigneeIds);
 
     logger.info(`Task created: ${task.id} in project ${data.projectId}`);
 
-    // Emit notification if task has an assignee
-    if (data.assigneeId) {
-      notificationEmitter.onTaskAssigned(task.id, data.assigneeId, data.assigneeId).catch(() => {});
+    if (data.actorId) {
+      await prisma.activityLog.create({
+        data: {
+          action: 'CREATE',
+          entityType: 'TASK',
+          entityId: task.id,
+          taskId: task.id,
+          userId: data.actorId,
+          metadata: {
+            title: task.title,
+            projectId: task.projectId,
+          } as Prisma.InputJsonValue,
+        },
+      });
+    }
+
+    for (const assigneeId of assigneeIds) {
+      notificationEmitter.onTaskAssigned(task.id, assigneeId, data.actorId ?? assigneeId).catch(() => {});
     }
 
     const created = await taskRepository.findListItemById(task.id);
     return created
-      ? this.formatTaskWithCounts(created, created.assignee, created._count.subTasks, created._count.comments)
-      : this.formatTaskWithCounts(task, null, 0, 0);
+      ? this.formatTaskWithCounts(created, created.assignee, created.assignees, created._count.subTasks, created._count.comments)
+      : this.formatTaskWithCounts(task, assignedUsers[0] ?? null, assignedUsers, 0, 0);
   }
 
   async createSubTask(parentId: number, data: Omit<CreateTaskInput, 'projectId' | 'parentId' | 'type'>) {
@@ -193,30 +211,48 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
   async update(id: number, data: UpdateTaskInput, userId?: number) {
     const task = await this.findTaskWithProjectOrThrow(id);
 
-    if (data.assigneeId !== undefined && data.assigneeId !== null) {
-      await this.ensureAssigneeInWorkspace(task.project.workspaceId, data.assigneeId);
+    const hasAssigneeUpdate = data.assigneeIds !== undefined || data.assigneeId !== undefined;
+    const nextAssigneeIds = hasAssigneeUpdate
+      ? this.normalizeAssigneeIds(data.assigneeIds, data.assigneeId ?? undefined)
+      : undefined;
+
+    if (nextAssigneeIds) {
+      await this.ensureAssigneesInWorkspace(task.project.workspaceId, nextAssigneeIds);
     }
+
+    const previousAssigneeIds = hasAssigneeUpdate
+      ? await this.getTaskAssigneeIds(task.id, task.assigneeId)
+      : [];
+    const { assigneeIds: _assigneeIds, ...dataWithoutAssigneeIds } = data;
 
     // Parse dates before updating
     const updateData: Prisma.TaskUncheckedUpdateInput = {
-      ...data,
+      ...dataWithoutAssigneeIds,
+      assigneeId: nextAssigneeIds ? (nextAssigneeIds[0] ?? null) : data.assigneeId,
       startDate: data.startDate !== undefined
-        ? (data.startDate ? new Date(data.startDate) : null)
+        ? (data.startDate ? this.parseTaskDateOnly(data.startDate) : null)
         : undefined,
       dueDate: data.dueDate !== undefined
-        ? (data.dueDate ? new Date(data.dueDate) : null)
+        ? (data.dueDate ? this.parseTaskDateOnly(data.dueDate) : null)
         : undefined,
     };
 
     const updated = await taskRepository.updateTask(id, updateData);
+    let updatedAssignees: { id: number; name: string | null; email: string; avatar: string | null }[] | undefined;
+    if (nextAssigneeIds) {
+      updatedAssignees = await taskRepository.replaceAssignees(id, nextAssigneeIds);
+    }
 
     // Log activity
     if (userId) {
       await this.logTaskActivity(updated, task, userId);
 
       // Emit notifications
-      if (data.assigneeId !== undefined && data.assigneeId !== null && data.assigneeId !== task.assigneeId) {
-        notificationEmitter.onTaskAssigned(id, data.assigneeId, userId).catch(() => {});
+      if (nextAssigneeIds) {
+        const newAssigneeIds = nextAssigneeIds.filter((assigneeId) => !previousAssigneeIds.includes(assigneeId));
+        for (const assigneeId of newAssigneeIds) {
+          notificationEmitter.onTaskAssigned(id, assigneeId, userId).catch(() => {});
+        }
       }
       if (data.status && data.status !== task.status) {
         notificationEmitter.onTaskStatusChanged(id, task.status, data.status, userId).catch(() => {});
@@ -226,6 +262,9 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       if (updated.title !== task.title) changes['title'] = { old: task.title, new: updated.title };
       if (updated.priority !== task.priority) changes['priority'] = { old: task.priority, new: updated.priority };
       if (updated.dueDate?.getTime() !== task.dueDate?.getTime()) changes['dueDate'] = { old: task.dueDate, new: updated.dueDate };
+      if (nextAssigneeIds && previousAssigneeIds.join(',') !== nextAssigneeIds.join(',')) {
+        changes['assignees'] = { old: previousAssigneeIds.join(','), new: nextAssigneeIds.join(',') };
+      }
       if (Object.keys(changes).length > 0) {
         notificationEmitter.onTaskUpdated(id, userId, changes).catch(() => {});
       }
@@ -239,6 +278,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       startDate: updated.startDate,
       dueDate: updated.dueDate,
       updatedAt: updated.updatedAt,
+      assignees: updatedAssignees,
     };
   }
 
@@ -280,6 +320,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     }
 
     const updated = await taskRepository.updateAssignee(id, assigneeId);
+    const updatedAssignees = await taskRepository.replaceAssignees(id, assigneeId ? [assigneeId] : []);
 
     // Log activity
     if (userId && previousAssigneeId !== assigneeId) {
@@ -313,6 +354,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
             avatar: updated.assignee.avatar,
           }
         : null,
+      assignees: updatedAssignees,
       updatedAt: updated.updatedAt,
     };
   }
@@ -399,6 +441,45 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     }
   }
 
+  private async ensureAssigneesInWorkspace(workspaceId: number, assigneeIds: number[]): Promise<void> {
+    for (const assigneeId of assigneeIds) {
+      await this.ensureAssigneeInWorkspace(workspaceId, assigneeId);
+    }
+  }
+
+  private normalizeAssigneeIds(assigneeIds?: number[], assigneeId?: number | null): number[] {
+    const ids = assigneeIds !== undefined ? assigneeIds : assigneeId ? [assigneeId] : [];
+    return Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
+  }
+
+  private async getTaskAssigneeIds(taskId: number, legacyAssigneeId?: number | null): Promise<number[]> {
+    const task = await taskRepository.findListItemById(taskId);
+    const ids = [
+      ...(legacyAssigneeId ? [legacyAssigneeId] : []),
+      ...((task?.assignees ?? []).map((assignee) => assignee.id)),
+    ];
+    return Array.from(new Set(ids));
+  }
+
+  private parseTaskDateOnly(value: string | Date): Date {
+    if (value instanceof Date) {
+      const date = new Date(value);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) {
+      throw ApiError.badRequest(
+        ErrorCode.VALIDATION_ERROR,
+        'Task dates must use YYYY-MM-DD format',
+      );
+    }
+
+    const [, year, month, day] = match;
+    return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day), 0, 0, 0, 0));
+  }
+
   private formatTask(task: Task) {
     return {
       id: task.id,
@@ -422,13 +503,15 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
 
   private formatTaskWithCounts(
     task: Task,
-    assignee: { id: number; name: string; avatar: string | null } | null,
+    assignee: { id: number; name: string | null; avatar: string | null } | null,
+    assignees: { id: number; name: string | null; email?: string; avatar: string | null }[],
     subTaskCount: number,
     commentCount: number,
   ) {
     return {
       ...this.formatTask(task),
       assignee,
+      assignees,
       subTaskCount,
       commentCount,
     };
@@ -450,6 +533,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
             avatar: task.assignee.avatar,
           }
         : null,
+      assignees: task.assignees,
       subTaskCount: task._count.subTasks,
       commentCount: task._count.comments,
       order: task.order,
@@ -465,6 +549,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
         key: task.project.key,
       },
       assignee: task.assignee,
+      assignees: task.assignees,
       parent: task.parent,
       subTasks: task.subTasks,
       comments: task.comments.map((comment) => ({

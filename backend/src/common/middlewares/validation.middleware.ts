@@ -275,12 +275,12 @@ export const validationRules = {
       .withMessage('Invalid priority'),
     body('startDate')
       .optional()
-      .isISO8601()
-      .withMessage('Start date must be a valid ISO 8601 date'),
+      .matches(/^\d{4}-\d{2}-\d{2}$/)
+      .withMessage('Start date must use YYYY-MM-DD format'),
     body('dueDate')
       .optional()
-      .isISO8601()
-      .withMessage('Due date must be a valid ISO 8601 date'),
+      .matches(/^\d{4}-\d{2}-\d{2}$/)
+      .withMessage('Due date must use YYYY-MM-DD format'),
     body('estimatedHours')
       .optional()
       .isFloat({ min: 0.01 })
@@ -289,6 +289,14 @@ export const validationRules = {
       .optional()
       .isInt({ min: 1 })
       .withMessage('Assignee ID must be a positive integer'),
+    body('assigneeIds')
+      .optional()
+      .isArray()
+      .withMessage('assigneeIds must be an array'),
+    body('assigneeIds.*')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Each assignee ID must be a positive integer'),
   ],
 
   updateTask: [
@@ -312,12 +320,12 @@ export const validationRules = {
       .withMessage('Invalid priority'),
     body('startDate')
       .optional({ nullable: true })
-      .isISO8601()
-      .withMessage('Start date must be a valid ISO 8601 date'),
+      .matches(/^\d{4}-\d{2}-\d{2}$/)
+      .withMessage('Start date must use YYYY-MM-DD format'),
     body('dueDate')
       .optional({ nullable: true })
-      .isISO8601()
-      .withMessage('Due date must be a valid ISO 8601 date'),
+      .matches(/^\d{4}-\d{2}-\d{2}$/)
+      .withMessage('Due date must use YYYY-MM-DD format'),
     body('estimatedHours')
       .optional()
       .isFloat({ min: 0.01 })
@@ -326,6 +334,14 @@ export const validationRules = {
       .optional({ nullable: true })
       .isInt({ min: 1 })
       .withMessage('Assignee ID must be a positive integer'),
+    body('assigneeIds')
+      .optional()
+      .isArray()
+      .withMessage('assigneeIds must be an array'),
+    body('assigneeIds.*')
+      .optional()
+      .isInt({ min: 1 })
+      .withMessage('Each assignee ID must be a positive integer'),
     body('order')
       .optional()
       .isInt({ min: 0 })

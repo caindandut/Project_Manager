@@ -38,6 +38,29 @@ const refreshClient = axios.create({
   withCredentials: true,
 })
 
+let refreshTokenPromise: Promise<string> | null = null
+
+const refreshAccessToken = async (): Promise<string> => {
+  if (!refreshTokenPromise) {
+    refreshTokenPromise = refreshClient
+      .post<ApiResponse<{ accessToken: string }>>('/auth/refresh')
+      .then((refreshResponse) => {
+        const refreshedToken = refreshResponse.data.data?.accessToken
+        if (!refreshedToken) {
+          throw new Error('Refresh token response did not include access token')
+        }
+
+        useAuthStore.getState().setAccessToken(refreshedToken)
+        return refreshedToken
+      })
+      .finally(() => {
+        refreshTokenPromise = null
+      })
+  }
+
+  return refreshTokenPromise
+}
+
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   withCredentials: true,
@@ -72,16 +95,7 @@ apiClient.interceptors.response.use(
       originalRequest._retry = true
 
       try {
-        const refreshResponse = await refreshClient.post<ApiResponse<{ accessToken: string }>>(
-          '/auth/refresh',
-        )
-
-        const refreshedToken = refreshResponse.data.data?.accessToken
-        if (!refreshedToken) {
-          throw new Error('Refresh token response did not include access token')
-        }
-
-        useAuthStore.getState().setAccessToken(refreshedToken)
+        const refreshedToken = await refreshAccessToken()
         originalRequest.headers = createAuthHeaders(originalRequest.headers, refreshedToken)
 
         return apiClient(originalRequest)

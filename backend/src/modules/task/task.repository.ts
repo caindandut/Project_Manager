@@ -18,6 +18,7 @@ export type TaskAssignee = Pick<User, 'id' | 'name' | 'email' | 'avatar'>;
 
 export type TaskListItem = Task & {
   assignee: Pick<User, 'id' | 'name' | 'avatar'> | null;
+  assignees: TaskAssignee[];
   _count: {
     subTasks: number;
     comments: number;
@@ -29,6 +30,7 @@ export type TaskDetail = Task & {
     workspace: Pick<Workspace, 'id' | 'name'>;
   };
   assignee: TaskAssignee | null;
+  assignees: TaskAssignee[];
   parent: Pick<Task, 'id' | 'title' | 'status'> | null;
   subTasks: Array<Pick<Task, 'id' | 'title' | 'status' | 'priority' | 'createdAt'>>;
   comments: Array<Comment & { user: Pick<User, 'id' | 'name' | 'avatar'> }>;
@@ -48,6 +50,8 @@ export class TaskRepository extends BaseRepository<
   Prisma.TaskCreateInput,
   Prisma.TaskUpdateInput
 > {
+  private taskAssigneesTableExists?: boolean;
+
   constructor() {
     super(prisma, prisma.task);
   }
@@ -97,7 +101,7 @@ export class TaskRepository extends BaseRepository<
       commentLimit: number;
     },
   ): Promise<TaskDetail | null> {
-    return prisma.task.findFirst({
+    const task = await prisma.task.findFirst({
       where: { id, deletedAt: null },
       include: {
         project: {
@@ -141,7 +145,14 @@ export class TaskRepository extends BaseRepository<
           include: { user: { select: { id: true, name: true, avatar: true } } },
         },
       },
-    }) as Promise<TaskDetail | null>;
+    });
+
+    if (!task) return null;
+    const assignees = await this.findAssigneesByTaskIds([task.id]);
+    return {
+      ...task,
+      assignees: assignees.get(task.id) || [],
+    } as TaskDetail;
   }
 
   async findAllInProject(
@@ -175,11 +186,18 @@ export class TaskRepository extends BaseRepository<
       prisma.task.count({ where }),
     ]);
 
-    return { data, total };
+    const assignees = await this.findAssigneesByTaskIds(data.map((task) => task.id));
+    return {
+      data: data.map((task) => ({
+        ...task,
+        assignees: assignees.get(task.id) || [],
+      })) as TaskListItem[],
+      total,
+    };
   }
 
   async findListItemById(id: number): Promise<TaskListItem | null> {
-    return prisma.task.findFirst({
+    const task = await prisma.task.findFirst({
       where: { id, deletedAt: null },
       include: {
         assignee: { select: { id: true, name: true, avatar: true } },
@@ -191,6 +209,12 @@ export class TaskRepository extends BaseRepository<
         },
       },
     });
+    if (!task) return null;
+    const assignees = await this.findAssigneesByTaskIds([task.id]);
+    return {
+      ...task,
+      assignees: assignees.get(task.id) || [],
+    } as TaskListItem;
   }
 
   async createTask(data: Prisma.TaskUncheckedCreateInput): Promise<Task> {
@@ -223,6 +247,50 @@ export class TaskRepository extends BaseRepository<
         assignee: { select: { id: true, name: true, avatar: true } },
       },
     });
+  }
+
+  async replaceAssignees(taskId: number, assigneeIds: number[]): Promise<TaskAssignee[]> {
+    await this.ensureTaskAssigneesTable();
+
+    await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`DELETE FROM task_assignees WHERE task_id = ${taskId}`;
+
+      for (const assigneeId of assigneeIds) {
+        await tx.$executeRaw`
+          INSERT IGNORE INTO task_assignees (task_id, user_id, assigned_at)
+          VALUES (${taskId}, ${assigneeId}, CURRENT_TIMESTAMP(3))
+        `;
+      }
+    });
+
+    const assignees = await this.findAssigneesByTaskIds([taskId]);
+    return assignees.get(taskId) || [];
+  }
+
+  async findAssignedTaskIds(userId: number, workspaceId?: number): Promise<number[]> {
+    await this.ensureTaskAssigneesTable();
+
+    let rows: Array<{ taskId: number }>;
+    rows = workspaceId
+      ? await prisma.$queryRaw<Array<{ taskId: number }>>`
+          SELECT ta.task_id AS taskId
+          FROM task_assignees ta
+          INNER JOIN tasks t ON t.id = ta.task_id
+          INNER JOIN projects p ON p.id = t.project_id
+          WHERE ta.user_id = ${userId}
+            AND t.deleted_at IS NULL
+            AND p.deleted_at IS NULL
+            AND p.workspace_id = ${workspaceId}
+        `
+      : await prisma.$queryRaw<Array<{ taskId: number }>>`
+          SELECT ta.task_id AS taskId
+          FROM task_assignees ta
+          INNER JOIN tasks t ON t.id = ta.task_id
+          WHERE ta.user_id = ${userId}
+            AND t.deleted_at IS NULL
+        `;
+
+    return rows.map((row) => row.taskId);
   }
 
   async logTime(id: number, hours: number): Promise<Task> {
@@ -277,6 +345,74 @@ export class TaskRepository extends BaseRepository<
           }
         : {}),
     };
+  }
+
+  private async findAssigneesByTaskIds(taskIds: number[]): Promise<Map<number, TaskAssignee[]>> {
+    if (taskIds.length === 0) return new Map();
+    await this.ensureTaskAssigneesTable();
+
+    const rows = await prisma.$queryRaw<Array<TaskAssignee & { taskId: number }>>`
+      SELECT
+        ta.task_id AS taskId,
+        u.id AS id,
+        u.name AS name,
+        u.email AS email,
+        u.avatar AS avatar
+      FROM task_assignees ta
+      INNER JOIN users u ON u.id = ta.user_id
+      WHERE ta.task_id IN (${Prisma.join(taskIds)})
+        AND u.deleted_at IS NULL
+      ORDER BY ta.assigned_at ASC, ta.id ASC
+    `;
+
+    return rows.reduce<Map<number, TaskAssignee[]>>((map, row) => {
+      const assignees = map.get(row.taskId) || [];
+      assignees.push({
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        avatar: row.avatar,
+      });
+      map.set(row.taskId, assignees);
+      return map;
+    }, new Map());
+  }
+
+  private async hasTaskAssigneesTable(): Promise<boolean> {
+    if (this.taskAssigneesTableExists === true) return true;
+
+    const rows = await prisma.$queryRaw<Array<Record<string, string>>>`
+      SHOW TABLES LIKE 'task_assignees'
+    `;
+    const exists = rows.length > 0;
+    if (exists) this.taskAssigneesTableExists = true;
+    return exists;
+  }
+
+  private async ensureTaskAssigneesTable(): Promise<void> {
+    if (await this.hasTaskAssigneesTable()) return;
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS \`task_assignees\` (
+        \`id\` INTEGER NOT NULL AUTO_INCREMENT,
+        \`task_id\` INTEGER NOT NULL,
+        \`user_id\` INTEGER NOT NULL,
+        \`assigned_at\` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+        UNIQUE INDEX \`uq_task_assignee_task_user\`(\`task_id\`, \`user_id\`),
+        INDEX \`idx_task_assignee_task\`(\`task_id\`),
+        INDEX \`idx_task_assignee_user\`(\`user_id\`),
+        PRIMARY KEY (\`id\`)
+      ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci
+    `);
+
+    await prisma.$executeRawUnsafe(`
+      INSERT IGNORE INTO \`task_assignees\` (\`task_id\`, \`user_id\`, \`assigned_at\`)
+      SELECT \`id\`, \`assignee_id\`, COALESCE(\`updated_at\`, \`created_at\`, CURRENT_TIMESTAMP(3))
+      FROM \`tasks\`
+      WHERE \`assignee_id\` IS NOT NULL AND \`deleted_at\` IS NULL
+    `);
+
+    this.taskAssigneesTableExists = true;
   }
 }
 

@@ -27,6 +27,7 @@ export interface Task {
   createdAt: string
   updatedAt: string
   assignee: TaskUser | null
+  assignees?: TaskUser[]
   subTaskCount?: number
   commentCount?: number
   _count?: { subTasks: number; comments: number }
@@ -94,6 +95,7 @@ export interface CreateTaskPayload {
   dueDate?: string
   estimatedHours?: number
   assigneeId?: number
+  assigneeIds?: number[]
 }
 
 export interface UpdateTaskPayload {
@@ -105,6 +107,7 @@ export interface UpdateTaskPayload {
   dueDate?: string | null
   estimatedHours?: number
   assigneeId?: number | null
+  assigneeIds?: number[]
 }
 
 export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {

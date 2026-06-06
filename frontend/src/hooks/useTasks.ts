@@ -14,9 +14,10 @@ import {
   updateTaskStatus,
   uploadAttachment,
 } from "@/lib/task-api"
-import { taskQueryKeys } from "@/lib/query-client"
+import { myTasksQueryKeys, taskQueryKeys } from "@/lib/query-client"
 import type {
   CreateTaskPayload,
+  TaskDetail,
   TaskFilter,
   UpdateTaskPayload,
 } from "@/types/task"
@@ -32,6 +33,9 @@ export const useTaskDetailQuery = (taskId: number | null) =>
     queryKey: taskQueryKeys.detail(taskId ?? 0),
     queryFn: () => getTaskDetail(taskId!),
     enabled: taskId !== null && taskId > 0,
+    refetchInterval: taskId !== null && taskId > 0 ? 3_000 : false,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   })
 
 export const useCreateTaskMutation = (projectId: number) => {
@@ -40,6 +44,7 @@ export const useCreateTaskMutation = (projectId: number) => {
     mutationFn: (payload: CreateTaskPayload) => createTask(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
@@ -54,9 +59,13 @@ export const useUpdateTaskMutation = (projectId: number) => {
       taskId: number
       payload: UpdateTaskPayload
     }) => updateTask(taskId, payload),
-    onSuccess: (_data, { taskId }) => {
+    onSuccess: (data, { taskId }) => {
+      queryClient.setQueryData<TaskDetail>(taskQueryKeys.detail(taskId), (current) =>
+        current ? { ...current, ...data } : current,
+      )
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
@@ -67,6 +76,7 @@ export const useDeleteTaskMutation = (projectId: number) => {
     mutationFn: (taskId: number) => deleteTask(taskId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
@@ -79,6 +89,7 @@ export const useUpdateTaskStatusMutation = (projectId: number) => {
     onSuccess: (_data, { taskId }) => {
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
@@ -96,6 +107,7 @@ export const useCreateSubTaskMutation = (projectId: number) => {
     onSuccess: (_data, { taskId }) => {
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
@@ -108,6 +120,7 @@ export const useToggleSubTaskMutation = (projectId: number) => {
     onSuccess: (_data, { taskId }) => {
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
@@ -118,6 +131,7 @@ export const useCreateCommentMutation = (taskId: number) => {
     mutationFn: (content: string) => createComment(taskId, content),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
@@ -128,6 +142,7 @@ export const useDeleteCommentMutation = (taskId: number) => {
     mutationFn: (commentId: number) => deleteComment(commentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
@@ -138,6 +153,7 @@ export const useUploadAttachmentMutation = (taskId: number) => {
     mutationFn: (file: File) => uploadAttachment(taskId, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
@@ -148,6 +164,7 @@ export const useDeleteAttachmentMutation = (taskId: number) => {
     mutationFn: (attachmentId: number) => deleteAttachment(attachmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
+      queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
   })
 }
