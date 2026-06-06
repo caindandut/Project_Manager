@@ -81,8 +81,13 @@ export class ProjectService extends BaseService<
     const project = await this.findProjectWithDetailsOrThrow(projectId, workspaceId);
 
     // RBAC: workspace OWNER/ADMIN can see any project;
-    // others must be a ProjectMember
-    if (workspaceRole !== 'OWNER' && workspaceRole !== 'ADMIN') {
+    // project owner can also see their own project;
+    // others must be an ACCEPTED ProjectMember
+    if (
+      workspaceRole !== 'OWNER' &&
+      workspaceRole !== 'ADMIN' &&
+      project.ownerId !== userId
+    ) {
       const membership = await prisma.projectMember.findFirst({
         where: { projectId, userId, status: 'ACCEPTED', deletedAt: null },
       });

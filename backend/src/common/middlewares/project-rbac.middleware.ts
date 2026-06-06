@@ -45,30 +45,36 @@ export const requireProjectRole = (options: ProjectRbacOptions) => {
       // Verify the project exists
       const project = await prisma.project.findFirst({
         where: { id: projectId, deletedAt: null },
-        select: { id: true },
+        select: { id: true, ownerId: true },
       });
       if (!project) {
         throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
       }
 
-      // Check membership
-      const membership = await prisma.projectMember.findFirst({
-        where: {
-          projectId,
-          userId: req.user.id,
-          status: 'ACCEPTED',
-          deletedAt: null,
-        },
-      });
+      let userRole: ProjectRole;
 
-      if (!membership) {
-        throw ApiError.forbidden(
-          ErrorCode.FORBIDDEN_ACCESS,
-          'You are not a member of this project',
-        );
+      if (project.ownerId === req.user.id) {
+        userRole = 'ADMIN';
+      } else {
+        // Check membership
+        const membership = await prisma.projectMember.findFirst({
+          where: {
+            projectId,
+            userId: req.user.id,
+            status: 'ACCEPTED',
+            deletedAt: null,
+          },
+        });
+
+        if (!membership) {
+          throw ApiError.forbidden(
+            ErrorCode.FORBIDDEN_ACCESS,
+            'You are not a member of this project',
+          );
+        }
+        userRole = membership.role as ProjectRole;
       }
 
-      const userRole = membership.role as ProjectRole;
       (req as AuthenticatedRequest & { projectRole?: ProjectRole }).projectRole = userRole;
 
       if (options.requiredRoles && options.requiredRoles.length > 0) {
