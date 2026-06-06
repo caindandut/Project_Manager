@@ -1,3 +1,5 @@
 ALTER TABLE `tasks`
-  MODIFY `start_date` DATE NULL,
+  ADD COLUMN `start_date` DATE NULL;
+
+ALTER TABLE `tasks`
   MODIFY `due_date` DATE NULL;
