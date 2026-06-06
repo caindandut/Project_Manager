@@ -109,7 +109,7 @@ export default function OverviewHeader({
             </Button>
           </Link>
 
-          {canManage && workspaceId && project && (
+          {(canManage || isProjectAdmin) && workspaceId && project && (
             <InviteProjectMemberDialog
               projectId={project.id}
               workspaceId={workspaceId}
