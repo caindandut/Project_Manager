@@ -188,8 +188,12 @@ export class WorkspaceRepository extends BaseRepository<
     userId: number,
     role: WorkspaceRole.ADMIN | WorkspaceRole.MEMBER | WorkspaceRole.GUEST = WorkspaceRole.MEMBER,
   ): Promise<WorkspaceMemberWithUser> {
-    return prisma.workspaceMember.create({
-      data: { workspaceId, userId, role },
+    return prisma.workspaceMember.upsert({
+      where: {
+        uq_workspace_member_user_workspace: { userId, workspaceId },
+      },
+      create: { workspaceId, userId, role },
+      update: { role, deletedAt: null, joinedAt: new Date() },
       include: {
         user: {
           select: { id: true, name: true, email: true, avatar: true },
