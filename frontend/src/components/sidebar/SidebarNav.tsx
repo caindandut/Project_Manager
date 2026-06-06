@@ -221,7 +221,7 @@ export default function SidebarNav() {
                                 key={proj.id}
                                 to={projHref}
                                 className={cn(
-                                  "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
+                                  "flex items-start gap-2.5 rounded-md px-3 py-2 text-sm transition-colors",
                                   "hover:bg-accent hover:text-accent-foreground",
                                   isActiveProject
                                     ? "bg-primary/10 font-medium text-primary"
@@ -229,10 +229,10 @@ export default function SidebarNav() {
                                 )}
                               >
                                 <span
-                                  className="h-2.5 w-2.5 shrink-0 rounded-sm"
+                                  className="h-2.5 w-2.5 shrink-0 rounded-sm mt-1.5"
                                   style={{ backgroundColor: proj.color || "#94a3b8" }}
                                 />
-                                <span className="truncate">{proj.name}</span>
+                                <span className="min-w-0 flex-1 break-words whitespace-normal">{proj.name}</span>
                               </Link>
                             )
                           })

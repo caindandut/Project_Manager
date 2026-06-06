@@ -95,7 +95,12 @@ export default function WorkspaceProjectsPage() {
                     {(project.key || project.name.slice(0, 2)).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <CardTitle className="truncate text-lg font-bold group-hover:text-primary transition-colors">{project.name}</CardTitle>
+                    <CardTitle 
+                      className="break-words whitespace-normal text-lg font-bold group-hover:text-primary transition-colors line-clamp-2"
+                      title={project.name}
+                    >
+                      {project.name}
+                    </CardTitle>
                     <CardDescription className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                       <span>Mã: {project.key || `Project #${project.id}`}</span>
                     </CardDescription>

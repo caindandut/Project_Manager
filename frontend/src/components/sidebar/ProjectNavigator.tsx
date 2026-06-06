@@ -248,7 +248,7 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
     <div>
       <div
         className={cn(
-          "flex min-w-0 items-center gap-2 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors",
+          "flex min-w-0 items-start gap-2 rounded-md px-3 py-2 text-sm cursor-pointer transition-colors",
           isActive || isExpanded
             ? "bg-sidebar-accent text-sidebar-foreground"
             : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
@@ -257,12 +257,12 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
         title={project.name}
       >
         {isExpanded ? (
-          <ChevronDown className="h-4 w-4 shrink-0" />
+          <ChevronDown className="h-4 w-4 shrink-0 mt-0.5" />
         ) : (
-          <ChevronRight className="h-4 w-4 shrink-0" />
+          <ChevronRight className="h-4 w-4 shrink-0 mt-0.5" />
         )}
-        <Folder className="h-4 w-4 shrink-0" />
-        <span className="min-w-0 flex-1 truncate font-medium">{project.name}</span>
+        <Folder className="h-4 w-4 shrink-0 mt-0.5" />
+        <span className="min-w-0 flex-1 break-words whitespace-normal font-medium">{project.name}</span>
       </div>
 
       {isExpanded && (
