@@ -259,7 +259,7 @@ export class WorkspaceService extends BaseService<
       expiresAt: new Date(Date.now() + INVITATION_EXPIRY_MS),
     });
 
-    await sendWorkspaceInvitationEmail({
+    sendWorkspaceInvitationEmail({
       to: email,
       workspaceName: workspace.name,
       inviterName: inviter.name || inviter.email,
@@ -268,6 +268,8 @@ export class WorkspaceService extends BaseService<
       declineUrl: this.buildMyInvitationsUrl(invitation.token),
       registerUrl: this.buildRegisterUrl(invitation.token, email),
       isExistingUser: Boolean(user),
+    }).catch((err) => {
+      logger.error(`Failed to send invitation email to ${email}: ${err instanceof Error ? err.message : String(err)}`);
     });
 
     logger.info(`Invitation ${invitation.id} sent to ${email} for workspace ${workspace.id} as ${role}`);

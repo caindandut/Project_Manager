@@ -136,18 +136,14 @@ export default function InviteMemberDialog({
         <DialogFooter className="gap-2">
           <Button
             variant="outline"
-            onClick={() => void handleInvite(false)}
-            disabled={isSending || !form.email.trim()}
+            onClick={() => {
+              resetForm()
+              setOpen(false)
+            }}
+            disabled={isSending}
             type="button"
           >
-            {isSending ? (
-              <>
-                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                Đang thêm...
-              </>
-            ) : (
-              "Thêm nữa"
-            )}
+            Hủy
           </Button>
           <Button
             onClick={() => void handleInvite(true)}
