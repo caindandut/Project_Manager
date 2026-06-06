@@ -14,6 +14,7 @@ import OnboardingProfilePage from '@/pages/OnboardingProfile';
 import OnboardingWorkspacePage from '@/pages/OnboardingWorkspace';
 import { ProjectCalendarPage, ProjectGanttPage, ProjectKanbanPage, ProjectListPage } from '@/pages/ProjectViews';
 import ProjectOverview from '@/pages/ProjectOverview';
+import ProjectMembersPage from '@/pages/ProjectMembersPage';
 import ProjectSettingsPage from '@/pages/ProjectSettingsPage';
 import RegisterPage from '@/pages/Register';
 import WorkspaceDashboard from '@/pages/WorkspaceDashboard';
@@ -108,6 +109,7 @@ function App() {
             <Route path="/workspaces/:workspaceId/projects/:projectId/kanban" element={<ProjectKanbanPage />} />
             <Route path="/workspaces/:workspaceId/projects/:projectId/gantt" element={<ProjectGanttPage />} />
             <Route path="/workspaces/:workspaceId/projects/:projectId/calendar" element={<ProjectCalendarPage />} />
+            <Route path="/workspaces/:workspaceId/projects/:projectId/members" element={<ProjectMembersPage />} />
             <Route path="/workspaces/:workspaceId/projects/:projectId/settings" element={<ProjectSettingsPage />} />
             
             {/* Global settings */}

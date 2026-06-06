@@ -52,6 +52,7 @@ const assertProjectAccess = async (
     where: {
       projectId,
       userId,
+      status: 'ACCEPTED',
       deletedAt: null,
     },
   });

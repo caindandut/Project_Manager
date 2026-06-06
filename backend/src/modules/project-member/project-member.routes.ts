@@ -34,4 +34,16 @@ router.delete(
   projectMemberController.removeMember,
 );
 
+// POST /api/v1/projects/:projectId/members/:memberId/accept
+router.post(
+  '/:projectId/members/:memberId/accept',
+  projectMemberController.acceptInvitation,
+);
+
+// POST /api/v1/projects/:projectId/members/:memberId/decline
+router.post(
+  '/:projectId/members/:memberId/decline',
+  projectMemberController.declineInvitation,
+);
+
 export default router;

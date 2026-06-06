@@ -84,7 +84,7 @@ export class ProjectService extends BaseService<
     // others must be a ProjectMember
     if (workspaceRole !== 'OWNER' && workspaceRole !== 'ADMIN') {
       const membership = await prisma.projectMember.findFirst({
-        where: { projectId, userId, deletedAt: null },
+        where: { projectId, userId, status: 'ACCEPTED', deletedAt: null },
       });
       if (!membership) {
         throw ApiError.forbidden(

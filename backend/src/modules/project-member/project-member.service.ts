@@ -70,11 +70,70 @@ export class ProjectMemberService extends BaseService<
     const role: ProjectRole = data.role ?? 'MEMBER';
     const member = await projectMemberRepository.addMember(projectId, data.userId, role);
 
+    // If it's not the creator adding themselves (which shouldn't happen via this endpoint normally),
+    // we emit an invitation notification.
+    if (requesterId !== data.userId) {
+      const actor = await prisma.user.findUnique({ where: { id: requesterId } });
+      await prisma.notification.create({
+        data: {
+          type: 'INVITATION_RECEIVED',
+          category: 'DIRECT',
+          title: 'Lời mời tham gia dự án',
+          message: `${actor?.name || 'Ai đó'} đã mời bạn tham gia dự án "${project.name}"`,
+          userId: data.userId,
+          actorId: requesterId,
+          metadata: { type: 'project', projectId, memberId: member.id },
+        },
+      });
+    }
+
     logger.info(`User ${data.userId} added to project ${projectId} as ${role}`);
 
     // Return full member info
     const created = await projectMemberRepository.findMemberById(projectId, member.id);
     return this.formatMember(created!);
+  }
+
+  // -----------------------------------------------------------------
+  // ACCEPT / DECLINE INVITATION
+  // -----------------------------------------------------------------
+
+  async acceptInvitation(projectId: number, memberId: number, requesterId: number) {
+    const member = await this.findMemberOrThrow(projectId, memberId);
+
+    if (member.userId !== requesterId) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'You can only accept your own invitations');
+    }
+
+    if (member.status === 'ACCEPTED') {
+      throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Already accepted');
+    }
+
+    await prisma.projectMember.update({
+      where: { id: memberId },
+      data: { status: 'ACCEPTED' },
+    });
+
+    return { message: 'Invitation accepted' };
+  }
+
+  async declineInvitation(projectId: number, memberId: number, requesterId: number) {
+    const member = await this.findMemberOrThrow(projectId, memberId);
+
+    if (member.userId !== requesterId) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'You can only decline your own invitations');
+    }
+
+    if (member.status === 'ACCEPTED') {
+      throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, 'Already accepted');
+    }
+
+    await prisma.projectMember.update({
+      where: { id: memberId },
+      data: { status: 'DECLINED' },
+    });
+
+    return { message: 'Invitation declined' };
   }
 
   // -----------------------------------------------------------------
@@ -258,7 +317,7 @@ export class ProjectMemberService extends BaseService<
     );
   }
 
-  private formatMember(member: ProjectMemberWithUser) {
+  private formatMember(member: ProjectMemberWithUser & { status?: string }) {
     return {
       id: member.id,
       user: {
@@ -268,6 +327,7 @@ export class ProjectMemberService extends BaseService<
         avatar: member.user.avatar,
       },
       role: member.role,
+      status: member.status,
       joinedAt: member.joinedAt,
     };
   }

@@ -62,6 +62,8 @@ export default function NotificationsPage() {
         navigate(
           `/workspaces/_/projects/${notification.task.projectId}/list?taskId=${notification.taskId}`,
         )
+      } else if (notification.type === "INVITATION_RECEIVED" && (notification.metadata as any)?.type === "project") {
+        navigate(`/workspaces/_/projects/${(notification.metadata as any).projectId}/members`)
       }
     },
     [markAsReadMutation, navigate],
@@ -260,10 +262,60 @@ function NotificationFullRow({
             </span>
           )}
         </div>
+
+        {/* Invitation actions */}
+        {notification.type === "INVITATION_RECEIVED" && (notification.metadata as any)?.type === "project" && (
+          <div className="mt-3 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            <Button
+              size="sm"
+              className="h-8 text-xs bg-primary hover:bg-primary/90"
+              onClick={async () => {
+                const { acceptProjectInvitation } = await import("@/lib/project-member-api");
+                const { toast } = await import("sonner");
+                try {
+                  const meta = notification.metadata as any;
+                  await acceptProjectInvitation(
+                    meta.projectId,
+                    meta.memberId
+                  );
+                  toast.success("Đã chấp nhận lời mời tham gia dự án!");
+                  onMarkRead();
+                  window.location.reload(); // Refresh the page to update the sidebar
+                } catch (error: any) {
+                  toast.error(error.message || "Không thể chấp nhận lời mời");
+                }
+              }}
+            >
+              Chấp nhận
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs text-destructive hover:bg-destructive/10"
+              onClick={async () => {
+                const { declineProjectInvitation } = await import("@/lib/project-member-api");
+                const { toast } = await import("sonner");
+                try {
+                  const meta = notification.metadata as any;
+                  await declineProjectInvitation(
+                    meta.projectId,
+                    meta.memberId
+                  );
+                  toast.success("Đã từ chối lời mời");
+                  onMarkRead();
+                } catch (error: any) {
+                  toast.error(error.message || "Không thể từ chối lời mời");
+                }
+              }}
+            >
+              Từ chối
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex flex-col items-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         {!notification.isRead && (
           <Button
             variant="ghost"

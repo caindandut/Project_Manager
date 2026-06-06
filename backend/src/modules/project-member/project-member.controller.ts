@@ -87,7 +87,43 @@ export class ProjectMemberController extends BaseController {
       res.json(success(result));
     });
   };
+  /**
+   * POST /api/v1/projects/:projectId/members/:memberId/accept
+   */
+  acceptInvitation = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const projectId = this.getProjectId(req);
+      const memberId = this.getMemberId(req);
 
+      const result = await projectMemberService.acceptInvitation(
+        projectId,
+        memberId,
+        authReq.user.id,
+      );
+
+      res.json(success(result));
+    });
+  };
+
+  /**
+   * POST /api/v1/projects/:projectId/members/:memberId/decline
+   */
+  declineInvitation = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const projectId = this.getProjectId(req);
+      const memberId = this.getMemberId(req);
+
+      const result = await projectMemberService.declineInvitation(
+        projectId,
+        memberId,
+        authReq.user.id,
+      );
+
+      res.json(success(result));
+    });
+  };
   // =================================================================
   // Private helpers
   // =================================================================

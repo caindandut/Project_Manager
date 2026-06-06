@@ -113,7 +113,7 @@ export class ProjectRepository extends BaseRepository<
       deletedAt: null,
       OR: [
         { ownerId: userId },
-        { projectMembers: { some: { userId, deletedAt: null } } },
+        { projectMembers: { some: { userId, status: 'ACCEPTED', deletedAt: null } } },
       ],
     };
 

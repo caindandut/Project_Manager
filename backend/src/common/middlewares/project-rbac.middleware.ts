@@ -56,6 +56,7 @@ export const requireProjectRole = (options: ProjectRbacOptions) => {
         where: {
           projectId,
           userId: req.user.id,
+          status: 'ACCEPTED',
           deletedAt: null,
         },
       });

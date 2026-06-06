@@ -16,6 +16,7 @@ export interface ProjectMember {
     avatar: string | null
   }
   role: ProjectRole
+  status: "PENDING" | "ACCEPTED" | "DECLINED"
   joinedAt: string
 }
 
@@ -100,6 +101,31 @@ export const removeProjectMember = async (
       `/projects/${projectId}/members/${memberId}`,
     )
     return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+export const acceptProjectInvitation = async (projectId: number, memberId: number): Promise<void> => {
+  try {
+    const response = await apiClient.post<ApiResponse<void>>(
+      `/projects/${projectId}/members/${memberId}/accept`,
+    )
+    if (!response.data.success) {
+      throw new Error(response.data.error?.message || "Failed to accept invitation")
+    }
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const declineProjectInvitation = async (projectId: number, memberId: number): Promise<void> => {
+  try {
+    const response = await apiClient.post<ApiResponse<void>>(
+      `/projects/${projectId}/members/${memberId}/decline`,
+    )
+    if (!response.data.success) {
+      throw new Error(response.data.error?.message || "Failed to decline invitation")
+    }
   } catch (error) {
     throw normalizeApiError(error)
   }

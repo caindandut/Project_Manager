@@ -202,6 +202,7 @@ export function ProjectItem({ project, workspaceId, isActive, isCollapsed, defau
   const viewItems = [
     { label: "Tổng quan", href: `${projectPath}/overview`, icon: LayoutDashboard },
     { label: "Danh sách công việc", href: `${projectPath}/kanban`, icon: List },
+    { label: "Thành viên", href: `${projectPath}/members`, icon: Users },
   ]
 
   if (isCollapsed) {

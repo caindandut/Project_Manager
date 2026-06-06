@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import {
   getProjectMembers,
   addProjectMember,
   updateProjectMemberRole,
   removeProjectMember,
+  acceptProjectInvitation,
+  declineProjectInvitation,
   type AddProjectMemberPayload,
   type UpdateProjectMemberRolePayload,
 } from "@/lib/project-member-api"
@@ -70,6 +71,38 @@ export const useRemoveProjectMemberMutation = (projectId: number) => {
   return useMutation({
     mutationFn: (memberId: number) => removeProjectMember(projectId, memberId),
     onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: projectMemberQueryKeys.list(projectId),
+      })
+    },
+  })
+}
+
+export const useAcceptProjectInvitationMutation = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, memberId }: { projectId: number; memberId: number }) =>
+      acceptProjectInvitation(projectId, memberId),
+    onSuccess: async (_, { projectId }) => {
+      await queryClient.invalidateQueries({
+        queryKey: projectMemberQueryKeys.list(projectId),
+      })
+      // invalidate project list to refresh sidebar
+      await queryClient.invalidateQueries({
+        queryKey: ["projects"],
+      })
+    },
+  })
+}
+
+export const useDeclineProjectInvitationMutation = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ projectId, memberId }: { projectId: number; memberId: number }) =>
+      declineProjectInvitation(projectId, memberId),
+    onSuccess: async (_, { projectId }) => {
       await queryClient.invalidateQueries({
         queryKey: projectMemberQueryKeys.list(projectId),
       })
