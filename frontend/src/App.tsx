@@ -1,6 +1,6 @@
 import { LoaderCircle } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { BrowserRouter, Navigate, Route, Routes, useParams } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 import { Toaster } from 'sonner';
 
 import AppLayout from '@/components/AppLayout';
@@ -74,6 +74,41 @@ function ProjectRedirect() {
   return <Navigate to={`/workspaces/${workspaceId}/projects/${projectId}/overview`} replace />;
 }
 
+/**
+ * Guard that intercepts invalid workspace slugs (e.g. '_') in the URL
+ * and redirects to a valid workspace. This prevents cascading 404 errors.
+ */
+function WorkspaceSlugGuard() {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const lastSlug = getLastWorkspaceSlug();
+  const workspacesQuery = useWorkspacesQuery(1, 1, { enabled: !lastSlug && workspaceId === '_' });
+
+  // If workspace slug is '_' or empty, redirect to a valid workspace
+  if (!workspaceId || workspaceId === '_') {
+    if (lastSlug) {
+      return <Navigate to={window.location.pathname.replace(`/workspaces/_`, `/workspaces/${lastSlug}`) + window.location.search} replace />;
+    }
+    if (workspacesQuery.isSuccess && workspacesQuery.data?.data.length) {
+      const validSlug = workspacesQuery.data.data[0].slug;
+      return <Navigate to={window.location.pathname.replace(`/workspaces/_`, `/workspaces/${validSlug}`) + window.location.search} replace />;
+    }
+    if (workspacesQuery.isSuccess && !workspacesQuery.data?.data.length) {
+      return <Navigate to="/workspaces" replace />;
+    }
+    // Still loading
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+        <div className="flex items-center gap-3 rounded-md border bg-card px-4 py-3 text-sm shadow-sm">
+          <LoaderCircle className="h-4 w-4 animate-spin" />
+          <span>Đang chuyển hướng...</span>
+        </div>
+      </div>
+    );
+  }
+
+  return <Outlet />;
+}
+
 function App() {
   const { resolvedTheme } = useTheme();
 
@@ -98,24 +133,26 @@ function App() {
             <Route path="/workspaces" element={<WorkspacesPage />} />
             <Route path="/workspaces/create" element={<CreateWorkspacePage />} />
             
-            {/* Workspace routes */}
-            <Route path="/workspaces/:workspaceId" element={<WorkspaceDashboard />} />
-            <Route path="/workspaces/:workspaceId/my-tasks" element={<MyTasksPage />} />
-            <Route path="/workspaces/:workspaceId/projects" element={<WorkspaceProjectsPage />} />
-            <Route path="/workspaces/:workspaceId/projects/new" element={<CreateProjectPage />} />
-            <Route path="/workspaces/:workspaceId/members" element={<WorkspaceMembersPage />} />
-            <Route path="/workspaces/:workspaceId/calendar" element={<WorkspacesPage />} />
-            <Route path="/workspaces/:workspaceId/settings" element={<WorkspaceSettingsPage />} />
-            
-            {/* Project routes */}
-            <Route path="/workspaces/:workspaceId/projects/:projectId" element={<ProjectRedirect />} />
-            <Route path="/workspaces/:workspaceId/projects/:projectId/overview" element={<ProjectOverview />} />
-            <Route path="/workspaces/:workspaceId/projects/:projectId/list" element={<ProjectListPage />} />
-            <Route path="/workspaces/:workspaceId/projects/:projectId/kanban" element={<ProjectKanbanPage />} />
-            <Route path="/workspaces/:workspaceId/projects/:projectId/gantt" element={<ProjectGanttPage />} />
-            <Route path="/workspaces/:workspaceId/projects/:projectId/calendar" element={<ProjectCalendarPage />} />
-            <Route path="/workspaces/:workspaceId/projects/:projectId/members" element={<ProjectMembersPage />} />
-            <Route path="/workspaces/:workspaceId/projects/:projectId/settings" element={<ProjectSettingsPage />} />
+            {/* Workspace routes - wrapped in guard to catch invalid slugs */}
+            <Route path="/workspaces/:workspaceId" element={<WorkspaceSlugGuard />}>
+              <Route index element={<WorkspaceDashboard />} />
+              <Route path="my-tasks" element={<MyTasksPage />} />
+              <Route path="projects" element={<WorkspaceProjectsPage />} />
+              <Route path="projects/new" element={<CreateProjectPage />} />
+              <Route path="members" element={<WorkspaceMembersPage />} />
+              <Route path="calendar" element={<WorkspacesPage />} />
+              <Route path="settings" element={<WorkspaceSettingsPage />} />
+              
+              {/* Project routes */}
+              <Route path="projects/:projectId" element={<ProjectRedirect />} />
+              <Route path="projects/:projectId/overview" element={<ProjectOverview />} />
+              <Route path="projects/:projectId/list" element={<ProjectListPage />} />
+              <Route path="projects/:projectId/kanban" element={<ProjectKanbanPage />} />
+              <Route path="projects/:projectId/gantt" element={<ProjectGanttPage />} />
+              <Route path="projects/:projectId/calendar" element={<ProjectCalendarPage />} />
+              <Route path="projects/:projectId/members" element={<ProjectMembersPage />} />
+              <Route path="projects/:projectId/settings" element={<ProjectSettingsPage />} />
+            </Route>
             
             {/* Global settings */}
             <Route path="/notifications" element={<NotificationsPage />} />

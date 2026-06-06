@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
+import { getLastWorkspaceSlug } from "@/stores/authStore"
 
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -108,7 +109,7 @@ export default function NotificationBell() {
       // Navigate to task
       if (notification.taskId && notification.task) {
         setIsOpen(false)
-        const workspaceSlug = notification.task.project?.workspace?.slug || "_"
+        const workspaceSlug = notification.task.project?.workspace?.slug || getLastWorkspaceSlug() || "_"
         // Navigate to the project task list and let the task detail panel open
         navigate(
           `/workspaces/${workspaceSlug}/projects/${notification.task.projectId}/list?task=${notification.taskId}`,

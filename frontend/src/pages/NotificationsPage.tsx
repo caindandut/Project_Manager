@@ -2,6 +2,7 @@ import { useCallback, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { Bell, Check, CheckCheck, Loader2, Search, User2 } from "lucide-react"
 import { useNavigate } from "react-router-dom"
+import { getLastWorkspaceSlug } from "@/stores/authStore"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
 import { toast } from "sonner"
@@ -79,7 +80,7 @@ export default function NotificationsPage() {
       }
 
       if (notification.taskId && notification.task) {
-        const workspaceSlug = notification.task.project?.workspace?.slug || "_"
+        const workspaceSlug = notification.task.project?.workspace?.slug || getLastWorkspaceSlug() || "_"
         navigate(`/workspaces/${workspaceSlug}/projects/${notification.task.projectId}/list?task=${notification.taskId}`)
         return
       }
