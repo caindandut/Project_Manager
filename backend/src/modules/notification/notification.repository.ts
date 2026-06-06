@@ -5,7 +5,22 @@ import { Notification, Prisma } from '@prisma/client';
 // ── Prisma payload types ──────────────────────────────────────────
 export type NotificationWithRelations = Prisma.NotificationGetPayload<{
   include: {
-    task: { select: { id: true; title: true; projectId: true } };
+    task: {
+      select: {
+        id: true;
+        title: true;
+        projectId: true;
+        project: {
+          select: {
+            workspace: {
+              select: {
+                slug: true;
+              };
+            };
+          };
+        };
+      };
+    };
     actor: { select: { id: true; name: true; avatar: true } };
   };
 }>;
@@ -29,7 +44,22 @@ export class NotificationRepository extends BaseRepository<
   }
 
   private readonly defaultInclude = {
-    task: { select: { id: true, title: true, projectId: true } },
+    task: {
+      select: {
+        id: true,
+        title: true,
+        projectId: true,
+        project: {
+          select: {
+            workspace: {
+              select: {
+                slug: true,
+              },
+            },
+          },
+        },
+      },
+    },
     actor: { select: { id: true, name: true, avatar: true } },
   } as const;
 

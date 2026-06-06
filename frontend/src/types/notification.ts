@@ -10,6 +10,11 @@ export interface NotificationTask {
   id: number
   title: string
   projectId: number
+  project?: {
+    workspace?: {
+      slug: string
+    }
+  }
 }
 
 export interface NotificationItem {

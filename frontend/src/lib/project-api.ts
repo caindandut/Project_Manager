@@ -4,32 +4,34 @@ import type { ApiResponse } from "@/types/api"
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1"
 
 export async function downloadAttachment(attachmentId: number, fileName: string): Promise<void> {
-  const token = localStorage.getItem("accessToken")
-  if (!token) {
-    throw new Error("Authentication required")
+  const response = await apiClient.get<ApiResponse<{ id: number; fileName: string; fileUrl: string }>>(
+    `/attachments/${attachmentId}`
+  )
+  const attachment = unwrapResponse(response)
+
+  let downloadUrl = attachment.fileUrl
+  if (!/^https?:\/\//i.test(downloadUrl)) {
+    const backendOrigin = API_BASE_URL.replace(/\/api\/v1\/?$/, "")
+    downloadUrl = `${backendOrigin}${downloadUrl.startsWith("/") ? "" : "/"}${downloadUrl}`
   }
 
-  const url = `${API_BASE_URL}/attachments/${attachmentId}?download=true`
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("Failed to download file")
+  try {
+    const fileResponse = await fetch(downloadUrl)
+    if (!fileResponse.ok) {
+      throw new Error(`Failed to fetch file: ${fileResponse.statusText}`)
+    }
+    const blob = await fileResponse.blob()
+    const blobUrl = window.URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = blobUrl
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(blobUrl)
+    document.body.removeChild(a)
+  } catch (err) {
+    window.open(downloadUrl, "_blank")
   }
-
-  const blob = await response.blob()
-  const blobUrl = window.URL.createObjectURL(blob)
-  const a = document.createElement("a")
-  a.href = blobUrl
-  a.download = fileName
-  document.body.appendChild(a)
-  a.click()
-  window.URL.revokeObjectURL(blobUrl)
-  document.body.removeChild(a)
 }
 
 export interface Project {
