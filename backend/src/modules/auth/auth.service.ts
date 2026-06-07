@@ -73,8 +73,6 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       name: data.name,
     });
 
-    await workspaceRepository.acceptPendingInvitationsForUser(user);
-
     logger.info(`User registered: ${user.email}`);
 
     return {
@@ -151,8 +149,6 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
             avatar: payload.picture,
             googleAvatar: payload.picture,
           });
-
-          await workspaceRepository.acceptPendingInvitationsForUser(user);
 
           logger.info(`New user registered via Google OAuth: ${user.email}`);
         }
@@ -298,8 +294,6 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       password: hashedPassword,
       name: data.name,
     });
-
-    await workspaceRepository.acceptPendingInvitationsForUser(user);
 
     // Clean up OTP
     await authRepository.deleteOtpCode(data.email, OTP_TYPE_REGISTRATION);

@@ -146,4 +146,5 @@ export interface PendingInvitation {
   invitedBy: PendingInvitationUser
   invitedAt: string
   expiresAt: string
+  isExistingUser?: boolean
 }

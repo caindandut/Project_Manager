@@ -20,7 +20,7 @@ interface AuthState {
   refreshToken: string | null;
   hasHydratedAuth: boolean;
   requireOnboarding: boolean;
-  login: (payload: { user: AuthUser; accessToken: string; refreshToken?: string }) => void;
+  login: (payload: { user: AuthUser; accessToken: string; refreshToken?: string; requireOnboarding?: boolean }) => void;
   logout: () => void;
   setUser: (user: AuthUser | null) => void;
   setAccessToken: (accessToken: string | null) => void;
@@ -34,6 +34,11 @@ const ACCESS_TOKEN_KEY = 'accessToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
 const WORKSPACE_SLUG_KEY = 'onboardingWorkspaceSlug';
 const LAST_WORKSPACE_SLUG_KEY = 'lastWorkspaceSlug';
+
+interface LastWorkspaceSlugPayload {
+  userId: number;
+  slug: string;
+}
 
 const getInitialAccessToken = (): string | null => {
   if (typeof window === 'undefined') {
@@ -67,19 +72,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   hasHydratedAuth: false,
   requireOnboarding: false,
 
-  login: ({ user, accessToken, refreshToken }) => {
+  login: ({ user, accessToken, refreshToken, requireOnboarding }) => {
     window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
     if (refreshToken) {
       window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
     }
 
+    const nextRequireOnboarding = requireOnboarding ?? user.requireOnboarding ?? false;
+
     set({
-      user,
+      user: { ...user, requireOnboarding: nextRequireOnboarding },
       accessToken,
       refreshToken: refreshToken ?? getInitialRefreshToken(),
       isAuthenticated: true,
       hasHydratedAuth: true,
-      requireOnboarding: user.requireOnboarding ?? false,
+      requireOnboarding: nextRequireOnboarding,
     });
   },
 
@@ -138,7 +145,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     })),
 
   setRequireOnboarding: (value) =>
-    set(() => ({
+    set((state) => ({
+      user: state.user ? { ...state.user, requireOnboarding: value } : state.user,
       requireOnboarding: value,
     })),
 
@@ -149,10 +157,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
     if (workspaceSlug) {
       window.localStorage.setItem(WORKSPACE_SLUG_KEY, workspaceSlug);
-      window.localStorage.setItem(LAST_WORKSPACE_SLUG_KEY, workspaceSlug);
+      setLastWorkspaceSlug(workspaceSlug, user.id);
     }
     set({
-      user,
+      user: { ...user, requireOnboarding: false },
       accessToken,
       refreshToken: refreshToken ?? getInitialRefreshToken(),
       isAuthenticated: true,
@@ -162,14 +170,35 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 }));
 
-export const getLastWorkspaceSlug = (): string | null => {
+export const getLastWorkspaceSlug = (userId?: number | null): string | null => {
   if (typeof window === 'undefined') return null;
-  return window.localStorage.getItem(LAST_WORKSPACE_SLUG_KEY);
+  const currentUserId = userId ?? useAuthStore.getState().user?.id;
+  if (!currentUserId) return null;
+
+  const rawValue = window.localStorage.getItem(LAST_WORKSPACE_SLUG_KEY);
+  if (!rawValue) return null;
+
+  try {
+    const parsed = JSON.parse(rawValue) as Partial<LastWorkspaceSlugPayload>;
+    if (parsed.userId === currentUserId && typeof parsed.slug === 'string' && parsed.slug.length > 0) {
+      return parsed.slug;
+    }
+  } catch {
+    window.localStorage.removeItem(LAST_WORKSPACE_SLUG_KEY);
+  }
+
+  return null;
 };
 
-export const setLastWorkspaceSlug = (slug: string): void => {
+export const setLastWorkspaceSlug = (slug: string, userId?: number | null): void => {
   if (typeof window !== 'undefined') {
-    window.localStorage.setItem(LAST_WORKSPACE_SLUG_KEY, slug);
+    const currentUserId = userId ?? useAuthStore.getState().user?.id;
+    if (!currentUserId) return;
+
+    window.localStorage.setItem(
+      LAST_WORKSPACE_SLUG_KEY,
+      JSON.stringify({ userId: currentUserId, slug } satisfies LastWorkspaceSlugPayload),
+    );
   }
 };
 

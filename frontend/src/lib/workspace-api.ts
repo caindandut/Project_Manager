@@ -169,6 +169,17 @@ export const declineWorkspaceInvitation = async (token: string) => {
   }
 }
 
+export const declineWorkspaceInvitationByToken = async (token: string) => {
+  try {
+    const response = await apiClient.post<ApiResponse<PendingInvitation>>(
+      `/workspaces/invitations/${token}/decline-public`,
+    )
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
 export const updateWorkspaceMemberRole = async (
   workspaceId: string | number,
   memberId: number,

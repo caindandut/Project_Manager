@@ -9,6 +9,7 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useWorkspacesQuery } from "@/hooks/useWorkspaces"
+import { useAuth } from "@/hooks/useAuth"
 import { cn } from "@/lib/utils"
 import { getWorkspaceRoleLabel, workspaceRoleVariantMap } from "@/lib/workspace-role"
 import { getLastWorkspaceSlug } from "@/stores/authStore"
@@ -18,6 +19,7 @@ const WORKSPACES_PER_PAGE = 6
 export default function WorkspacesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = Math.max(1, Number(searchParams.get("page") || "1"))
+  const { user, requireOnboarding } = useAuth()
   const workspacesQuery = useWorkspacesQuery(page, WORKSPACES_PER_PAGE)
   const workspaces = workspacesQuery.data?.data ?? []
   const meta = workspacesQuery.data?.meta
@@ -27,7 +29,10 @@ export default function WorkspacesPage() {
   }, [])
 
   // Auto-redirect to the last workspace or first available workspace
-  const lastSlug = getLastWorkspaceSlug()
+  const lastSlug = getLastWorkspaceSlug(user?.id)
+  if (requireOnboarding) {
+    return <Navigate to={user?.name ? "/onboarding/workspace" : "/onboarding/profile"} replace />
+  }
   if (lastSlug) {
     return <Navigate to={`/workspaces/${lastSlug}`} replace />
   }

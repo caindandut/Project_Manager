@@ -10,6 +10,8 @@ import { GoogleButton } from '@/components/auth/GoogleButton'
 import { AuthDivider } from '@/components/auth/AuthDivider'
 import { useAuth } from '@/hooks/useAuth'
 import { toVietnameseErrorMessage } from '@/lib/error-messages'
+import { acceptWorkspaceInvitation } from '@/lib/workspace-api'
+import { setLastWorkspaceSlug, useAuthStore } from '@/stores/authStore'
 
 type RegisterStep = 'email' | 'otp' | 'profile'
 
@@ -22,10 +24,12 @@ export default function RegisterPage() {
     sendOtp,
     verifyOtp,
     registerWithOtp,
+    requireOnboarding,
     isSendOtpPending,
     isVerifyOtpPending,
     isRegisterWithOtpPending,
   } = useAuth()
+  const setRequireOnboarding = useAuthStore((state) => state.setRequireOnboarding)
   const [step, setStep] = useState<RegisterStep>('email')
   const [email, setEmail] = useState('')
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
@@ -55,7 +59,7 @@ export default function RegisterPage() {
   }, [step, resendTimer])
 
   if (isAuthenticated) {
-    return <Navigate to="/workspaces" replace />
+    return <Navigate to={requireOnboarding ? '/onboarding/workspace' : '/workspaces'} replace />
   }
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -151,9 +155,35 @@ export default function RegisterPage() {
     }
 
     try {
-      await registerWithOtp({ email, name, password })
+      const data = await registerWithOtp({ email, name: name.trim(), password })
       toast.success('Tạo tài khoản thành công!')
-      navigate('/workspaces', { replace: true })
+
+      const invitationToken = searchParams.get('invitation')
+      if (invitationToken) {
+        try {
+          const acceptedInvitation = await acceptWorkspaceInvitation(invitationToken)
+          setRequireOnboarding(false)
+
+          if (acceptedInvitation.workspace?.slug) {
+            setLastWorkspaceSlug(acceptedInvitation.workspace.slug, data.user.id)
+            navigate(`/workspaces/${acceptedInvitation.workspace.slug}`, { replace: true })
+            return
+          }
+
+          navigate('/workspaces', { replace: true })
+          return
+        } catch (invitationError) {
+          toast.error(
+            toVietnameseErrorMessage(
+              invitationError,
+              'Không thể chấp nhận lời mời. Vui lòng tạo workspace đầu tiên.'
+            )
+          )
+        }
+      }
+
+      const needsOnboarding = data.requireOnboarding ?? data.user.requireOnboarding ?? true
+      navigate(needsOnboarding ? '/onboarding/workspace' : '/workspaces', { replace: true })
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, 'Không thể tạo tài khoản. Vui lòng thử lại.'))
     }

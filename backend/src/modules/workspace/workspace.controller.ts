@@ -110,6 +110,14 @@ export class WorkspaceController extends BaseController {
     });
   };
 
+  declineInvitationByToken = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const token = this.getInvitationToken(req);
+      const result = await workspaceService.declineInvitationByToken(token);
+      res.json(success(result));
+    });
+  };
+
   updateMemberRole = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
       const authReq = this.requireAuth(req);

@@ -17,13 +17,13 @@ type LoginStep = 'email' | 'password'
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, login, googleAuth, isAuthenticated } = useAuth()
+  const { user, login, googleAuth, isAuthenticated, requireOnboarding } = useAuth()
   const [step, setStep] = useState<LoginStep>('email')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [loginSuccessShown, setLoginSuccessShown] = useState(false)
-  const lastSlug = getLastWorkspaceSlug()
+  const lastSlug = getLastWorkspaceSlug(user?.id)
   const defaultRedirect = lastSlug ? `/workspaces/${lastSlug}` : '/'
   const redirectTo = (location.state as { from?: string } | null)?.from || defaultRedirect
   const shownErrorRef = useRef<string | null>(null)
@@ -52,6 +52,14 @@ export default function LoginPage() {
   }, [location.state, navigate])
 
   if (isAuthenticated) {
+    if (redirectTo.startsWith('/invitations/workspace/')) {
+      return <Navigate to={redirectTo} replace />
+    }
+
+    if (requireOnboarding) {
+      return <Navigate to={user?.name ? '/onboarding/workspace' : '/onboarding/profile'} replace />
+    }
+
     return <Navigate to={user?.systemRole === 'OWNER' ? '/owner' : redirectTo} replace />
   }
 
@@ -72,7 +80,19 @@ export default function LoginPage() {
       const data = await login({ email, password })
       setLoginSuccessShown(true)
       toast.success('Đăng nhập thành công.')
-      navigate(data.user.systemRole === 'OWNER' ? '/owner' : redirectTo, { replace: true })
+      const needsOnboarding = data.requireOnboarding ?? data.user.requireOnboarding ?? false
+      if (data.user.systemRole === 'OWNER') {
+        navigate('/owner', { replace: true })
+      } else if (redirectTo.startsWith('/invitations/workspace/')) {
+        navigate(redirectTo, { replace: true })
+      } else if (needsOnboarding) {
+        navigate(data.user.name ? '/onboarding/workspace' : '/onboarding/profile', { replace: true })
+      } else {
+        const nextLastSlug = getLastWorkspaceSlug(data.user.id)
+        const nextDefaultRedirect = nextLastSlug ? `/workspaces/${nextLastSlug}` : '/'
+        const nextRedirectTo = (location.state as { from?: string } | null)?.from || nextDefaultRedirect
+        navigate(nextRedirectTo, { replace: true })
+      }
     } catch (error) {
       toast.error(
         toVietnameseErrorMessage(error, 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.')

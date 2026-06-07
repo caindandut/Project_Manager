@@ -14,6 +14,11 @@ router.get(
   workspaceController.getInvitationByToken,
 );
 
+router.post(
+  '/invitations/:token/decline-public',
+  workspaceController.declineInvitationByToken,
+);
+
 router.use(authMiddleware);
 
 router.get(

@@ -19,6 +19,7 @@ import ProjectSettingsPage from '@/pages/ProjectSettingsPage';
 import RegisterPage from '@/pages/Register';
 import WorkspaceDashboard from '@/pages/WorkspaceDashboard';
 import WorkspaceInvitationPage from '@/pages/WorkspaceInvitation';
+import WorkspaceInvitationActionPage from '@/pages/WorkspaceInvitationAction';
 import WorkspaceMembersPage from '@/pages/WorkspaceMembers';
 import WorkspaceProjectsPage from '@/pages/WorkspaceProjects';
 import WorkspaceSettingsPage from '@/pages/WorkspaceSettings';
@@ -36,10 +37,10 @@ import NotificationsPage from '@/pages/NotificationsPage';
 import { getLastWorkspaceSlug } from '@/stores/authStore';
 
 function RootRedirect() {
-  const { user, isAuthenticated, isBootstrappingAuth } = useAuth();
-  const lastSlug = getLastWorkspaceSlug();
+  const { user, isAuthenticated, isBootstrappingAuth, requireOnboarding } = useAuth();
+  const lastSlug = getLastWorkspaceSlug(user?.id);
   // Only fetch workspaces if no saved slug (fallback)
-  const workspacesQuery = useWorkspacesQuery(1, 1, { enabled: !lastSlug });
+  const workspacesQuery = useWorkspacesQuery(1, 1, { enabled: !lastSlug && !requireOnboarding });
 
   if (isBootstrappingAuth) {
     return (
@@ -58,6 +59,10 @@ function RootRedirect() {
 
   if (user?.systemRole === 'OWNER') {
     return <Navigate to="/owner" replace />;
+  }
+
+  if (requireOnboarding) {
+    return <Navigate to={user?.name ? '/onboarding/workspace' : '/onboarding/profile'} replace />;
   }
 
   // If we have a saved last workspace, redirect there directly
@@ -96,8 +101,13 @@ function ProjectRedirect() {
  */
 function WorkspaceSlugGuard() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
-  const lastSlug = getLastWorkspaceSlug();
+  const { user, requireOnboarding } = useAuth();
+  const lastSlug = getLastWorkspaceSlug(user?.id);
   const workspacesQuery = useWorkspacesQuery(1, 1, { enabled: !lastSlug && workspaceId === '_' });
+
+  if (requireOnboarding) {
+    return <Navigate to={user?.name ? '/onboarding/workspace' : '/onboarding/profile'} replace />;
+  }
 
   // If workspace slug is '_' or empty, redirect to a valid workspace
   if (!workspaceId || workspaceId === '_') {
@@ -135,6 +145,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/google/callback" element={<GoogleCallbackPage />} />
+        <Route path="/invitations/workspace/:token/:action" element={<WorkspaceInvitationActionPage />} />
 
         {/* Onboarding routes - accessible with temp token */}
         <Route element={<ProtectedRoute />}>

@@ -349,7 +349,12 @@ export class WorkspaceService extends BaseService<
 
   async getInvitationByToken(token: string) {
     const invitation = await this.findInvitationByTokenOrThrow(token);
-    return this.formatInvitation(invitation);
+    const existingUser = await workspaceRepository.findUserByEmail(this.normalizeEmail(invitation.email));
+
+    return {
+      ...this.formatInvitation(invitation),
+      isExistingUser: Boolean(existingUser),
+    };
   }
 
   async getMyInvitations(userId: number) {
@@ -418,6 +423,20 @@ export class WorkspaceService extends BaseService<
     );
 
     logger.info(`Invitation ${invitation.id} declined by ${invitation.email}`);
+
+    return this.formatInvitation({ ...invitation, ...updated });
+  }
+
+  async declineInvitationByToken(token: string) {
+    const invitation = await this.findInvitationByTokenOrThrow(token);
+    this.assertInvitationCanBeAnswered(invitation);
+
+    const updated = await workspaceRepository.updateInvitationStatus(
+      invitation.id,
+      InvitationStatus.DECLINED,
+    );
+
+    logger.info(`Invitation ${invitation.id} declined by public token`);
 
     return this.formatInvitation({ ...invitation, ...updated });
   }
@@ -565,10 +584,8 @@ export class WorkspaceService extends BaseService<
     };
   }
 
-  private buildMyInvitationsUrl(token: string): string {
-    const url = new URL('/my-invitations', config.CLIENT_URL);
-    url.searchParams.set('token', token);
-    return url.toString();
+  private buildInvitationActionUrl(token: string, action: 'accept' | 'decline'): string {
+    return new URL(`/invitations/workspace/${token}/${action}`, config.CLIENT_URL).toString();
   }
 
   private buildRegisterUrl(token: string, email: string): string {
@@ -615,7 +632,8 @@ export class WorkspaceService extends BaseService<
     token: string;
     isExistingUser: boolean;
   }): void {
-    const acceptUrl = this.buildMyInvitationsUrl(options.token);
+    const acceptUrl = this.buildInvitationActionUrl(options.token, 'accept');
+    const declineUrl = this.buildInvitationActionUrl(options.token, 'decline');
     const registerUrl = this.buildRegisterUrl(options.token, options.email);
 
     setImmediate(() => {
@@ -625,7 +643,7 @@ export class WorkspaceService extends BaseService<
         inviterName: options.inviterName,
         role: options.role,
         acceptUrl,
-        declineUrl: acceptUrl,
+        declineUrl,
         registerUrl,
         isExistingUser: options.isExistingUser,
       }).catch((err) => {

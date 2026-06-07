@@ -11,7 +11,7 @@ import {
   updateNotificationPreference,
 } from '@/lib/notification-api'
 
-export const NOTIFICATION_REFRESH_INTERVAL_MS = 5_000
+export const NOTIFICATION_REFRESH_INTERVAL_MS = 1_000
 
 // ── Query Keys ────────────────────────────────────────────────────
 

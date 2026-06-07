@@ -100,7 +100,7 @@ export default function GoogleCallbackPage() {
         if (isLinkingGoogle) {
           window.localStorage.removeItem('isLinkingGoogle');
           toast.success('Liên kết tài khoản Google thành công!');
-          const lastSlug = getLastWorkspaceSlug();
+          const lastSlug = getLastWorkspaceSlug(userData.id);
           navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
           return;
         }
@@ -113,7 +113,7 @@ export default function GoogleCallbackPage() {
           navigate('/onboarding/profile', { replace: true });
         } else {
           toast.success('Đăng nhập Google thành công.');
-          const lastSlug = getLastWorkspaceSlug();
+          const lastSlug = getLastWorkspaceSlug(userData.id);
           navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
         }
       } catch (error) {
@@ -140,7 +140,7 @@ export default function GoogleCallbackPage() {
 
         if (isLinkingGoogle) {
           window.localStorage.removeItem('isLinkingGoogle');
-          const lastSlug = getLastWorkspaceSlug();
+          const lastSlug = getLastWorkspaceSlug(callbackUser?.id);
           navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
           return;
         }
@@ -150,7 +150,7 @@ export default function GoogleCallbackPage() {
         } else if (requireOnboardingParam) {
           navigate('/onboarding/profile', { replace: true });
         } else {
-          const lastSlug = getLastWorkspaceSlug();
+          const lastSlug = getLastWorkspaceSlug(callbackUser?.id);
           navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
         }
       }

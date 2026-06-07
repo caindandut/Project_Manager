@@ -46,6 +46,7 @@ interface AuthSuccessPayload {
   accessToken: string
   refreshToken?: string
   expiresIn: number
+  requireOnboarding?: boolean
 }
 
 interface GoogleAuthResult {
@@ -113,8 +114,14 @@ export const useAuth = () => {
       }
     },
     onSuccess: (data) => {
-      setAuthSession({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken })
-      queryClient.setQueryData(AUTH_ME_QUERY_KEY, data.user)
+      const user = { ...data.user, requireOnboarding: data.requireOnboarding ?? data.user.requireOnboarding }
+      setAuthSession({
+        user,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        requireOnboarding: data.requireOnboarding,
+      })
+      queryClient.setQueryData(AUTH_ME_QUERY_KEY, user)
     },
   })
 
@@ -185,8 +192,14 @@ export const useAuth = () => {
       }
     },
     onSuccess: (data) => {
-      setAuthSession({ user: data.user, accessToken: data.accessToken, refreshToken: data.refreshToken })
-      queryClient.setQueryData(AUTH_ME_QUERY_KEY, data.user)
+      const user = { ...data.user, requireOnboarding: data.requireOnboarding ?? data.user.requireOnboarding }
+      setAuthSession({
+        user,
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+        requireOnboarding: data.requireOnboarding,
+      })
+      queryClient.setQueryData(AUTH_ME_QUERY_KEY, user)
     },
   })
 

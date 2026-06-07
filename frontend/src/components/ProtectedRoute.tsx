@@ -8,7 +8,7 @@ const ONBOARDING_ROUTES = ['/onboarding'];
 
 export default function ProtectedRoute() {
   const location = useLocation();
-  const { isAuthenticated, isBootstrappingAuth, requireOnboarding } = useAuth();
+  const { user, isAuthenticated, isBootstrappingAuth, requireOnboarding } = useAuth();
 
   const isOnboardingRoute = ONBOARDING_ROUTES.some((route) =>
     location.pathname.startsWith(route)
@@ -28,11 +28,14 @@ export default function ProtectedRoute() {
   // Allow onboarding routes if user has token but needs onboarding
   if (isOnboardingRoute) {
     if (isAuthenticated && requireOnboarding) {
+      if (location.pathname === '/onboarding/profile' && user?.name) {
+        return <Navigate to="/onboarding/workspace" replace />;
+      }
       return <Outlet />;
     }
     // If user is fully authenticated, redirect away from onboarding
     if (isAuthenticated) {
-      const lastSlug = getLastWorkspaceSlug();
+      const lastSlug = getLastWorkspaceSlug(user?.id);
       return <Navigate to={lastSlug ? `/workspaces/${lastSlug}` : '/workspaces'} replace />;
     }
     // Not authenticated, redirect to login
@@ -42,6 +45,10 @@ export default function ProtectedRoute() {
   // For protected routes, require full authentication
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
+  }
+
+  if (requireOnboarding) {
+    return <Navigate to={user?.name ? '/onboarding/workspace' : '/onboarding/profile'} replace />;
   }
 
   return <Outlet />;

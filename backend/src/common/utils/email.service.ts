@@ -240,8 +240,7 @@ export async function sendWorkspaceInvitationEmail(options: {
   registerUrl: string;
   isExistingUser: boolean;
 }): Promise<void> {
-  const primaryUrl = options.isExistingUser ? options.acceptUrl : options.registerUrl;
-  const primaryLabel = options.isExistingUser ? 'Xem chi tiết lời mời' : 'Đăng ký & tham gia';
+  const acceptUrl = options.isExistingUser ? options.acceptUrl : options.registerUrl;
 
   const html = `
     <div style="background-color: #f3f4f6; padding: 40px 20px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; min-height: 100%;">
@@ -271,13 +270,18 @@ export async function sendWorkspaceInvitationEmail(options: {
 
           <!-- CTA Buttons -->
           <div style="text-align: center; margin: 32px 0 16px 0;">
-            <a href="${primaryUrl}" style="display: inline-block; background-color: #4f46e5; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 10px; font-size: 14px; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2), 0 2px 4px -1px rgba(79, 70, 229, 0.1); transition: background-color 0.2s;">
-              ${primaryLabel}
+            <a href="${acceptUrl}" style="display: inline-block; min-width: 128px; background-color: #16a34a; color: #ffffff; text-decoration: none; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 700; box-shadow: 0 4px 6px -1px rgba(22, 163, 74, 0.2), 0 2px 4px -1px rgba(22, 163, 74, 0.1);">
+              Chấp nhận
+            </a>
+            <a href="${options.declineUrl}" style="display: inline-block; min-width: 128px; margin-left: 12px; background-color: #ffffff; color: #dc2626; text-decoration: none; padding: 11px 22px; border-radius: 10px; font-size: 14px; font-weight: 700; border: 1px solid #fecaca;">
+              Từ chối
             </a>
           </div>
           
           <p style="color: #6b7280; font-size: 13px; line-height: 1.5; text-align: center; margin-top: 24px;">
-            Bạn có thể chấp nhận hoặc từ chối lời mời này sau khi truy cập vào hệ thống.
+            ${options.isExistingUser
+              ? 'Bạn có thể chấp nhận hoặc từ chối lời mời này trong hệ thống.'
+              : 'Nếu chấp nhận, bạn sẽ được chuyển đến trang đăng ký và tham gia workspace này sau khi hoàn tất tài khoản.'}
           </p>
         </div>
 

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { getLastWorkspaceSlug, setLastWorkspaceSlug } from "@/stores/authStore"
 import { useWorkspacesQuery } from "@/hooks/useWorkspaces"
+import { useAuth } from "@/hooks/useAuth"
 import { ProjectNavigator } from "./ProjectNavigator"
 
 interface AppSidebarProps {
@@ -19,8 +20,10 @@ interface AppSidebarProps {
 export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) {
   const params = useParams()
   const urlWorkspaceSlug = params.workspaceId || ""
+  const { user } = useAuth()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [fallbackSlug, setFallbackSlug] = useState("")
+  const lastWorkspaceSlug = getLastWorkspaceSlug(user?.id)
 
   const workspacesQuery = useWorkspacesQuery(1, 20, {
     enabled: !urlWorkspaceSlug && !fallbackSlug
@@ -28,20 +31,20 @@ export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) 
 
   let activeWorkspaceSlug = urlWorkspaceSlug
   if (!activeWorkspaceSlug) {
-    activeWorkspaceSlug = getLastWorkspaceSlug() || fallbackSlug
+    activeWorkspaceSlug = lastWorkspaceSlug || fallbackSlug
   }
 
   useEffect(() => {
-    if (!urlWorkspaceSlug && !getLastWorkspaceSlug() && workspacesQuery.data?.data?.length) {
+    if (!urlWorkspaceSlug && !lastWorkspaceSlug && workspacesQuery.data?.data?.length) {
       setFallbackSlug(workspacesQuery.data.data[0].slug)
     }
-  }, [urlWorkspaceSlug, workspacesQuery.data])
+  }, [urlWorkspaceSlug, lastWorkspaceSlug, workspacesQuery.data])
 
   useEffect(() => {
     if (urlWorkspaceSlug) {
-      setLastWorkspaceSlug(urlWorkspaceSlug)
+      setLastWorkspaceSlug(urlWorkspaceSlug, user?.id)
     }
-  }, [urlWorkspaceSlug])
+  }, [urlWorkspaceSlug, user?.id])
 
   return (
     <>
