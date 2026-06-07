@@ -40,6 +40,7 @@ export interface RecentTask {
   createdAt: Date;
   updatedAt: Date;
   assignee: { id: number; name: string | null; email: string; avatar: string | null } | null;
+  assignees: Array<{ id: number; name: string | null; email: string; avatar: string | null }>;
 }
 
 export interface ProjectActivity {
@@ -252,11 +253,21 @@ export class ProjectRepository extends BaseRepository<
         assignee: {
           select: { id: true, name: true, email: true, avatar: true },
         },
+        assignees: {
+          select: {
+            user: {
+              select: { id: true, name: true, email: true, avatar: true },
+            },
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
       take: limit,
     });
-    return tasks as RecentTask[];
+    return tasks.map((task) => ({
+      ...task,
+      assignees: task.assignees.map((assignee) => assignee.user),
+    }));
   }
 
   /**
@@ -296,4 +307,3 @@ export class ProjectRepository extends BaseRepository<
 }
 
 export const projectRepository = new ProjectRepository();
-

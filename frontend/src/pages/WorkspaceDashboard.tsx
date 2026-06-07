@@ -16,6 +16,7 @@ import { vi } from "date-fns/locale"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import { getTaskAssignees } from "@/components/tasks/TaskAssigneeAvatars"
 import { useAuth } from "@/hooks/useAuth"
 import { useWorkspaceDetailQuery } from "@/hooks/useWorkspaces"
 import { cn } from "@/lib/utils"
@@ -67,6 +68,9 @@ function RecentTaskItem({ task, workspaceSlug }: { task: RecentTask; workspaceSl
   const taskLink = task.project
     ? `/workspaces/${workspaceSlug}/projects/${task.project.id}/kanban?task=${task.id}`
     : null
+  const assigneeNames = getTaskAssignees(task)
+    .map((assignee) => assignee.name || assignee.email)
+    .filter(Boolean)
 
   const content = (
     <div className={cn(
@@ -84,10 +88,10 @@ function RecentTaskItem({ task, workspaceSlug }: { task: RecentTask; workspaceSl
               <span>{task.project.name}</span>
             </>
           ) : null}
-          {task.assignee ? (
+          {assigneeNames.length > 0 ? (
             <>
               <span>•</span>
-              <span>{task.assignee.name || task.assignee.email}</span>
+              <span>{assigneeNames.join(", ")}</span>
             </>
           ) : null}
           {task.updatedAt ? (

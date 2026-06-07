@@ -16,6 +16,8 @@ import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { config, prisma } from '../../config';
 import { sendWorkspaceInvitationEmail } from '../../common/utils/email.service';
 import { notificationEmitter } from '../notification/notification-emitter';
+import { realtimeService } from '../../common/realtime';
+import { taskRepository } from '../task/task.repository';
 
 export interface CreateWorkspaceInput {
   name: string;
@@ -79,6 +81,21 @@ export class WorkspaceService extends BaseService<
     );
 
     logger.info(`Workspace created: ${workspace.id} by user ${userId}`);
+    realtimeService.emitToUser(userId, {
+      type: 'workspace',
+      action: 'created',
+      entityId: workspace.id,
+      workspaceId: workspace.id,
+      actorId: userId,
+    });
+    realtimeService.emitToOwners({
+      type: 'workspace',
+      action: 'created',
+      entityId: workspace.id,
+      workspaceId: workspace.id,
+      actorId: userId,
+    });
+
     return this.formatWorkspace(workspace);
   }
 
@@ -110,6 +127,7 @@ export class WorkspaceService extends BaseService<
         createdAt: task.createdAt,
         project: task.project,
         assignee: task.assignee,
+        assignees: task.assignees.map((assignee) => assignee.user),
       })),
       recentActivities: recentActivities.map((activity) => ({
         id: activity.id,
@@ -188,6 +206,18 @@ export class WorkspaceService extends BaseService<
     }
 
     const updated = await workspaceRepository.update(workspace.id, updateData);
+    realtimeService.emitToWorkspace(workspace.id, {
+      type: 'workspace',
+      action: 'updated',
+      entityId: workspace.id,
+    });
+    realtimeService.emitToOwners({
+      type: 'workspace',
+      action: 'updated',
+      entityId: workspace.id,
+      workspaceId: workspace.id,
+    });
+
     return {
       ...this.formatWorkspace(updated),
       updatedAt: updated.updatedAt,
@@ -199,6 +229,18 @@ export class WorkspaceService extends BaseService<
     await workspaceRepository.softDelete(workspace.id);
 
     logger.info(`Workspace deleted: ${workspace.id}`);
+    realtimeService.emitToWorkspace(workspace.id, {
+      type: 'workspace',
+      action: 'deleted',
+      entityId: workspace.id,
+    });
+    realtimeService.emitToOwners({
+      type: 'workspace',
+      action: 'deleted',
+      entityId: workspace.id,
+      workspaceId: workspace.id,
+    });
+
     return { message: 'Workspace deleted successfully' };
   }
 
@@ -261,6 +303,23 @@ export class WorkspaceService extends BaseService<
     });
 
     logger.info(`Invitation ${invitation.id} sent to ${email} for workspace ${workspace.id} as ${role}`);
+    realtimeService.emitToWorkspace(workspace.id, {
+      type: 'invitation',
+      action: 'created',
+      entityId: invitation.id,
+      actorId: inviterId,
+      userId: user?.id,
+    });
+    if (user) {
+      realtimeService.emitToUser(user.id, {
+        type: 'invitation',
+        action: 'created',
+        entityId: invitation.id,
+        workspaceId: workspace.id,
+        actorId: inviterId,
+        userId: user.id,
+      });
+    }
 
     this.dispatchInvitationSideEffects({
       invitationId: invitation.id,
@@ -301,6 +360,14 @@ export class WorkspaceService extends BaseService<
     }
 
     const updated = await workspaceRepository.updateMemberRole(member.id, data.role);
+    realtimeService.emitToWorkspace(workspace.id, {
+      type: 'workspace',
+      action: 'updated',
+      entityId: member.id,
+      actorId: requesterId,
+      userId: member.userId,
+    });
+
     return {
       id: updated.id,
       role: updated.role,
@@ -319,8 +386,25 @@ export class WorkspaceService extends BaseService<
       );
     }
 
+    await this.assertMemberHasNoActiveWorkspaceTasks(member.userId, workspace.id);
+
     await workspaceRepository.removeMemberById(member.id);
     logger.info(`Member ${member.id} removed from workspace ${workspace.id}`);
+    realtimeService.emitToWorkspace(workspace.id, {
+      type: 'workspace',
+      action: 'deleted',
+      entityId: member.id,
+      actorId: requesterId,
+      userId: member.userId,
+    });
+    realtimeService.emitToUser(member.userId, {
+      type: 'workspace',
+      action: 'deleted',
+      entityId: member.id,
+      workspaceId: workspace.id,
+      actorId: requesterId,
+      userId: member.userId,
+    });
 
     return { message: 'Member removed successfully' };
   }
@@ -332,8 +416,17 @@ export class WorkspaceService extends BaseService<
       throw ApiError.notFound(ErrorCode.MEMBER_NOT_FOUND, 'Member not found');
     }
 
+    await this.assertMemberHasNoActiveWorkspaceTasks(userId, workspace.id);
+
     await workspaceRepository.removeMemberById(member.id);
     logger.info(`User ${userId} left workspace ${workspace.id}`);
+    realtimeService.emitToWorkspace(workspace.id, {
+      type: 'workspace',
+      action: 'deleted',
+      entityId: member.id,
+      actorId: userId,
+      userId,
+    });
 
     return { message: 'Left workspace successfully' };
   }
@@ -397,6 +490,21 @@ export class WorkspaceService extends BaseService<
     );
 
     logger.info(`Invitation ${invitation.id} accepted by ${invitation.email}`);
+    realtimeService.emitToWorkspace(invitation.workspaceId, {
+      type: 'invitation',
+      action: 'accepted',
+      entityId: invitation.id,
+      actorId: user.id,
+      userId: user.id,
+    });
+    realtimeService.emitToUser(user.id, {
+      type: 'invitation',
+      action: 'accepted',
+      entityId: invitation.id,
+      workspaceId: invitation.workspaceId,
+      actorId: user.id,
+      userId: user.id,
+    });
 
     return {
       ...this.formatInvitation({ ...invitation, ...updated }),
@@ -423,6 +531,21 @@ export class WorkspaceService extends BaseService<
     );
 
     logger.info(`Invitation ${invitation.id} declined by ${invitation.email}`);
+    realtimeService.emitToWorkspace(invitation.workspaceId, {
+      type: 'invitation',
+      action: 'declined',
+      entityId: invitation.id,
+      actorId: user.id,
+      userId: user.id,
+    });
+    realtimeService.emitToUser(user.id, {
+      type: 'invitation',
+      action: 'declined',
+      entityId: invitation.id,
+      workspaceId: invitation.workspaceId,
+      actorId: user.id,
+      userId: user.id,
+    });
 
     return this.formatInvitation({ ...invitation, ...updated });
   }
@@ -437,6 +560,11 @@ export class WorkspaceService extends BaseService<
     );
 
     logger.info(`Invitation ${invitation.id} declined by public token`);
+    realtimeService.emitToWorkspace(invitation.workspaceId, {
+      type: 'invitation',
+      action: 'declined',
+      entityId: invitation.id,
+    });
 
     return this.formatInvitation({ ...invitation, ...updated });
   }
@@ -458,6 +586,12 @@ export class WorkspaceService extends BaseService<
 
     await workspaceRepository.cancelInvitation(invitationId);
     logger.info(`Invitation ${invitationId} cancelled by user ${userId}`);
+    realtimeService.emitToWorkspace(workspace.id, {
+      type: 'invitation',
+      action: 'cancelled',
+      entityId: invitationId,
+      actorId: userId,
+    });
 
     return { message: 'Invitation cancelled successfully' };
   }
@@ -520,6 +654,21 @@ export class WorkspaceService extends BaseService<
     if (invitation.expiresAt < new Date()) {
       void workspaceRepository.updateInvitationStatus(invitation.id, InvitationStatus.EXPIRED);
       throw ApiError.badRequest(ErrorCode.INVITATION_EXPIRED, 'Invitation has expired');
+    }
+  }
+
+  private async assertMemberHasNoActiveWorkspaceTasks(userId: number, workspaceId: number): Promise<void> {
+    const summary = await taskRepository.findActiveAssignedTaskSummary(userId, {
+      workspaceId,
+      limit: 5,
+    });
+
+    if (summary.activeTaskCount > 0) {
+      throw ApiError.conflict(
+        ErrorCode.MEMBER_HAS_ACTIVE_TASKS,
+        'Cannot remove this workspace member because they still have active tasks in this workspace.',
+        summary,
+      );
     }
   }
 

@@ -92,6 +92,12 @@ export interface RecentTask {
     email: string
     avatar?: string | null
   } | null
+  assignees?: Array<{
+    id: number
+    name?: string | null
+    email: string
+    avatar?: string | null
+  }>
   projectId?: number
   project?: {
     id: number

@@ -3,12 +3,12 @@ import { CSS } from "@dnd-kit/utilities"
 import { isPast, parseISO } from "date-fns"
 import { Calendar, GripVertical } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { formatTaskDateTime } from "@/lib/date-time"
 import type { Task } from "@/types/task"
 import { TASK_PRIORITY_LABELS } from "@/types/task"
+import TaskAssigneeAvatars from "./TaskAssigneeAvatars"
 
 interface KanbanCardProps {
   task: Task
@@ -89,16 +89,14 @@ export function KanbanCard({ task, projectKey, onClick, isDragging }: KanbanCard
       {/* Footer: Assignee + Due Date */}
       <div className="flex items-center justify-between mt-auto">
         <div className="flex items-center gap-1.5">
-          {task.assignee ? (
-            <Avatar className="h-5 w-5">
-              <AvatarImage src={task.assignee.avatar ?? undefined} />
-              <AvatarFallback className="text-[9px]">
-                {task.assignee.name?.[0] ?? "?"}
-              </AvatarFallback>
-            </Avatar>
-          ) : (
-            <span className="text-[10px] text-muted-foreground/50 italic">—</span>
-          )}
+          <TaskAssigneeAvatars
+            task={task}
+            maxVisible={3}
+            avatarClassName="h-5 w-5"
+            countClassName="h-5 w-5 text-[9px]"
+            fallbackClassName="text-[9px]"
+            emptyClassName="text-[10px] text-muted-foreground/50"
+          />
         </div>
         {task.dueDate && (
           <div className={cn(

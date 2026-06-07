@@ -11,6 +11,7 @@ import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { ALLOWED_MIME_TYPES, FILE_SIZE_LIMITS } from '../../config/constants';
 import { prisma } from '../../config';
 import { cloudinaryService } from '../../common/services/cloudinary.service';
+import { realtimeService } from '../../common/realtime';
 
 export interface UploadAttachmentInput {
   taskId: number;
@@ -95,6 +96,12 @@ export class AttachmentService extends BaseService<
     await this.logActivity(attachment.id, taskId, uploadedById, 'ATTACHMENT_UPLOAD', {
       fileName: file.originalname,
     });
+    void realtimeService.emitTaskChildEvent(taskId, {
+      type: 'attachment',
+      action: 'created',
+      entityId: attachment.id,
+      actorId: uploadedById,
+    });
 
     return this.formatAttachment(fullAttachment);
   }
@@ -153,6 +160,12 @@ export class AttachmentService extends BaseService<
 
     await this.logActivity(id, attachment.taskId, userId, 'ATTACHMENT_DELETE', {
       fileName: attachment.fileName,
+    });
+    void realtimeService.emitTaskChildEvent(attachment.taskId, {
+      type: 'attachment',
+      action: 'deleted',
+      entityId: id,
+      actorId: userId,
     });
 
     return { message: 'Attachment deleted successfully' };

@@ -1,7 +1,7 @@
 import { useDraggable } from "@dnd-kit/core"
 import { cn } from "@/lib/utils"
 import { PRIORITY_COLORS } from "@/lib/calendar-utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import TaskAssigneeAvatars from "@/components/tasks/TaskAssigneeAvatars"
 import type { Task } from "@/types/task"
 
 interface CalendarTaskCardProps {
@@ -50,14 +50,14 @@ export function CalendarTaskCard({ task, onClick, compact = true }: CalendarTask
         <span className="truncate flex-1 text-foreground/85 font-medium leading-tight">
           {task.title}
         </span>
-        {task.assignee && (
-          <Avatar className="h-4 w-4 shrink-0">
-            <AvatarImage src={task.assignee.avatar ?? undefined} />
-            <AvatarFallback className="text-[7px] font-medium">
-              {task.assignee.name?.[0] ?? "?"}
-            </AvatarFallback>
-          </Avatar>
-        )}
+        <TaskAssigneeAvatars
+          task={task}
+          maxVisible={2}
+          avatarClassName="h-4 w-4"
+          countClassName="h-4 w-4 text-[7px]"
+          fallbackClassName="text-[7px]"
+          emptyClassName="hidden"
+        />
       </div>
     )
   }
@@ -94,14 +94,14 @@ export function CalendarTaskCard({ task, onClick, compact = true }: CalendarTask
           </p>
         )}
       </div>
-      {task.assignee && (
-        <Avatar className="h-5 w-5 shrink-0">
-          <AvatarImage src={task.assignee.avatar ?? undefined} />
-          <AvatarFallback className="text-[8px] font-medium">
-            {task.assignee.name?.[0] ?? "?"}
-          </AvatarFallback>
-        </Avatar>
-      )}
+      <TaskAssigneeAvatars
+        task={task}
+        maxVisible={3}
+        avatarClassName="h-5 w-5"
+        countClassName="h-5 w-5 text-[8px]"
+        fallbackClassName="text-[8px]"
+        emptyClassName="hidden"
+      />
     </div>
   )
 }

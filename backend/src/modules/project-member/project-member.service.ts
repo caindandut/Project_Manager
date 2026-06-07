@@ -12,6 +12,8 @@ import { ErrorCode } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { prisma } from '../../config';
+import { realtimeService } from '../../common/realtime';
+import { taskRepository } from '../task/task.repository';
 
 export class ProjectMemberService extends BaseService<
   unknown,
@@ -85,9 +87,25 @@ export class ProjectMemberService extends BaseService<
           metadata: { type: 'project', projectId, memberId: member.id },
         },
       });
+      realtimeService.emitToUser(data.userId, {
+        type: 'invitation',
+        action: 'created',
+        entityId: member.id,
+        workspaceId: project.workspaceId,
+        projectId,
+        actorId: requesterId,
+        userId: data.userId,
+      });
     }
 
     logger.info(`User ${data.userId} added to project ${projectId} as ${role}`);
+    realtimeService.emitToProject(project.workspaceId, projectId, {
+      type: 'invitation',
+      action: 'created',
+      entityId: member.id,
+      actorId: requesterId,
+      userId: data.userId,
+    });
 
     // Return full member info
     const created = await projectMemberRepository.findMemberById(projectId, member.id);
@@ -162,6 +180,23 @@ export class ProjectMemberService extends BaseService<
       where: { id: memberId },
       data: { status: 'ACCEPTED' },
     });
+    const project = await this.findProjectOrThrow(projectId);
+    realtimeService.emitToProject(project.workspaceId, projectId, {
+      type: 'invitation',
+      action: 'accepted',
+      entityId: memberId,
+      actorId: requesterId,
+      userId: requesterId,
+    });
+    realtimeService.emitToUser(requesterId, {
+      type: 'invitation',
+      action: 'accepted',
+      entityId: memberId,
+      workspaceId: project.workspaceId,
+      projectId,
+      actorId: requesterId,
+      userId: requesterId,
+    });
 
     return { message: 'Invitation accepted' };
   }
@@ -180,6 +215,23 @@ export class ProjectMemberService extends BaseService<
     await prisma.projectMember.update({
       where: { id: memberId },
       data: { status: 'DECLINED' },
+    });
+    const project = await this.findProjectOrThrow(projectId);
+    realtimeService.emitToProject(project.workspaceId, projectId, {
+      type: 'invitation',
+      action: 'declined',
+      entityId: memberId,
+      actorId: requesterId,
+      userId: requesterId,
+    });
+    realtimeService.emitToUser(requesterId, {
+      type: 'invitation',
+      action: 'declined',
+      entityId: memberId,
+      workspaceId: project.workspaceId,
+      projectId,
+      actorId: requesterId,
+      userId: requesterId,
     });
 
     return { message: 'Invitation declined' };
@@ -213,6 +265,13 @@ export class ProjectMemberService extends BaseService<
     const updated = await projectMemberRepository.updateRole(memberId, data.role);
 
     logger.info(`Member ${memberId} role changed to ${data.role} in project ${projectId}`);
+    realtimeService.emitToProject(project.workspaceId, projectId, {
+      type: 'project',
+      action: 'updated',
+      entityId: memberId,
+      actorId: requesterId,
+      userId: member.userId,
+    });
 
     return {
       id: updated.id,
@@ -241,9 +300,27 @@ export class ProjectMemberService extends BaseService<
       );
     }
 
+    await this.assertMemberHasNoActiveTasks(member.userId, projectId);
+
     await projectMemberRepository.removeMember(memberId);
 
     logger.info(`Member ${memberId} removed from project ${projectId}`);
+    realtimeService.emitToProject(project.workspaceId, projectId, {
+      type: 'project',
+      action: 'deleted',
+      entityId: memberId,
+      actorId: requesterId,
+      userId: member.userId,
+    });
+    realtimeService.emitToUser(member.userId, {
+      type: 'project',
+      action: 'deleted',
+      entityId: memberId,
+      workspaceId: project.workspaceId,
+      projectId,
+      actorId: requesterId,
+      userId: member.userId,
+    });
 
     return { message: 'Member removed successfully' };
   }
@@ -355,6 +432,21 @@ export class ProjectMemberService extends BaseService<
       ErrorCode.FORBIDDEN_ACCESS,
       'Only project admin can manage project members',
     );
+  }
+
+  private async assertMemberHasNoActiveTasks(userId: number, projectId: number): Promise<void> {
+    const summary = await taskRepository.findActiveAssignedTaskSummary(userId, {
+      projectId,
+      limit: 5,
+    });
+
+    if (summary.activeTaskCount > 0) {
+      throw ApiError.conflict(
+        ErrorCode.PROJECT_MEMBER_HAS_ACTIVE_TASKS,
+        'Cannot remove this project member because they still have active tasks in this project.',
+        summary,
+      );
+    }
   }
 
   private formatMember(member: ProjectMemberWithUser & { status?: string }) {

@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
@@ -9,6 +10,7 @@ import { logger } from './common/utils/logger';
 import { verifyEmailTransport } from './common/utils/email.service';
 import { seedOwnerAccounts } from './common/utils/seed-owner';
 import { prisma } from './config';
+import { realtimeService } from './common/realtime';
 
 const app = express();
 
@@ -77,8 +79,10 @@ app.use(errorMiddleware);
 
 // Start server
 const PORT = config.PORT;
+const server = createServer(app);
+realtimeService.initialize(server, allowedOrigins);
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   logger.info(`Environment: ${config.NODE_ENV}`);
   logger.info(`API: http://localhost:${PORT}/api/v1`);

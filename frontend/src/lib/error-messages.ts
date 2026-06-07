@@ -1,5 +1,23 @@
 export function toVietnameseErrorMessage(error: unknown, fallback: string): string {
   const message = error instanceof Error ? error.message : ""
+  const details = error && typeof error === "object" && "details" in error
+    ? (error as { details?: unknown }).details
+    : undefined
+  const activeTaskCount =
+    details && typeof details === "object" && "activeTaskCount" in details
+      ? Number((details as { activeTaskCount?: unknown }).activeTaskCount)
+      : 0
+  const code = error && typeof error === "object" && "code" in error
+    ? String((error as { code?: unknown }).code ?? "")
+    : ""
+
+  if (code === "PROJECT_MEMBER_HAS_ACTIVE_TASKS" && activeTaskCount > 0) {
+    return `Không thể xóa thành viên khỏi dự án vì còn ${activeTaskCount} công việc chưa hoàn thành.`
+  }
+
+  if (code === "MEMBER_HAS_ACTIVE_TASKS" && activeTaskCount > 0) {
+    return `Không thể xóa thành viên khỏi workspace vì còn ${activeTaskCount} công việc chưa hoàn thành.`
+  }
 
   const mappings: Array<[string, string]> = [
     ["Invalid email or password", "Email hoặc mật khẩu không đúng."],

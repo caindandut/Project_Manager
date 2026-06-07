@@ -10,7 +10,6 @@ import {
   List,
   Plus,
   Settings,
-  Users,
 } from "lucide-react"
 
 import { Skeleton } from "@/components/ui/skeleton"
@@ -323,13 +322,6 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
 
         <SectionTitle isCollapsed />
         <SidebarItem
-          icon={Users}
-          label="Thành viên"
-          href={`${basePath}/members`}
-          isActive={location.pathname === `${basePath}/members`}
-          isCollapsed={true}
-        />
-        <SidebarItem
           icon={Settings}
           label="Cài đặt workspace"
           href={`${basePath}/settings`}
@@ -412,13 +404,6 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
       </div>
 
       <div className="mt-2 border-t border-sidebar-border pt-1">
-        <SectionTitle>Cài đặt</SectionTitle>
-        <SidebarItem
-          icon={Users}
-          label="Thành viên"
-          href={`${basePath}/members`}
-          isActive={location.pathname === `${basePath}/members`}
-        />
         <SidebarItem
           icon={Settings}
           label="Cài đặt workspace"

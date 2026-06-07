@@ -51,6 +51,7 @@ import apiClient from "@/lib/api-client"
 import { formatTaskDateTime } from "@/lib/date-time"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import { myTasksQueryKeys, queryClient, taskQueryKeys } from "@/lib/query-client"
+import { useRealtimeStore } from "@/lib/realtime"
 import { updateTaskStatus } from "@/lib/task-api"
 import { cn } from "@/lib/utils"
 import type { Task, TaskPriority, TaskStatus, TaskUser } from "@/types/task"
@@ -154,6 +155,8 @@ function useMyTasksData(workspaceId: string, filters: {
   role: RoleFilter
   sort: SortField
 }) {
+  const isRealtimeConnected = useRealtimeStore((state) => state.isConnected)
+
   return useQuery({
     queryKey: [...myTasksQueryKeys.workspace(workspaceId), filters],
     queryFn: async (): Promise<MyTasksResponse> => {
@@ -177,7 +180,7 @@ function useMyTasksData(workspaceId: string, filters: {
     },
     enabled: Boolean(workspaceId),
     staleTime: 0,
-    refetchInterval: 2_000,
+    refetchInterval: isRealtimeConnected ? false : 2_000,
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
     refetchOnMount: "always",

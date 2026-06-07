@@ -35,8 +35,8 @@ export class ApiError extends Error {
     return new ApiError(HTTP_STATUS.NOT_FOUND, code, message);
   }
 
-  static conflict(code: ErrorCode, message: string): ApiError {
-    return new ApiError(HTTP_STATUS.CONFLICT, code, message);
+  static conflict(code: ErrorCode, message: string, details?: unknown): ApiError {
+    return new ApiError(HTTP_STATUS.CONFLICT, code, message, details);
   }
 
   static internal(message: string): ApiError {

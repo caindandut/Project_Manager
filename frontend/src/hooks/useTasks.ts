@@ -21,6 +21,7 @@ import type {
   TaskFilter,
   UpdateTaskPayload,
 } from "@/types/task"
+import { useRealtimeStore } from "@/lib/realtime"
 
 export const useTasksQuery = (projectId: number, filters?: TaskFilter) =>
   useQuery({
@@ -28,15 +29,18 @@ export const useTasksQuery = (projectId: number, filters?: TaskFilter) =>
     queryFn: () => getTasks(projectId, filters),
   })
 
-export const useTaskDetailQuery = (taskId: number | null) =>
-  useQuery({
+export const useTaskDetailQuery = (taskId: number | null) => {
+  const isRealtimeConnected = useRealtimeStore((state) => state.isConnected)
+
+  return useQuery({
     queryKey: taskQueryKeys.detail(taskId ?? 0),
     queryFn: () => getTaskDetail(taskId!),
     enabled: taskId !== null && taskId > 0,
-    refetchInterval: taskId !== null && taskId > 0 ? 3_000 : false,
+    refetchInterval: !isRealtimeConnected && taskId !== null && taskId > 0 ? 3_000 : false,
     refetchIntervalInBackground: true,
     refetchOnWindowFocus: true,
   })
+}
 
 export const useCreateTaskMutation = (projectId: number) => {
   const queryClient = useQueryClient()

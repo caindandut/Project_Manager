@@ -5,8 +5,8 @@ import { addDays } from "date-fns"
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import TaskDetailPanel from "@/components/tasks/TaskDetailPanel"
+import TaskAssigneeAvatars from "@/components/tasks/TaskAssigneeAvatars"
 
 import {
   GanttProvider,
@@ -289,14 +289,14 @@ export function GanttView() {
                           <span className="flex-1 truncate text-xs font-medium">
                             {feature.name}
                           </span>
-                          {task.assignee && (
-                            <Avatar className="h-5 w-5 flex-shrink-0 border border-background">
-                              <AvatarImage src={task.assignee.avatar || undefined} alt={task.assignee.name || task.assignee.email} />
-                              <AvatarFallback className="text-[8px] bg-primary/10 text-primary font-medium">
-                                {(task.assignee.name || task.assignee.email || "?").charAt(0).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                          )}
+                          <TaskAssigneeAvatars
+                            task={task}
+                            maxVisible={3}
+                            avatarClassName="h-5 w-5 border border-background"
+                            countClassName="h-5 w-5 text-[8px]"
+                            fallbackClassName="bg-primary/10 text-[8px] font-medium text-primary"
+                            emptyClassName="hidden"
+                          />
                         </div>
                       </GanttFeatureItem>
                     )

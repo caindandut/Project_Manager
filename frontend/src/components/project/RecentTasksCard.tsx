@@ -7,10 +7,10 @@ import {
   XCircle,
 } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
+import TaskAssigneeAvatars from "@/components/tasks/TaskAssigneeAvatars"
 import type { RecentTask } from "@/lib/project-api"
 import { formatDistanceToNow } from "date-fns"
 import { vi } from "date-fns/locale"
@@ -82,10 +82,6 @@ export default function RecentTasksCard({ tasks, isLoading }: RecentTasksCardPro
               const statusCfg = STATUS_CONFIG[task.status] || STATUS_CONFIG.TODO
               const StatusIcon = statusCfg.icon
               const priorityCfg = PRIORITY_CONFIG[task.priority || "MEDIUM"]
-              const initials = task.assignee?.name
-                ? task.assignee.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()
-                : task.assignee?.email?.[0]?.toUpperCase() || "?"
-
               return (
                 <div
                   key={task.id}
@@ -112,14 +108,14 @@ export default function RecentTasksCard({ tasks, isLoading }: RecentTasksCardPro
                     </Badge>
                   )}
 
-                  {task.assignee && (
-                    <Avatar className="h-6 w-6">
-                      {task.assignee.avatar && <AvatarImage src={task.assignee.avatar} />}
-                      <AvatarFallback className="text-[10px] bg-primary/10 text-primary">
-                        {initials}
-                      </AvatarFallback>
-                    </Avatar>
-                  )}
+                  <TaskAssigneeAvatars
+                    task={task}
+                    maxVisible={3}
+                    avatarClassName="h-6 w-6"
+                    countClassName="h-6 w-6 text-[10px]"
+                    fallbackClassName="bg-primary/10 text-[10px] text-primary"
+                    emptyClassName="hidden"
+                  />
                 </div>
               )
             })}

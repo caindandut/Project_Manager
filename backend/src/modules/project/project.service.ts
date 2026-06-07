@@ -7,6 +7,7 @@ import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { projectMemberRepository } from '../project-member/project-member.repository';
 import { prisma } from '../../config';
+import { realtimeService } from '../../common/realtime';
 
 export interface CreateProjectInput {
   name: string;
@@ -65,6 +66,22 @@ export class ProjectService extends BaseService<
     }
 
     logger.info(`Project created: ${project.id} in workspace ${data.workspaceId}`);
+    realtimeService.emitToWorkspace(data.workspaceId, {
+      type: 'project',
+      action: 'created',
+      entityId: project.id,
+      projectId: project.id,
+      actorId: data.ownerId,
+    });
+    realtimeService.emitToOwners({
+      type: 'project',
+      action: 'created',
+      entityId: project.id,
+      workspaceId: data.workspaceId,
+      projectId: project.id,
+      actorId: data.ownerId,
+    });
+
     return {
       ...this.formatProject(created),
       owner: this.formatOwner(created),
@@ -137,6 +154,19 @@ export class ProjectService extends BaseService<
     }
 
     const updated = await projectRepository.update(project.id, data);
+    realtimeService.emitToProject(workspaceId, project.id, {
+      type: 'project',
+      action: 'updated',
+      entityId: project.id,
+    });
+    realtimeService.emitToOwners({
+      type: 'project',
+      action: 'updated',
+      entityId: project.id,
+      workspaceId,
+      projectId: project.id,
+    });
+
     return {
       id: updated.id,
       name: updated.name,
@@ -151,6 +181,20 @@ export class ProjectService extends BaseService<
     await projectRepository.softDelete(project.id);
 
     logger.info(`Project deleted: ${project.id}`);
+    realtimeService.emitToWorkspace(workspaceId, {
+      type: 'project',
+      action: 'deleted',
+      entityId: project.id,
+      projectId: project.id,
+    });
+    realtimeService.emitToOwners({
+      type: 'project',
+      action: 'deleted',
+      entityId: project.id,
+      workspaceId,
+      projectId: project.id,
+    });
+
     return { message: 'Project deleted successfully' };
   }
 
@@ -170,6 +214,12 @@ export class ProjectService extends BaseService<
     }
 
     const updated = await projectRepository.update(id, data);
+    void realtimeService.emitProjectEvent(id, {
+      type: 'project',
+      action: 'updated',
+      entityId: id,
+    });
+
     return this.formatProject(updated);
   }
 
@@ -180,6 +230,12 @@ export class ProjectService extends BaseService<
     }
 
     await projectRepository.softDelete(id);
+    void realtimeService.emitProjectEvent(id, {
+      type: 'project',
+      action: 'deleted',
+      entityId: id,
+    });
+
     return { message: 'Project deleted successfully' };
   }
 

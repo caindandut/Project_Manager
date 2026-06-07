@@ -7,6 +7,7 @@ import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { prisma } from '../../config';
 import { notificationEmitter } from '../notification/notification-emitter';
+import { realtimeService } from '../../common/realtime';
 
 export interface CreateTaskInput {
   title: string;
@@ -130,6 +131,13 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     }
 
     const created = await taskRepository.findListItemById(task.id);
+    void realtimeService.emitTaskEvent(task.id, {
+      type: 'task',
+      action: 'created',
+      entityId: task.id,
+      actorId: data.actorId,
+    });
+
     return created
       ? this.formatTaskWithCounts(created, created.assignee, created.assignees, created._count.subTasks, created._count.comments)
       : this.formatTaskWithCounts(task, assignedUsers[0] ?? null, assignedUsers, 0, 0);
@@ -270,6 +278,13 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       }
     }
 
+    void realtimeService.emitTaskEvent(id, {
+      type: 'task',
+      action: 'updated',
+      entityId: id,
+      actorId: userId,
+    });
+
     return {
       id: updated.id,
       title: updated.title,
@@ -308,6 +323,13 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       notificationEmitter.onTaskStatusChanged(id, previousStatus, status, userId).catch(() => {});
     }
 
+    void realtimeService.emitTaskEvent(id, {
+      type: 'task',
+      action: 'updated',
+      entityId: id,
+      actorId: userId,
+    });
+
     return updated;
   }
 
@@ -345,6 +367,13 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       }
     }
 
+    void realtimeService.emitTaskEvent(id, {
+      type: 'task',
+      action: 'updated',
+      entityId: id,
+      actorId: userId,
+    });
+
     return {
       id: updated.id,
       assignee: updated.assignee
@@ -360,10 +389,17 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
   }
 
   async delete(id: number) {
-    await this.findTaskOrThrow(id);
+    const task = await this.findTaskOrThrow(id);
     const deletedSubTaskCount = await taskRepository.deleteWithSubTasks(id);
 
     logger.info(`Task deleted: ${id}`);
+    void realtimeService.emitProjectEvent(task.projectId, {
+      type: 'task',
+      action: 'deleted',
+      entityId: id,
+      taskId: id,
+    });
+
     return { message: 'Task deleted successfully', deletedSubTaskCount };
   }
 
@@ -372,6 +408,12 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     const updated = await taskRepository.logTime(id, hours);
 
     logger.info(`Time logged: ${hours}h for task ${id}`);
+    void realtimeService.emitTaskEvent(id, {
+      type: 'task',
+      action: 'updated',
+      entityId: id,
+    });
+
     return {
       id: updated.id,
       loggedHours: updated.loggedHours,

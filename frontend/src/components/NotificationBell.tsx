@@ -20,6 +20,7 @@ import {
   useGroupDetailQuery,
 } from "@/hooks/useNotifications"
 import { getMyWorkspaceInvitations } from "@/lib/workspace-api"
+import { useRealtimeStore } from "@/lib/realtime"
 import type { GroupedNotification, NotificationItem } from "@/types/notification"
 import type { PendingInvitation } from "@/types/workspace"
 
@@ -61,10 +62,11 @@ export default function NotificationBell() {
   const directGroupedQuery = useGroupedNotificationsQuery("DIRECT", 20)
   const watchingGroupedQuery = useGroupedNotificationsQuery("WATCHING", 10)
   const groupedQuery = activeTab === "DIRECT" ? directGroupedQuery : watchingGroupedQuery
+  const isRealtimeConnected = useRealtimeStore((state) => state.isConnected)
   const invitationsQuery = useQuery({
     queryKey: ["my-workspace-invitations"],
     queryFn: getMyWorkspaceInvitations,
-    refetchInterval: NOTIFICATION_REFRESH_INTERVAL_MS,
+    refetchInterval: isRealtimeConnected ? false : NOTIFICATION_REFRESH_INTERVAL_MS,
     refetchIntervalInBackground: true,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,

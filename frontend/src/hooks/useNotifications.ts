@@ -10,6 +10,7 @@ import {
   getNotificationPreferences,
   updateNotificationPreference,
 } from '@/lib/notification-api'
+import { useRealtimeStore } from '@/lib/realtime'
 
 export const NOTIFICATION_REFRESH_INTERVAL_MS = 1_000
 
@@ -30,10 +31,12 @@ const notificationKeys = {
  * Get grouped notifications for dropdown.
  */
 export function useGroupedNotificationsQuery(category?: string, limit = 10) {
+  const isRealtimeConnected = useRealtimeStore((state) => state.isConnected)
+
   return useQuery({
     queryKey: notificationKeys.grouped(category, limit),
     queryFn: () => getGroupedNotifications(category, limit),
-    refetchInterval: NOTIFICATION_REFRESH_INTERVAL_MS,
+    refetchInterval: isRealtimeConnected ? false : NOTIFICATION_REFRESH_INTERVAL_MS,
     refetchIntervalInBackground: true,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,
@@ -55,10 +58,12 @@ export function useNotificationsQuery(category?: string, limit = 20) {
  * Get DIRECT unread count for the badge.
  */
 export function useUnreadCountQuery() {
+  const isRealtimeConnected = useRealtimeStore((state) => state.isConnected)
+
   return useQuery({
     queryKey: notificationKeys.unreadCount(),
     queryFn: getUnreadCount,
-    refetchInterval: NOTIFICATION_REFRESH_INTERVAL_MS,
+    refetchInterval: isRealtimeConnected ? false : NOTIFICATION_REFRESH_INTERVAL_MS,
     refetchIntervalInBackground: true,
     refetchOnMount: 'always',
     refetchOnWindowFocus: true,

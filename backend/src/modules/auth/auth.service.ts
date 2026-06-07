@@ -17,6 +17,7 @@ import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { GoogleUserPayload } from './google-auth.util';
 import { sendOTPEmail } from '../../common/utils/email.service';
 import { cloudinaryService } from '../../common/services/cloudinary.service';
+import { realtimeService } from '../../common/realtime';
 
 export interface RegisterInput {
   email: string;
@@ -373,6 +374,11 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     }
 
     const updated = await authRepository.update(userId, data);
+    void realtimeService.emitUserEvent(userId, {
+      type: 'user',
+      action: 'updated',
+      actorId: userId,
+    });
 
     return {
       id: updated.id,
@@ -407,6 +413,12 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     await authRepository.updatePassword(userId, hashedPassword);
 
     logger.info(`Password changed for user: ${userId}`);
+    void realtimeService.emitUserEvent(userId, {
+      type: 'user',
+      action: 'updated',
+      actorId: userId,
+    });
+
     return { message: 'Password changed successfully' };
   }
 
@@ -435,6 +447,11 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
 
     if (Object.keys(updateData).length > 0) {
       await authRepository.update(userId, updateData);
+      void realtimeService.emitUserEvent(userId, {
+        type: 'user',
+        action: 'updated',
+        actorId: userId,
+      });
     }
 
     // 2. Normalize and validate slug
@@ -530,6 +547,11 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     await authRepository.update(userId, { avatar: avatarUrl });
 
     logger.info(`Avatar uploaded for user ${userId}: ${avatarUrl}`);
+    void realtimeService.emitUserEvent(userId, {
+      type: 'user',
+      action: 'updated',
+      actorId: userId,
+    });
 
     return { avatar: avatarUrl };
   }

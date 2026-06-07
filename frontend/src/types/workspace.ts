@@ -40,6 +40,12 @@ export interface RecentTask {
     email: string
     avatar?: string | null
   } | null
+  assignees?: Array<{
+    id: number
+    name: string | null
+    email: string
+    avatar: string | null
+  }>
   createdAt?: string
   updatedAt?: string
 }

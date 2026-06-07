@@ -30,6 +30,7 @@ interface JwtPayload {
 export interface ApiClientError extends Error {
   code?: string
   status?: number
+  details?: unknown
 }
 
 const getStoredAccessToken = (): string | null => {
@@ -274,6 +275,7 @@ export const normalizeApiError = (error: unknown): Error => {
     const apiError = new Error(message) as ApiClientError
     apiError.code = error.response?.data?.error?.code
     apiError.status = error.response?.status
+    apiError.details = error.response?.data?.error?.details
 
     return apiError
   }

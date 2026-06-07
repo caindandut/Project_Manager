@@ -7,6 +7,7 @@ import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
 import { prisma } from '../../config';
 import { notificationEmitter } from '../notification/notification-emitter';
+import { realtimeService } from '../../common/realtime';
 
 export interface CreateCommentInput {
   content: string;
@@ -60,6 +61,12 @@ export class CommentService extends BaseService<
 
     // Emit notification (also parses @mentions)
     notificationEmitter.onTaskCommented(data.taskId, data.userId, data.content).catch(() => {});
+    void realtimeService.emitTaskChildEvent(data.taskId, {
+      type: 'comment',
+      action: 'created',
+      entityId: comment.id,
+      actorId: data.userId,
+    });
 
     return this.formatComment(fullComment);
   }
@@ -117,6 +124,13 @@ export class CommentService extends BaseService<
       await this.logActivity(id, comment.taskId, userId, 'COMMENT_UPDATE');
     }
 
+    void realtimeService.emitTaskChildEvent(comment.taskId, {
+      type: 'comment',
+      action: 'updated',
+      entityId: id,
+      actorId: userId,
+    });
+
     return this.formatComment(fullComment);
   }
 
@@ -138,6 +152,12 @@ export class CommentService extends BaseService<
 
     // Log activity
     await this.logActivity(id, comment.taskId, userId, 'COMMENT_DELETE');
+    void realtimeService.emitTaskChildEvent(comment.taskId, {
+      type: 'comment',
+      action: 'deleted',
+      entityId: id,
+      actorId: userId,
+    });
 
     return { message: 'Comment deleted successfully' };
   }

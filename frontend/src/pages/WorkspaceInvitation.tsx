@@ -16,6 +16,7 @@ import {
 } from "@/lib/workspace-api"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import { cn } from "@/lib/utils"
+import { useRealtimeStore } from "@/lib/realtime"
 import type { ProjectInvitation } from "@/lib/project-member-api"
 import type { PendingInvitation } from "@/types/workspace"
 
@@ -53,11 +54,12 @@ export default function WorkspaceInvitationPage() {
   const highlightedProjectInvitationId = Number(searchParams.get("projectInvitation") ?? 0)
   const activeTab = getInitialTab(searchParams.get("tab"))
   const queryClient = useQueryClient()
+  const isRealtimeConnected = useRealtimeStore((state) => state.isConnected)
 
   const workspaceInvitationsQuery = useQuery({
     queryKey: ["my-workspace-invitations"],
     queryFn: getMyWorkspaceInvitations,
-    refetchInterval: NOTIFICATION_REFRESH_INTERVAL_MS,
+    refetchInterval: isRealtimeConnected ? false : NOTIFICATION_REFRESH_INTERVAL_MS,
     refetchIntervalInBackground: true,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,
@@ -67,7 +69,7 @@ export default function WorkspaceInvitationPage() {
   const projectInvitationsQuery = useQuery({
     queryKey: ["my-project-invitations"],
     queryFn: getMyProjectInvitations,
-    refetchInterval: NOTIFICATION_REFRESH_INTERVAL_MS,
+    refetchInterval: isRealtimeConnected ? false : NOTIFICATION_REFRESH_INTERVAL_MS,
     refetchIntervalInBackground: true,
     refetchOnMount: "always",
     refetchOnWindowFocus: true,

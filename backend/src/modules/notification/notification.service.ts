@@ -5,6 +5,7 @@ import { ApiError } from '../../common/utils/apiError';
 import { ErrorCode } from '../../types/enums';
 import { logger } from '../../common/utils/logger';
 import { PaginationMeta, ListOptions } from '../../types/interfaces';
+import { realtimeService } from '../../common/realtime';
 
 // ── Input / Response types ────────────────────────────────────────
 
@@ -86,6 +87,15 @@ export class NotificationService extends BaseService<
         'Notification not found',
       );
     }
+
+    realtimeService.emitToUser(data.userId, {
+      type: 'notification',
+      action: 'created',
+      entityId: notification.id,
+      taskId: data.taskId,
+      actorId: data.actorId,
+      userId: data.userId,
+    });
 
     return this.formatNotification(fullNotification);
   }
@@ -200,11 +210,25 @@ export class NotificationService extends BaseService<
     }
 
     const updated = await notificationRepository.markAsRead(id);
+    realtimeService.emitToUser(userId, {
+      type: 'notification',
+      action: 'read',
+      entityId: id,
+      userId,
+    });
+
     return this.formatNotification({ ...notification, ...updated });
   }
 
   async markGroupAsRead(userId: number, groupKey: string): Promise<{ updatedCount: number }> {
     const count = await notificationRepository.markGroupAsRead(userId, groupKey);
+    realtimeService.emitToUser(userId, {
+      type: 'notification',
+      action: 'read',
+      entityId: 0,
+      userId,
+    });
+
     return { updatedCount: count };
   }
 
@@ -213,6 +237,13 @@ export class NotificationService extends BaseService<
     logger.info(
       `Marked ${count} notifications as read for user ${userId}${category ? ` [${category}]` : ''}`,
     );
+    realtimeService.emitToUser(userId, {
+      type: 'notification',
+      action: 'read',
+      entityId: 0,
+      userId,
+    });
+
     return { updatedCount: count };
   }
 
@@ -227,12 +258,26 @@ export class NotificationService extends BaseService<
 
     await notificationRepository.softDelete(id);
     logger.info(`Notification deleted: ${id}`);
+    realtimeService.emitToUser(userId, {
+      type: 'notification',
+      action: 'deleted',
+      entityId: id,
+      userId,
+    });
+
     return { message: 'Notification deleted' };
   }
 
   async clearAll(userId: number, category?: string): Promise<{ deletedCount: number }> {
     const count = await notificationRepository.softDeleteAll(userId, category);
     logger.info(`Cleared ${count} notifications for user ${userId}`);
+    realtimeService.emitToUser(userId, {
+      type: 'notification',
+      action: 'cleared',
+      entityId: 0,
+      userId,
+    });
+
     return { deletedCount: count };
   }
 

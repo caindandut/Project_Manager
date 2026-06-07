@@ -45,6 +45,11 @@ export interface TaskCursorListOptions {
   orderBy: Prisma.TaskOrderByWithRelationInput[];
 }
 
+export interface ActiveAssignedTaskSummary {
+  activeTaskCount: number;
+  taskIds: number[];
+}
+
 export class TaskRepository extends BaseRepository<
   Task,
   Prisma.TaskCreateInput,
@@ -321,6 +326,54 @@ export class TaskRepository extends BaseRepository<
         `;
 
     return rows.map((row) => row.taskId);
+  }
+
+  async findActiveAssignedTaskSummary(
+    userId: number,
+    options: { projectId?: number; workspaceId?: number; limit?: number },
+  ): Promise<ActiveAssignedTaskSummary> {
+    await this.ensureTaskAssigneesTable();
+
+    const scopeFilter = options.projectId
+      ? Prisma.sql`AND t.project_id = ${options.projectId}`
+      : options.workspaceId
+        ? Prisma.sql`AND p.workspace_id = ${options.workspaceId}`
+        : Prisma.empty;
+
+    const baseWhere = Prisma.sql`
+      t.deleted_at IS NULL
+      AND p.deleted_at IS NULL
+      AND t.status NOT IN ('DONE', 'CANCELLED')
+      AND (t.assignee_id = ${userId} OR ta.user_id IS NOT NULL)
+      ${scopeFilter}
+    `;
+
+    const countRows = await prisma.$queryRaw<Array<{ activeTaskCount: bigint | number }>>`
+      SELECT COUNT(DISTINCT t.id) AS activeTaskCount
+      FROM tasks t
+      INNER JOIN projects p ON p.id = t.project_id
+      LEFT JOIN task_assignees ta
+        ON ta.task_id = t.id
+        AND ta.user_id = ${userId}
+      WHERE ${baseWhere}
+    `;
+
+    const taskIdRows = await prisma.$queryRaw<Array<{ taskId: number }>>`
+      SELECT DISTINCT t.id AS taskId
+      FROM tasks t
+      INNER JOIN projects p ON p.id = t.project_id
+      LEFT JOIN task_assignees ta
+        ON ta.task_id = t.id
+        AND ta.user_id = ${userId}
+      WHERE ${baseWhere}
+      ORDER BY t.updated_at DESC, t.id DESC
+      LIMIT ${options.limit ?? 5}
+    `;
+
+    return {
+      activeTaskCount: Number(countRows[0]?.activeTaskCount ?? 0),
+      taskIds: taskIdRows.map((row) => row.taskId),
+    };
   }
 
   async logTime(id: number, hours: number): Promise<Task> {

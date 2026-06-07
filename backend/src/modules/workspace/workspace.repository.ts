@@ -316,6 +316,13 @@ export class WorkspaceRepository extends BaseRepository<
         assignee: {
           select: { id: true, name: true, email: true, avatar: true },
         },
+        assignees: {
+          select: {
+            user: {
+              select: { id: true, name: true, email: true, avatar: true },
+            },
+          },
+        },
       },
       orderBy: { updatedAt: 'desc' },
       take,

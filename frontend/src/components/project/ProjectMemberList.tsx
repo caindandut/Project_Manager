@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { MoreHorizontal, Shield, ShieldCheck, User, UserMinus } from "lucide-react"
+import { toast } from "sonner"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +28,7 @@ import {
   useUpdateProjectMemberRoleMutation,
   useRemoveProjectMemberMutation,
 } from "@/hooks/useProjectMembers"
+import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import type { ProjectMember, ProjectRole } from "@/lib/project-member-api"
 
 // ============================================================
@@ -70,6 +72,9 @@ export default function ProjectMemberList({ projectId, canManage }: ProjectMembe
     if (!removingMember) return
     removeMutation.mutate(removingMember.id, {
       onSuccess: () => setRemovingMember(null),
+      onError: (error) => {
+        toast.error(toVietnameseErrorMessage(error, "Không thể xóa thành viên khỏi dự án."))
+      },
     })
   }
 

@@ -20,6 +20,7 @@ import {
   OwnerSystemHealth,
   MaintenanceResult,
 } from './admin.interface';
+import { realtimeService } from '../../common/realtime';
 
 export class AdminService implements IAdminService {
   // -------------------------------------------------------------------------
@@ -96,6 +97,20 @@ export class AdminService implements IAdminService {
     logger.info(
       `Admin ${performedById} ${isBlocked ? 'blocked' : 'unblocked'} user ${userId}`,
     );
+    realtimeService.emitToOwners({
+      type: 'admin',
+      action: 'updated',
+      entityId: userId,
+      actorId: performedById,
+      userId,
+    });
+    realtimeService.emitToUser(userId, {
+      type: 'admin',
+      action: 'updated',
+      entityId: userId,
+      actorId: performedById,
+      userId,
+    });
   }
 
   async updateUserSystemRole(
@@ -132,6 +147,20 @@ export class AdminService implements IAdminService {
     logger.info(
       `Admin ${performedById} changed role of user ${userId} from ${oldRole} to ${role}`,
     );
+    realtimeService.emitToOwners({
+      type: 'admin',
+      action: 'updated',
+      entityId: userId,
+      actorId: performedById,
+      userId,
+    });
+    realtimeService.emitToUser(userId, {
+      type: 'admin',
+      action: 'updated',
+      entityId: userId,
+      actorId: performedById,
+      userId,
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -190,6 +219,13 @@ export class AdminService implements IAdminService {
     });
 
     logger.info(`Owner ${performedById} cleaned ${result.deleted} expired refresh tokens`);
+    realtimeService.emitToOwners({
+      type: 'admin',
+      action: 'deleted',
+      entityId: 0,
+      actorId: performedById,
+    });
+
     return result;
   }
 
@@ -205,6 +241,13 @@ export class AdminService implements IAdminService {
     });
 
     logger.info(`Owner ${performedById} cleaned ${result.deleted} expired OTP codes`);
+    realtimeService.emitToOwners({
+      type: 'admin',
+      action: 'deleted',
+      entityId: 0,
+      actorId: performedById,
+    });
+
     return result;
   }
 
@@ -238,6 +281,12 @@ export class AdminService implements IAdminService {
     });
 
     logger.info(`Admin ${performedById} updated settings: ${keys}`);
+    realtimeService.emitToOwners({
+      type: 'admin',
+      action: 'updated',
+      entityId: 0,
+      actorId: performedById,
+    });
 
     return results;
   }

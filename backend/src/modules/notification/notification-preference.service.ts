@@ -1,5 +1,6 @@
 import { notificationPreferenceRepository } from './notification-preference.repository';
 import { logger } from '../../common/utils/logger';
+import { realtimeService } from '../../common/realtime';
 
 interface PreferenceResponse {
   eventType: string;
@@ -49,6 +50,12 @@ export class NotificationPreferenceService {
     logger.info(
       `Notification preference updated: user ${userId}, event ${eventType}, email=${pref.email}`,
     );
+    realtimeService.emitToUser(userId, {
+      type: 'notification',
+      action: 'updated',
+      entityId: pref.id,
+      userId,
+    });
 
     return {
       eventType: pref.eventType,

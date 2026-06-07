@@ -10,8 +10,8 @@ import {
   formatFullDate,
   PRIORITY_COLORS,
 } from "@/lib/calendar-utils"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import TaskAssigneeAvatars, { getTaskAssignees } from "@/components/tasks/TaskAssigneeAvatars"
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "@/types/task"
 import type { Task } from "@/types/task"
 
@@ -138,16 +138,17 @@ export function DayView({ currentDate, tasks, onTaskClick, onQuickAdd }: DayView
                 </Badge>
               </div>
             </div>
-            {task.assignee && (
+            {getTaskAssignees(task).length > 0 && (
               <div className="flex items-center gap-1.5 shrink-0">
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={task.assignee.avatar ?? undefined} />
-                  <AvatarFallback className="text-[9px] font-medium">
-                    {task.assignee.name?.[0] ?? "?"}
-                  </AvatarFallback>
-                </Avatar>
+                <TaskAssigneeAvatars
+                  task={task}
+                  maxVisible={3}
+                  avatarClassName="h-6 w-6"
+                  countClassName="h-6 w-6 text-[9px]"
+                  fallbackClassName="text-[9px]"
+                />
                 <span className="text-xs text-muted-foreground hidden sm:inline">
-                  {task.assignee.name}
+                  {getTaskAssignees(task)[0]?.name || getTaskAssignees(task)[0]?.email}
                 </span>
               </div>
             )}
