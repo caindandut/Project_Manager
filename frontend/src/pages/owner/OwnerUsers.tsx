@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, MoreHorizontal, Search, ShieldBan, ShieldCheck, UserCog, X } from 'lucide-react'
+import { Eye, MoreHorizontal, Search, ShieldBan, ShieldCheck, UserCog } from 'lucide-react'
 import { toast } from 'sonner'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -253,12 +253,7 @@ export default function OwnerUsers() {
       <Dialog open={Boolean(selectedUserId)} onOpenChange={(open) => !open && setSelectedUserId(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Chi tiết người dùng
-              <Button variant="ghost" size="icon" className="ml-auto h-7 w-7" onClick={() => setSelectedUserId(null)}>
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogTitle>
+            <DialogTitle>Chi tiết người dùng</DialogTitle>
             <DialogDescription>Quyền hệ thống, workspace và dự án người này đang tham gia.</DialogDescription>
           </DialogHeader>
 

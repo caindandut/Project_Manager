@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Search, MoreHorizontal, ShieldCheck, ShieldBan, Eye, UserCog, X } from 'lucide-react'
+import { Search, MoreHorizontal, ShieldCheck, ShieldBan, Eye, UserCog } from 'lucide-react'
 import { toast } from 'sonner'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -299,17 +299,7 @@ export default function AdminUsers() {
       <Dialog open={!!selectedUserId} onOpenChange={(open) => !open && setSelectedUserId(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              Chi tiết người dùng
-              <Button
-                variant="ghost"
-                size="sm"
-                className="ml-auto h-6 w-6 p-0"
-                onClick={() => setSelectedUserId(null)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </DialogTitle>
+            <DialogTitle>Chi tiết người dùng</DialogTitle>
             <DialogDescription>Thông tin tài khoản và danh sách workspace.</DialogDescription>
           </DialogHeader>
 
