@@ -1,15 +1,118 @@
 import nodemailer from 'nodemailer';
-import { config } from '../../config';
+import { config, prisma } from '../../config';
 import { logger } from './logger';
-
-let missingEmailConfigWarned = false;
-
 
 interface SendEmailOptions {
   to: string;
   subject: string;
   html: string;
 }
+
+interface EmailTransportConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  from: string;
+}
+
+const SMTP_SETTING_KEYS = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from'] as const;
+
+let missingEmailConfigWarningKey: string | null = null;
+
+const trimValue = (value: string | undefined | null): string | undefined => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const parsePort = (value: string | undefined, fallback: number): number => {
+  if (!value) return fallback;
+
+  const parsed = Number.parseInt(value, 10);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const getDbSmtpSettings = async (): Promise<Partial<Record<(typeof SMTP_SETTING_KEYS)[number], string>>> => {
+  try {
+    const settings = await prisma.systemSetting.findMany({
+      where: { key: { in: [...SMTP_SETTING_KEYS] } },
+      select: { key: true, value: true },
+    });
+
+    return settings.reduce<Partial<Record<(typeof SMTP_SETTING_KEYS)[number], string>>>(
+      (acc, setting) => {
+        if (SMTP_SETTING_KEYS.includes(setting.key as (typeof SMTP_SETTING_KEYS)[number])) {
+          acc[setting.key as (typeof SMTP_SETTING_KEYS)[number]] = setting.value;
+        }
+        return acc;
+      },
+      {},
+    );
+  } catch (error) {
+    logger.warn('Could not load SMTP settings from database; falling back to environment variables.', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return {};
+  }
+};
+
+const resolveEmailTransportConfig = async (): Promise<EmailTransportConfig> => {
+  const dbSettings = await getDbSmtpSettings();
+  const user = trimValue(dbSettings.smtp_user) || trimValue(process.env.EMAIL_USER) || '';
+  const pass = trimValue(dbSettings.smtp_pass) || trimValue(process.env.EMAIL_PASS) || '';
+  const from =
+    trimValue(dbSettings.smtp_from) ||
+    trimValue(process.env.EMAIL_FROM) ||
+    user;
+
+  return {
+    host: trimValue(dbSettings.smtp_host) || config.EMAIL_HOST || 'smtp.gmail.com',
+    port: parsePort(trimValue(dbSettings.smtp_port), config.EMAIL_PORT || 587),
+    secure: parsePort(trimValue(dbSettings.smtp_port), config.EMAIL_PORT || 587) === 465,
+    user,
+    pass,
+    from,
+  };
+};
+
+const validateEmailTransportConfig = (emailConfig: EmailTransportConfig): void => {
+  const missingKeys = [
+    !emailConfig.user ? 'smtp_user/EMAIL_USER' : null,
+    !emailConfig.pass ? 'smtp_pass/EMAIL_PASS' : null,
+    !emailConfig.from ? 'smtp_from/EMAIL_FROM' : null,
+  ].filter((key): key is string => Boolean(key));
+
+  if (missingKeys.length === 0) return;
+
+  const warningKey = missingKeys.join(',');
+  if (missingEmailConfigWarningKey !== warningKey) {
+    missingEmailConfigWarningKey = warningKey;
+    logger.error('Email SMTP is not configured completely.', {
+      missing: missingKeys,
+      host: emailConfig.host,
+      port: emailConfig.port,
+    });
+  }
+
+  throw new Error(`Email SMTP is not configured. Missing: ${missingKeys.join(', ')}`);
+};
+
+const createSmtpTransport = (emailConfig: EmailTransportConfig) => {
+  return nodemailer.createTransport({
+    pool: true,
+    host: emailConfig.host,
+    port: emailConfig.port,
+    secure: emailConfig.secure,
+    auth: {
+      user: emailConfig.user,
+      pass: emailConfig.pass,
+    },
+    tls: {
+      rejectUnauthorized: false,
+    },
+  });
+};
 
 export async function sendWorkspaceInvitationEmail(options: {
   to: string;
@@ -150,98 +253,60 @@ export async function sendNotificationEmail(options: {
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
-  // 1. Try Brevo HTTP API
-  const brevoApiKey = process.env.BREVO_API_KEY;
-  if (brevoApiKey) {
-    try {
-      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
-        method: 'POST',
-        headers: {
-          'api-key': brevoApiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sender: { email: config.EMAIL_FROM, name: 'Project Manager' },
-          to: [{ email: options.to }],
-          subject: options.subject,
-          htmlContent: options.html,
-        }),
-      });
+  const emailConfig = await resolveEmailTransportConfig();
+  validateEmailTransportConfig(emailConfig);
 
-      if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Brevo API returned status ${response.status}: ${errText}`);
-      }
+  try {
+    const transporter = createSmtpTransport(emailConfig);
+    await transporter.sendMail({
+      from: emailConfig.from,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+    });
 
-      logger.info(`Email sent via Brevo API to ${options.to}`);
-      return;
-    } catch (apiError: any) {
-      logger.error('Failed to send email via Brevo API, falling back to SMTP...', {
-        error: apiError?.message || String(apiError),
-      });
-    }
+    logger.info(`Email sent via Google SMTP to ${options.to}`, {
+      host: emailConfig.host,
+      port: emailConfig.port,
+      from: emailConfig.from,
+    });
+  } catch (error) {
+    logger.error(`Failed to send email via Google SMTP to ${options.to}`, {
+      host: emailConfig.host,
+      port: emailConfig.port,
+      from: emailConfig.from,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
   }
-
-  // 2. Fallback to standard SMTP
-  if (!config.EMAIL_USER || !config.EMAIL_PASS || !config.EMAIL_FROM) {
-    if (!missingEmailConfigWarned) {
-      missingEmailConfigWarned = true;
-      logger.error('Email is not configured. Please set EMAIL_USER, EMAIL_PASS, and EMAIL_FROM.');
-    }
-    throw new Error('Email is not configured');
-  }
-
-  const transporter = nodemailer.createTransport({
-    pool: true,
-    host: config.EMAIL_HOST,
-    port: config.EMAIL_PORT,
-    secure: config.EMAIL_PORT === 465,
-    auth: {
-      user: config.EMAIL_USER,
-      pass: config.EMAIL_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-  });
-
-  await transporter.sendMail({
-    from: config.EMAIL_FROM,
-    to: options.to,
-    subject: options.subject,
-    html: options.html,
-  });
-  logger.info(`Email sent via SMTP to ${options.to}`);
 }
 
 export async function verifyEmailTransport(): Promise<void> {
-  if (process.env.BREVO_API_KEY) {
-    logger.info('Email transport verified successfully (using Brevo HTTP API).');
-    return;
-  }
-
-  if (!config.EMAIL_USER || !config.EMAIL_PASS || !config.EMAIL_FROM) {
-    logger.warn('Email transport verification skipped: EMAIL_USER, EMAIL_PASS, or EMAIL_FROM is missing.');
+  const emailConfig = await resolveEmailTransportConfig();
+  try {
+    validateEmailTransportConfig(emailConfig);
+  } catch (error) {
+    logger.warn('Email transport verification skipped because SMTP configuration is incomplete.', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return;
   }
 
   try {
-    const transporter = nodemailer.createTransport({
-      host: config.EMAIL_HOST,
-      port: config.EMAIL_PORT,
-      secure: config.EMAIL_PORT === 465,
-      auth: {
-        user: config.EMAIL_USER,
-        pass: config.EMAIL_PASS,
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
+    const transporter = createSmtpTransport(emailConfig);
     await transporter.verify();
-    logger.info('Email transport verified successfully.');
+    logger.info('Email transport verified successfully via Google SMTP.', {
+      host: emailConfig.host,
+      port: emailConfig.port,
+      from: emailConfig.from,
+    });
   } catch (error) {
-    logger.error('Email transport verification failed', error);
+    logger.error('Email transport verification failed via Google SMTP.', {
+      host: emailConfig.host,
+      port: emailConfig.port,
+      from: emailConfig.from,
+      error: error instanceof Error ? error.message : String(error),
+    });
   }
 }
 

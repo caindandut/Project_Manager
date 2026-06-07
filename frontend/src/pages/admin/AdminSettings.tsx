@@ -47,6 +47,7 @@ const settingGroups: { title: string; description: string; category: string; fie
       { key: 'smtp_port', label: 'SMTP Port', placeholder: '(đang dùng giá trị mặc định từ .env)', category: 'smtp' },
       { key: 'smtp_user', label: 'SMTP User', placeholder: '(đang dùng giá trị mặc định từ .env)', category: 'smtp' },
       { key: 'smtp_pass', label: 'SMTP Password', placeholder: '(đang dùng giá trị mặc định từ .env)', type: 'password', category: 'smtp' },
+      { key: 'smtp_from', label: 'SMTP From', placeholder: '(nếu trống sẽ dùng SMTP User)', category: 'smtp' },
     ],
   },
 ]
