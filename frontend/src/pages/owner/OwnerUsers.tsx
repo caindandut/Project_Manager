@@ -95,7 +95,7 @@ export default function OwnerUsers() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">User Governance</h1>
+        <h1 className="text-2xl font-semibold text-foreground">Quản trị người dùng</h1>
         <p className="text-sm text-muted-foreground">
           Owner quản lý tài khoản hệ thống, phân quyền OWNER và trạng thái truy cập.
         </p>

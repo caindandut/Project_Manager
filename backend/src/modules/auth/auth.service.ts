@@ -98,7 +98,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     }
 
     if (user.isBlocked) {
-      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Your account has been blocked. Please contact the administrator.');
+      throw ApiError.forbidden(ErrorCode.USER_BLOCKED, 'Your account has been blocked. Please contact the administrator.');
     }
 
     if (!user.password) {
@@ -162,7 +162,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     if (user.deletedAt) {
       throw ApiError.forbidden(ErrorCode.USER_DELETED, 'This account has been deactivated');
     } else if (user.isBlocked) {
-      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Your account has been blocked. Please contact the administrator.');
+      throw ApiError.forbidden(ErrorCode.USER_BLOCKED, 'Your account has been blocked. Please contact the administrator.');
     }
 
     // Check if user has any workspaces
@@ -203,6 +203,10 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     const user = await authRepository.findById(decoded.userId as number);
     if (!user || user.deletedAt) {
       throw ApiError.unauthorized(ErrorCode.AUTH_USER_DELETED, 'User not found or deactivated');
+    }
+
+    if (user.isBlocked) {
+      throw ApiError.forbidden(ErrorCode.USER_BLOCKED, 'Your account has been blocked. Please contact the administrator.');
     }
 
     await authRepository.deleteRefreshToken(refreshToken);
@@ -344,6 +348,10 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     const user = await authRepository.findById(userId);
     if (!user) {
       throw ApiError.notFound(ErrorCode.USER_NOT_FOUND, 'User not found');
+    }
+
+    if (user.isBlocked) {
+      throw ApiError.forbidden(ErrorCode.USER_BLOCKED, 'Your account has been blocked. Please contact the administrator.');
     }
 
     const hasWorkspaces = await authRepository.hasWorkspaces(userId);

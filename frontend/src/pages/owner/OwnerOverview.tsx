@@ -66,42 +66,6 @@ function StatCard({
   )
 }
 
-function ServiceStatusRow({
-  icon: Icon,
-  name,
-  configured,
-  configuredLabel,
-  notConfiguredLabel,
-}: {
-  icon: typeof Mail
-  name: string
-  configured: boolean
-  configuredLabel: string
-  notConfiguredLabel: string
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-border/50 bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50">
-      <div className="flex items-center gap-3">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-background text-muted-foreground shadow-sm">
-          <Icon className="h-4 w-4" />
-        </div>
-        <span className="text-sm font-medium text-foreground">{name}</span>
-      </div>
-      {configured ? (
-        <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-600">
-          <CheckCircle2 className="h-3.5 w-3.5" />
-          {configuredLabel}
-        </span>
-      ) : (
-        <span className="flex items-center gap-1.5 text-xs font-medium text-amber-600">
-          <AlertTriangle className="h-3.5 w-3.5" />
-          {notConfiguredLabel}
-        </span>
-      )}
-    </div>
-  )
-}
-
 function ActivityTimeline({
   activities,
   isLoading,
@@ -349,41 +313,6 @@ export default function OwnerOverview() {
 
         {/* Right sidebar — takes 2/5 */}
         <div className="space-y-6 xl:col-span-2">
-          {/* System Status */}
-          <Card className="border-border">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-base">Trạng thái hệ thống</CardTitle>
-                  <CardDescription>Cấu hình vận hành quan trọng</CardDescription>
-                </div>
-                <NavLink
-                  to="/owner/settings"
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  Chi tiết
-                  <ArrowUpRight className="h-3 w-3" />
-                </NavLink>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <ServiceStatusRow
-                icon={Mail}
-                name="SMTP"
-                configured={!!stats?.emailConfigured}
-                configuredLabel="Đã cấu hình"
-                notConfiguredLabel="Chưa cấu hình"
-              />
-              <ServiceStatusRow
-                icon={Mail}
-                name="Gmail API"
-                configured={!!stats?.gmailApiConfigured}
-                configuredLabel="Đã cấu hình"
-                notConfiguredLabel="Chưa dùng"
-              />
-            </CardContent>
-          </Card>
-
           {/* Recent Activity */}
           <Card className="border-border">
             <CardHeader className="pb-3">

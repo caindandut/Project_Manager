@@ -36,14 +36,13 @@ export default function GoogleCallbackPage() {
 
       if (errorParam) {
         const decodedError = decodeURIComponent(errorParam);
-        toast.error(toVietnameseErrorMessage(new Error(decodedError), decodedError));
         if (isLinkingGoogle) {
           window.localStorage.removeItem('isLinkingGoogle');
           const lastSlug = getLastWorkspaceSlug();
           navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
         } else {
           logout();
-          navigate('/login', { replace: true });
+          navigate('/login', { replace: true, state: { error: decodedError } });
         }
         return;
       }
@@ -52,14 +51,16 @@ export default function GoogleCallbackPage() {
       const refreshToken = searchParams.get('refreshToken');
 
       if (!accessToken) {
-        toast.error('Không nhận được mã truy cập từ Google.');
         if (isLinkingGoogle) {
           window.localStorage.removeItem('isLinkingGoogle');
           const lastSlug = getLastWorkspaceSlug();
           navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
         } else {
           logout();
-          navigate('/login', { replace: true });
+          navigate('/login', {
+            replace: true,
+            state: { error: 'Không nhận được mã truy cập từ Google.', isTranslated: true }
+          });
         }
         return;
       }
@@ -119,13 +120,14 @@ export default function GoogleCallbackPage() {
         const normalizedError = normalizeApiError(error);
         if (isSessionInvalidError(normalizedError)) {
           logout();
-          toast.error(
-            toVietnameseErrorMessage(
-              normalizedError,
-              'Không thể hoàn tất đăng nhập bằng Google. Vui lòng thử lại.',
-            ),
+          const errorMsg = toVietnameseErrorMessage(
+            normalizedError,
+            'Không thể hoàn tất đăng nhập bằng Google. Vui lòng thử lại.',
           );
-          navigate('/login', { replace: true });
+          navigate('/login', {
+            replace: true,
+            state: { error: errorMsg, isTranslated: true }
+          });
           return;
         }
 

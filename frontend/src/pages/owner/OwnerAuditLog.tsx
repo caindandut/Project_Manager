@@ -1,16 +1,10 @@
 import { useState } from 'react'
-import { Clock, Settings, ShieldBan, ShieldCheck, UserCog, Trash2 } from 'lucide-react'
+import { Clock, Settings, ShieldBan, ShieldCheck, UserCog, Trash2, UserPlus, Building2 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
@@ -20,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useAdminAuditLogs } from '@/hooks/useAdmin'
+import { useAdminAuditLogs, useAdminRecentActivity } from '@/hooks/useAdmin'
 
 const actionIcons: Record<string, typeof ShieldCheck> = {
   USER_BLOCKED: ShieldBan,
@@ -68,47 +62,29 @@ const getAvatarUrl = (avatarPath?: string | null) => {
 
 export default function OwnerAuditLog() {
   const [page, setPage] = useState(1)
-  const [actionFilter, setActionFilter] = useState('all')
   const limit = 20
+
   const logsQuery = useAdminAuditLogs({
     page,
     limit,
-    action: actionFilter === 'all' ? undefined : actionFilter,
   })
   const totalPages = logsQuery.data?.meta.totalPages ?? 1
+
+  const systemActivityQuery = useAdminRecentActivity(50)
 
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold text-foreground">Audit & Security Log</h1>
+        <h1 className="text-2xl font-semibold text-foreground">Nhật ký hệ thống</h1>
         <p className="text-sm text-muted-foreground">
-          Theo dõi các thao tác nhạy cảm do Owner thực hiện trên hệ thống.
+          Theo dõi các hoạt động bảo mật của Owner và hoạt động đăng ký, workspace trên hệ thống.
         </p>
       </div>
 
       <Card className="border-border">
-        <CardContent className="p-4">
-          <Select value={actionFilter} onValueChange={(value) => { setActionFilter(value); setPage(1) }}>
-            <SelectTrigger className="h-9 w-[220px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Mọi hành động</SelectItem>
-              <SelectItem value="USER_BLOCKED">Khóa tài khoản</SelectItem>
-              <SelectItem value="USER_UNBLOCKED">Mở khóa tài khoản</SelectItem>
-              <SelectItem value="USER_ROLE_CHANGED">Đổi quyền hệ thống</SelectItem>
-              <SelectItem value="SETTINGS_UPDATED">Cập nhật cấu hình</SelectItem>
-              <SelectItem value="MAINTENANCE_OTP_CODES_CLEANED">Dọn dẹp mã OTP</SelectItem>
-              <SelectItem value="MAINTENANCE_REFRESH_TOKENS_CLEANED">Dọn dẹp Token</SelectItem>
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      <Card className="border-border">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between text-base">
-            Nhật ký Owner
+            Hoạt động của Owner
             <span className="text-sm font-normal text-muted-foreground">{logsQuery.data?.meta.total ?? 0} bản ghi</span>
           </CardTitle>
         </CardHeader>
@@ -184,6 +160,68 @@ export default function OwnerAuditLog() {
             </Button>
           </div>
         )}
+      </Card>
+
+      <Card className="border-border">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center justify-between text-base">
+            Hoạt động gần đây của hệ thống
+            <span className="text-sm font-normal text-muted-foreground">
+              {(systemActivityQuery.data ?? []).length} hoạt động gần đây
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {systemActivityQuery.isLoading ? (
+            <div className="space-y-2 p-4">
+              {Array.from({ length: 6 }).map((_, index) => <Skeleton key={index} className="h-14 w-full" />)}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Hành động</TableHead>
+                  <TableHead>Mô tả</TableHead>
+                  <TableHead>Thời gian</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(systemActivityQuery.data ?? []).length ? (
+                  (systemActivityQuery.data ?? []).map((activity) => {
+                    const isUser = activity.type === 'USER_REGISTERED'
+                    const Icon = isUser ? UserPlus : Building2
+                    return (
+                      <TableRow key={`${activity.type}-${activity.id}`}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className={`flex h-8 w-8 items-center justify-center rounded-md ${isUser ? 'bg-blue-500/10 text-blue-600' : 'bg-emerald-500/10 text-emerald-600'}`}>
+                              <Icon className="h-4 w-4" />
+                            </div>
+                            <Badge variant="outline" className={isUser ? 'border-blue-500/30 text-blue-600' : 'border-emerald-500/30 text-emerald-600'}>
+                              {isUser ? 'Đăng ký mới' : 'Workspace mới'}
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <p className="text-sm font-medium">{activity.description}</p>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(activity.createdAt).toLocaleString('vi-VN')}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                      Chưa có hoạt động hệ thống nào.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
       </Card>
     </div>
   )

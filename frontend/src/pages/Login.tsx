@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArrowLeft, LoaderCircle, Mail } from 'lucide-react'
@@ -26,10 +26,30 @@ export default function LoginPage() {
   const lastSlug = getLastWorkspaceSlug()
   const defaultRedirect = lastSlug ? `/workspaces/${lastSlug}` : '/'
   const redirectTo = (location.state as { from?: string } | null)?.from || defaultRedirect
+  const shownErrorRef = useRef<string | null>(null)
 
   useEffect(() => {
     document.title = 'Đăng nhập | Project Manager'
-  }, [])
+
+    const state = location.state as { error?: string; isTranslated?: boolean } | null
+    if (state?.error && shownErrorRef.current !== state.error) {
+      shownErrorRef.current = state.error
+      if (state.isTranslated) {
+        toast.error(state.error)
+      } else {
+        toast.error(toVietnameseErrorMessage(new Error(state.error), state.error))
+      }
+      // Clear error state while preserving other values (like the redirection target "from")
+      navigate('/login', {
+        replace: true,
+        state: {
+          ...location.state,
+          error: undefined,
+          isTranslated: undefined,
+        },
+      })
+    }
+  }, [location.state, navigate])
 
   if (isAuthenticated) {
     return <Navigate to={user?.systemRole === 'OWNER' ? '/owner' : redirectTo} replace />

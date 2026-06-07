@@ -92,6 +92,7 @@ export const isSessionInvalidError = (error: unknown): boolean => {
     status === 401 ||
     code === 'AUTH_TOKEN_INVALID' ||
     code === 'AUTH_USER_DELETED' ||
+    code === 'USER_BLOCKED' ||
     Boolean(code && REFRESH_TOKEN_AUTH_FAILURE_CODES.has(code))
   )
 }
