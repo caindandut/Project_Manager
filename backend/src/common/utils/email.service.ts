@@ -227,15 +227,7 @@ const sendEmailViaGmailApi = async (
 };
 
 const verifyGmailApi = async (emailConfig: EmailTransportConfig): Promise<void> => {
-  const accessToken = await getGmailAccessToken(emailConfig);
-  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-
-  if (!response.ok) {
-    const responseText = await response.text();
-    throw new Error(`Gmail API profile check failed with ${response.status}: ${responseText}`);
-  }
+  await getGmailAccessToken(emailConfig);
 };
 
 export async function sendWorkspaceInvitationEmail(options: {
