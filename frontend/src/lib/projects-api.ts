@@ -1,9 +1,10 @@
-import apiClient from "./api-client"
+import apiClient, { unwrapResponse } from "./api-client"
+import type { ApiResponse, PaginatedResponse } from "@/types/api"
 import type { Project, ProjectWithStats, Task } from "@/types/project"
 
 export interface ProjectListResponse {
   data: Project[]
-  pagination: {
+  meta: {
     page: number
     limit: number
     total: number
@@ -16,21 +17,31 @@ export interface ProjectDetailResponse extends ProjectWithStats {
 }
 
 export async function getProjects(workspaceId: string | number, page = 1, limit = 20): Promise<ProjectListResponse> {
-  const response = await apiClient.get<ProjectListResponse>(
+  const response = await apiClient.get<PaginatedResponse<Project>>(
     `/workspaces/${workspaceId}/projects`,
     { params: { page, limit } }
   )
-  return response.data
+  const projects = unwrapResponse(response)
+
+  return {
+    data: projects,
+    meta: response.data.meta ?? {
+      page,
+      limit,
+      total: projects.length,
+      totalPages: 0,
+    },
+  }
 }
 
 export async function getProjectDetail(
   workspaceId: string | number,
   projectId: number
 ): Promise<ProjectDetailResponse> {
-  const response = await apiClient.get<ProjectDetailResponse>(
+  const response = await apiClient.get<ApiResponse<ProjectDetailResponse>>(
     `/workspaces/${workspaceId}/projects/${projectId}`
   )
-  return response.data
+  return unwrapResponse(response)
 }
 
 export interface CreateProjectPayload {
@@ -43,9 +54,9 @@ export async function createProject(
   workspaceId: string | number,
   payload: CreateProjectPayload
 ): Promise<Project> {
-  const response = await apiClient.post<Project>(
+  const response = await apiClient.post<ApiResponse<Project>>(
     `/workspaces/${workspaceId}/projects`,
     payload
   )
-  return response.data
+  return unwrapResponse(response)
 }
