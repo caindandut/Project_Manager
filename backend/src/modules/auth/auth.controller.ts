@@ -135,7 +135,7 @@ export class AuthController extends BaseController {
 
   refresh = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
-      const refreshToken = req.cookies?.refreshToken || req.body?.refreshToken;
+      const refreshToken = req.body?.refreshToken || req.cookies?.refreshToken;
       if (!refreshToken) {
         throw ApiError.unauthorized(ErrorCode.AUTH_REFRESH_TOKEN_INVALID, 'Refresh token required');
       }

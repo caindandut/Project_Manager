@@ -15,6 +15,22 @@ declare module 'axios' {
 }
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1'
+const AUTH_TOKEN_EXPIRED_CODE = 'AUTH_TOKEN_EXPIRED'
+const REFRESH_TOKEN_AUTH_FAILURE_CODES = new Set([
+  'AUTH_REFRESH_TOKEN_INVALID',
+  'AUTH_REFRESH_TOKEN_EXPIRED',
+])
+const REFRESH_TOKEN_BUFFER_MS = 60 * 1000
+const REFRESH_RETRY_DELAY_MS = 60 * 1000
+
+interface JwtPayload {
+  exp?: number
+}
+
+export interface ApiClientError extends Error {
+  code?: string
+  status?: number
+}
 
 const getStoredAccessToken = (): string | null => {
   if (typeof window === 'undefined') {
@@ -47,11 +63,126 @@ const refreshClient = axios.create({
 })
 
 let refreshTokenPromise: Promise<string> | null = null
+let refreshTimerId: number | null = null
+
+const getApiErrorCode = (error: unknown): string | undefined => {
+  if (!axios.isAxiosError<ApiResponse<unknown>>(error)) {
+    return undefined
+  }
+
+  return error.response?.data?.error?.code
+}
+
+const isAccessTokenExpiredError = (
+  error: AxiosError<ApiResponse<unknown>>,
+): boolean => error.response?.data?.error?.code === AUTH_TOKEN_EXPIRED_CODE
+
+const isRefreshTokenAuthFailure = (error: unknown): boolean => {
+  const code = getApiErrorCode(error)
+  return Boolean(code && REFRESH_TOKEN_AUTH_FAILURE_CODES.has(code))
+}
+
+export const isSessionInvalidError = (error: unknown): boolean => {
+  if (!error || typeof error !== 'object') {
+    return false
+  }
+
+  const { code, status } = error as ApiClientError
+  return (
+    status === 401 ||
+    code === 'AUTH_TOKEN_INVALID' ||
+    code === 'AUTH_USER_DELETED' ||
+    Boolean(code && REFRESH_TOKEN_AUTH_FAILURE_CODES.has(code))
+  )
+}
+
+const decodeBase64Url = (value: string): string => {
+  const normalized = value.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = normalized.padEnd(normalized.length + ((4 - (normalized.length % 4)) % 4), '=')
+  return window.atob(padded)
+}
+
+const getAccessTokenExpiresAt = (token: string): number | null => {
+  if (typeof window === 'undefined') {
+    return null
+  }
+
+  const [, payload] = token.split('.')
+  if (!payload) {
+    return null
+  }
+
+  try {
+    const parsed: unknown = JSON.parse(decodeBase64Url(payload))
+    if (!parsed || typeof parsed !== 'object' || !('exp' in parsed)) {
+      return null
+    }
+
+    const { exp } = parsed as JwtPayload
+    return typeof exp === 'number' ? exp * 1000 : null
+  } catch {
+    return null
+  }
+}
+
+export const clearScheduledTokenRefresh = (): void => {
+  if (typeof window === 'undefined') {
+    return
+  }
+
+  if (refreshTimerId !== null) {
+    window.clearTimeout(refreshTimerId)
+    refreshTimerId = null
+  }
+}
+
+const scheduleRefreshRetry = (): void => {
+  clearScheduledTokenRefresh()
+  if (!getStoredAccessToken() || !getStoredRefreshToken()) {
+    return
+  }
+
+  refreshTimerId = window.setTimeout(() => {
+    refreshTimerId = null
+    void refreshAccessToken().catch((error) => {
+      if (isRefreshTokenAuthFailure(error)) {
+        useAuthStore.getState().logout()
+      } else {
+        scheduleRefreshRetry()
+      }
+    })
+  }, REFRESH_RETRY_DELAY_MS)
+}
+
+export const scheduleAccessTokenRefresh = (accessToken: string | null): void => {
+  clearScheduledTokenRefresh()
+
+  if (!accessToken || !getStoredRefreshToken() || typeof window === 'undefined') {
+    return
+  }
+
+  const expiresAt = getAccessTokenExpiresAt(accessToken)
+  if (!expiresAt) {
+    return
+  }
+
+  const delayMs = Math.max(expiresAt - Date.now() - REFRESH_TOKEN_BUFFER_MS, 0)
+  refreshTimerId = window.setTimeout(() => {
+    refreshTimerId = null
+    void refreshAccessToken().catch((error) => {
+      if (isRefreshTokenAuthFailure(error)) {
+        useAuthStore.getState().logout()
+      } else {
+        scheduleRefreshRetry()
+      }
+    })
+  }, delayMs)
+}
 
 const refreshAccessToken = async (): Promise<string> => {
   if (!refreshTokenPromise) {
     refreshTokenPromise = refreshClient
-      .post<ApiResponse<{ accessToken: string; refreshToken?: string }>>('/auth/refresh', {
+      .post<ApiResponse<{ accessToken: string; refreshToken?: string; expiresIn?: number }>>('/auth/refresh', {
         refreshToken: getStoredRefreshToken(),
       })
       .then((refreshResponse) => {
@@ -64,6 +195,7 @@ const refreshAccessToken = async (): Promise<string> => {
         if (refreshResponse.data.data?.refreshToken) {
           useAuthStore.getState().setRefreshToken(refreshResponse.data.data.refreshToken)
         }
+        scheduleAccessTokenRefresh(refreshedToken)
         return refreshedToken
       })
       .finally(() => {
@@ -96,11 +228,11 @@ apiClient.interceptors.request.use((config) => {
 
 apiClient.interceptors.response.use(
   (response: AxiosResponse<ApiResponse<unknown>>) => response,
-  async (error: AxiosError<ApiResponse<{ accessToken: string }>>) => {
+  async (error: AxiosError<ApiResponse<unknown>>) => {
     const originalRequest = error.config
 
     if (
-      error.response?.status === 401 &&
+      isAccessTokenExpiredError(error) &&
       originalRequest &&
       !originalRequest._retry &&
       !originalRequest.url?.includes('/auth/refresh')
@@ -113,7 +245,9 @@ apiClient.interceptors.response.use(
 
         return apiClient(originalRequest)
       } catch (refreshError) {
-        useAuthStore.getState().logout()
+        if (isRefreshTokenAuthFailure(refreshError)) {
+          useAuthStore.getState().logout()
+        }
         return Promise.reject(normalizeApiError(refreshError))
       }
     }
@@ -136,8 +270,11 @@ export const normalizeApiError = (error: unknown): Error => {
       error.response?.data?.error?.message ||
       error.message ||
       'Unexpected API error'
+    const apiError = new Error(message) as ApiClientError
+    apiError.code = error.response?.data?.error?.code
+    apiError.status = error.response?.status
 
-    return new Error(message)
+    return apiError
   }
 
   if (error instanceof Error) {
@@ -145,6 +282,24 @@ export const normalizeApiError = (error: unknown): Error => {
   }
 
   return new Error('Unexpected API error')
+}
+
+if (typeof window !== 'undefined') {
+  scheduleAccessTokenRefresh(getStoredAccessToken())
+  useAuthStore.subscribe((state, previousState) => {
+    if (
+      state.accessToken === previousState.accessToken &&
+      state.refreshToken === previousState.refreshToken
+    ) {
+      return
+    }
+
+    if (state.accessToken && state.refreshToken) {
+      scheduleAccessTokenRefresh(state.accessToken)
+    } else {
+      clearScheduledTokenRefresh()
+    }
+  })
 }
 
 export default apiClient

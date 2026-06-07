@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import apiClient, { normalizeApiError, unwrapResponse } from '@/lib/api-client'
+import apiClient, { isSessionInvalidError, normalizeApiError, unwrapResponse } from '@/lib/api-client'
 import { useAuthStore, type AuthUser } from '@/stores/authStore'
 import type { ApiResponse } from '@/types/api'
 
@@ -92,10 +92,10 @@ export const useAuth = () => {
   }, [meQuery.data, setHydratedAuth, setUser])
 
   useEffect(() => {
-    if (meQuery.isError) {
+    if (meQuery.isError && isSessionInvalidError(meQuery.error)) {
       clearAuthSession()
     }
-  }, [clearAuthSession, meQuery.isError])
+  }, [clearAuthSession, meQuery.error, meQuery.isError])
 
   useEffect(() => {
     if (!accessToken && !hasHydratedAuth) {

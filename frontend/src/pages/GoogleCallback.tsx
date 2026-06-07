@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import apiClient, { normalizeApiError, unwrapResponse } from '@/lib/api-client';
+import apiClient, { isSessionInvalidError, normalizeApiError, unwrapResponse } from '@/lib/api-client';
 import ThemeToggle from '@/components/ThemeToggle';
 import { toVietnameseErrorMessage } from '@/lib/error-messages';
 import { useAuthStore, getLastWorkspaceSlug, type AuthUser } from '@/stores/authStore';
@@ -109,14 +109,39 @@ export default function GoogleCallbackPage() {
           navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
         }
       } catch (error) {
-        logout();
+        const normalizedError = normalizeApiError(error);
+        if (isSessionInvalidError(normalizedError)) {
+          logout();
+          toast.error(
+            toVietnameseErrorMessage(
+              normalizedError,
+              'Không thể hoàn tất đăng nhập bằng Google. Vui lòng thử lại.',
+            ),
+          );
+          navigate('/login', { replace: true });
+          return;
+        }
+
         toast.error(
           toVietnameseErrorMessage(
-            normalizeApiError(error),
-            'Không thể hoàn tất đăng nhập bằng Google. Vui lòng thử lại.',
+            normalizedError,
+            'Không thể đồng bộ thông tin mới nhất, nhưng phiên đăng nhập vẫn hợp lệ.',
           ),
         );
-        navigate('/login', { replace: true });
+
+        if (isLinkingGoogle) {
+          window.localStorage.removeItem('isLinkingGoogle');
+          const lastSlug = getLastWorkspaceSlug();
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
+          return;
+        }
+
+        if (requireOnboardingParam) {
+          navigate('/onboarding/profile', { replace: true });
+        } else {
+          const lastSlug = getLastWorkspaceSlug();
+          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
+        }
       }
     };
 

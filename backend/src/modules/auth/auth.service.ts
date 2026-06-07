@@ -3,6 +3,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import crypto from 'crypto';
 import path from 'path';
 import fs from 'fs';
+import type { User } from '@prisma/client';
 import { config } from '../../config';
 import { prisma } from '../../config';
 import { authRepository } from './auth.repository';
@@ -51,6 +52,12 @@ const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
 const OTP_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_TYPE_REGISTRATION = 'REGISTRATION';
+const ACCESS_TOKEN_EXPIRES_IN_SECONDS = 15 * 60;
+const REFRESH_TOKEN_EXPIRES_IN_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface AuthSessionOptions {
+  requireOnboarding?: boolean;
+}
 
 export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfileInput> {
   async register(data: RegisterInput) {
@@ -105,28 +112,11 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
 
     const hasWorkspaces = await authRepository.hasWorkspaces(user.id);
 
-    const accessToken = this.generateAccessToken(user);
-    const refreshToken = this.generateRefreshToken(user);
-
     logger.info(`User logged in: ${user.email}`);
 
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatar: user.avatar,
-        bio: user.bio,
-        systemRole: user.systemRole,
-        googleId: user.googleId,
-        googleAvatar: user.googleAvatar,
-        hasPassword: user.password !== null,
-      },
-      accessToken,
-      refreshToken,
-      expiresIn: 900, // 15 minutes
+    return this.createAuthSession(user, {
       requireOnboarding: !hasWorkspaces,
-    };
+    });
   }
 
   async googleLogin(payload: GoogleUserPayload, currentUserId?: number) {
@@ -178,28 +168,11 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     // Check if user has any workspaces
     const hasWorkspaces = await authRepository.hasWorkspaces(user.id);
 
-    const accessToken = this.generateAccessToken(user);
-    const refreshToken = this.generateRefreshToken(user);
-
     logger.info(`User logged in via Google OAuth: ${user.email}`);
 
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatar: user.avatar,
-        bio: user.bio,
-        systemRole: user.systemRole,
-        googleId: user.googleId,
-        googleAvatar: user.googleAvatar,
-        hasPassword: user.password !== null,
-      },
-      accessToken,
-      refreshToken,
-      expiresIn: 900,
+    return this.createAuthSession(user, {
       requireOnboarding: !hasWorkspaces,
-    };
+    });
   }
 
   async logout(userId: number) {
@@ -232,18 +205,13 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
       throw ApiError.unauthorized(ErrorCode.AUTH_USER_DELETED, 'User not found or deactivated');
     }
 
-    const newAccessToken = this.generateAccessToken(user);
-    const newRefreshToken = this.generateRefreshToken(user);
-
-    // Rotate refresh token
     await authRepository.deleteRefreshToken(refreshToken);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await authRepository.createRefreshToken(user.id, newRefreshToken, expiresAt);
+    const session = await this.createAuthSession(user);
 
     return {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
-      expiresIn: 900,
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
+      expiresIn: session.expiresIn,
     };
   }
 
@@ -334,29 +302,11 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
 
     logger.info(`User registered with OTP: ${user.email}`);
 
-    const accessToken = this.generateAccessToken(user);
-    const refreshToken = this.generateRefreshToken(user);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await authRepository.createRefreshToken(user.id, refreshToken, expiresAt);
-
     const hasWorkspaces = await authRepository.hasWorkspaces(user.id);
 
-    return {
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        avatar: user.avatar,
-        bio: user.bio,
-        googleId: user.googleId,
-        googleAvatar: user.googleAvatar,
-        hasPassword: user.password !== null,
-      },
-      accessToken,
-      refreshToken,
-      expiresIn: 900,
+    return this.createAuthSession(user, {
       requireOnboarding: !hasWorkspaces,
-    };
+    });
   }
 
   private async isOtpVerified(email: string): Promise<boolean> {
@@ -515,29 +465,12 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
 
     // 5. Generate new tokens
     const updatedUser = await authRepository.findById(userId);
-    const accessToken = this.generateAccessToken(updatedUser!);
-    const refreshToken = this.generateRefreshToken(updatedUser!);
-
-    // 6. Create refresh token record
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-    await authRepository.createRefreshToken(userId, refreshToken, expiresAt);
+    const session = await this.createAuthSession(updatedUser!);
 
     logger.info(`User ${userId} completed onboarding with workspace ${workspace.id}`);
 
     return {
-      user: {
-        id: updatedUser!.id,
-        email: updatedUser!.email,
-        name: updatedUser!.name,
-        avatar: updatedUser!.avatar,
-        bio: updatedUser!.bio,
-        googleId: updatedUser!.googleId,
-        googleAvatar: updatedUser!.googleAvatar,
-        hasPassword: updatedUser!.password !== null,
-      },
-      accessToken,
-      refreshToken,
-      expiresIn: 900,
+      ...session,
       workspace: {
         ...workspace,
         slug: normalizedSlug,
@@ -615,6 +548,38 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
     return slug;
   }
 
+  private async createAuthSession(user: User, options: AuthSessionOptions = {}) {
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken(user);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_IN_MS);
+
+    await authRepository.createRefreshToken(user.id, refreshToken, expiresAt);
+
+    return {
+      user: this.toAuthUser(user),
+      accessToken,
+      refreshToken,
+      expiresIn: ACCESS_TOKEN_EXPIRES_IN_SECONDS,
+      ...(options.requireOnboarding !== undefined
+        ? { requireOnboarding: options.requireOnboarding }
+        : {}),
+    };
+  }
+
+  private toAuthUser(user: User) {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatar: user.avatar,
+      bio: user.bio,
+      systemRole: user.systemRole,
+      googleId: user.googleId,
+      googleAvatar: user.googleAvatar,
+      hasPassword: user.password !== null,
+    };
+  }
+
   private generateAccessToken(user: { id: number; email: string; systemRole?: string }): string {
     return jwt.sign(
       { userId: user.id, email: user.email, systemRole: user.systemRole || 'USER' },
@@ -625,7 +590,7 @@ export class AuthService extends BaseService<unknown, RegisterInput, UpdateProfi
 
   private generateRefreshToken(user: { id: number; email: string }): string {
     return jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, jti: crypto.randomUUID() },
       config.REFRESH_TOKEN_SECRET,
       { expiresIn: '7d' as jwt.SignOptions['expiresIn'] },
     );
