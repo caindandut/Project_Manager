@@ -9,6 +9,7 @@ import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useDebounce } from "@/hooks/useDebounce"
 import {
   useMarkAllAsReadMutation,
   useMarkAsReadMutation,
@@ -48,30 +49,28 @@ const getProjectInvitationMeta = (metadata: NotificationItem["metadata"]) => {
 export default function NotificationsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [page, setPage] = useState(1)
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined)
   const [readFilter, setReadFilter] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
 
-  const notificationsQuery = useNotificationsQuery(activeTab, 50)
+  const debouncedSearch = useDebounce(searchQuery, 400)
+  const isRead = readFilter === "unread" ? false : readFilter === "read" ? true : undefined
+
+  const notificationsQuery = useNotificationsQuery({
+    category: activeTab,
+    limit: 10,
+    page,
+    isRead,
+    q: debouncedSearch || undefined,
+  })
   const unreadCountQuery = useUnreadCountQuery()
   const markAsReadMutation = useMarkAsReadMutation()
   const markAllAsReadMutation = useMarkAllAsReadMutation()
 
   const unreadCount = unreadCountQuery.data ?? 0
-  const allNotifications = notificationsQuery.data?.data ?? []
-  const filteredNotifications = allNotifications.filter((notification) => {
-    if (readFilter === "unread" && notification.isRead) return false
-    if (readFilter === "read" && !notification.isRead) return false
-
-    const query = searchQuery.trim().toLowerCase()
-    if (!query) return true
-
-    return (
-      notification.message.toLowerCase().includes(query) ||
-      notification.title.toLowerCase().includes(query) ||
-      notification.task?.title.toLowerCase().includes(query)
-    )
-  })
+  const filteredNotifications = notificationsQuery.data?.data ?? []
+  const totalPages = notificationsQuery.data?.meta?.totalPages ?? 1
 
   const handleNotificationClick = useCallback(
     (notification: NotificationItem) => {
@@ -164,7 +163,10 @@ export default function NotificationsPage() {
             { value: "DIRECT", label: "Dành cho tôi" },
             { value: "WATCHING", label: "Đang theo dõi" },
           ]}
-          onChange={(value) => setActiveTab(value === "all" ? undefined : value)}
+          onChange={(value) => {
+            setActiveTab(value === "all" ? undefined : value)
+            setPage(1)
+          }}
         />
 
         <SegmentedControl
@@ -174,7 +176,10 @@ export default function NotificationsPage() {
             { value: "unread", label: "Chưa đọc" },
             { value: "read", label: "Đã đọc" },
           ]}
-          onChange={setReadFilter}
+          onChange={(value) => {
+            setReadFilter(value)
+            setPage(1)
+          }}
         />
 
         <div className="relative min-w-[200px] flex-1">
@@ -183,7 +188,10 @@ export default function NotificationsPage() {
             type="search"
             placeholder="Tìm kiếm thông báo..."
             value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
+            onChange={(event) => {
+              setSearchQuery(event.target.value)
+              setPage(1)
+            }}
             className="h-9 pl-10 text-sm"
           />
         </div>
@@ -203,17 +211,46 @@ export default function NotificationsPage() {
             <p className="mt-1 text-xs text-muted-foreground">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
           </div>
         ) : (
-          <div className="divide-y divide-border/30">
-            {filteredNotifications.map((notification) => (
-              <NotificationFullRow
-                key={notification.id}
-                notification={notification}
-                onClick={() => handleNotificationClick(notification)}
-                onMarkRead={() => markAsReadMutation.mutate(notification.id)}
-                onProjectInvitationAnswer={(action) => handleProjectInvitationAnswer(notification, action)}
-              />
-            ))}
-          </div>
+          <>
+            <div className="divide-y divide-border/30">
+              {filteredNotifications.map((notification) => (
+                <NotificationFullRow
+                  key={notification.id}
+                  notification={notification}
+                  onClick={() => handleNotificationClick(notification)}
+                  onMarkRead={() => markAsReadMutation.mutate(notification.id)}
+                  onProjectInvitationAnswer={(action) => handleProjectInvitationAnswer(notification, action)}
+                />
+              ))}
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 border-t border-border/60 p-4 bg-muted/10">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  className="h-8 text-xs"
+                >
+                  Trước
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Trang {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  className="h-8 text-xs"
+                >
+                  Sau
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>

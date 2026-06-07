@@ -13,7 +13,7 @@ interface GroupedNotificationsResponse {
 interface NotificationsListResponse {
   success: boolean
   data: NotificationItem[]
-  meta?: CursorMeta
+  meta?: CursorMeta & { page?: number; totalPages?: number }
 }
 
 export async function getGroupedNotifications(
@@ -34,15 +34,17 @@ export async function getGroupedNotifications(
 }
 
 export async function getNotifications(
-  options?: { category?: string; limit?: number; cursor?: string; isRead?: boolean },
-): Promise<{ data: NotificationItem[]; meta: CursorMeta }> {
+  options?: { category?: string; limit?: number; cursor?: string; page?: number; isRead?: boolean; q?: string },
+): Promise<{ data: NotificationItem[]; meta: CursorMeta & { page?: number; totalPages?: number } }> {
   try {
     const response = await apiClient.get<NotificationsListResponse>('/notifications', {
       params: {
         category: options?.category,
         limit: options?.limit ?? 20,
         cursor: options?.cursor,
+        page: options?.page,
         isRead: options?.isRead,
+        q: options?.q,
       },
     })
     return {

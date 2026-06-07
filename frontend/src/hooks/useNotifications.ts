@@ -19,7 +19,8 @@ export const NOTIFICATION_REFRESH_INTERVAL_MS = 1_000
 const notificationKeys = {
   all: ['notifications'] as const,
   grouped: (category?: string, limit?: number) => [...notificationKeys.all, 'grouped', category, limit] as const,
-  list: (category?: string) => [...notificationKeys.all, 'list', category] as const,
+  list: (category?: string, page?: number, limit?: number, isRead?: boolean, q?: string) =>
+    [...notificationKeys.all, 'list', category, page, limit, isRead, q] as const,
   unreadCount: () => [...notificationKeys.all, 'unread-count'] as const,
   groupDetail: (groupKey: string) => [...notificationKeys.all, 'group', groupKey] as const,
   preferences: () => ['notification-preferences'] as const,
@@ -47,10 +48,22 @@ export function useGroupedNotificationsQuery(category?: string, limit = 10) {
 /**
  * Get flat notification list for the full history page.
  */
-export function useNotificationsQuery(category?: string, limit = 20) {
+export function useNotificationsQuery(options?: {
+  category?: string
+  limit?: number
+  page?: number
+  isRead?: boolean
+  q?: string
+}) {
+  const category = options?.category
+  const limit = options?.limit ?? 10
+  const page = options?.page ?? 1
+  const isRead = options?.isRead
+  const q = options?.q
+
   return useQuery({
-    queryKey: notificationKeys.list(category),
-    queryFn: () => getNotifications({ category, limit }),
+    queryKey: notificationKeys.list(category, page, limit, isRead, q),
+    queryFn: () => getNotifications({ category, limit, page, isRead, q }),
   })
 }
 

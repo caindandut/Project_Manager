@@ -130,14 +130,29 @@ export class NotificationService extends BaseService<
     options?: {
       limit?: number;
       cursor?: string;
+      page?: number;
       isRead?: boolean;
       type?: string;
       category?: string;
+      q?: string;
     },
   ): Promise<{ data: NotificationResponse[]; meta: PaginationMeta & { unreadCount: number } }> {
     const result = await notificationRepository.findByUserId(userId, options);
     const limit = options?.limit || 20;
     const lastNotification = result.data.at(-1);
+
+    if (options?.page !== undefined) {
+      return {
+        data: result.data.map((n) => this.formatNotification(n)),
+        meta: {
+          page: options.page,
+          limit,
+          total: result.total,
+          totalPages: Math.ceil(result.total / limit),
+          unreadCount: result.unreadCount,
+        },
+      };
+    }
 
     return {
       data: result.data.map((n) => this.formatNotification(n)),

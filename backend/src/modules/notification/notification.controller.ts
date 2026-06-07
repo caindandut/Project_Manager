@@ -24,6 +24,8 @@ export class NotificationController extends BaseController {
 
       const limit = parseInt(req.query.limit as string, 10) || 20;
       const cursor = req.query.cursor as string;
+      const page = req.query.page ? parseInt(req.query.page as string, 10) : undefined;
+      const q = typeof req.query.q === 'string' ? req.query.q : undefined;
       const isRead =
         typeof req.query.isRead === 'string'
           ? String(req.query.isRead).toLowerCase() === 'true'
@@ -43,9 +45,11 @@ export class NotificationController extends BaseController {
         const result = await notificationService.getAllForUser(authReq.user.id, {
           limit,
           cursor,
+          page,
           isRead,
           type,
           category,
+          q,
         });
         res.json(success(result.data, result.meta));
       }

@@ -86,9 +86,11 @@ export class NotificationRepository extends BaseRepository<
     options?: {
       limit?: number;
       cursor?: string;
+      page?: number;
       isRead?: boolean;
       type?: string;
       category?: string;
+      q?: string;
     },
   ) {
     const where: Prisma.NotificationWhereInput = { userId, deletedAt: null };
@@ -101,12 +103,22 @@ export class NotificationRepository extends BaseRepository<
     if (options?.category) {
       where.category = options.category;
     }
+    if (options?.q) {
+      const search = options.q.trim();
+      where.OR = [
+        { title: { contains: search } },
+        { message: { contains: search } },
+        { task: { title: { contains: search } } },
+      ];
+    }
 
     let skip = 0;
     const take = options?.limit || 20;
     let cursor: { id: number } | undefined;
 
-    if (options?.cursor) {
+    if (options?.page !== undefined) {
+      skip = (options.page - 1) * take;
+    } else if (options?.cursor) {
       cursor = { id: parseInt(options.cursor, 10) };
       skip = 1;
     }
