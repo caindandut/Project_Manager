@@ -87,13 +87,13 @@ export default function AppHeader({ onMenuClick }: AppHeaderProps) {
 
         <NotificationBell />
 
-        {/* Admin Panel - only visible for OWNER */}
+        {/* Owner Console - only visible for system OWNER */}
         {user?.systemRole === 'OWNER' && (
           <Link
-            to="/admin"
+            to="/owner"
             className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-            aria-label="Quản trị hệ thống"
-            title="Quản trị hệ thống"
+            aria-label="Owner Console"
+            title="Owner Console"
           >
             <ShieldCheck className="h-4 w-4" />
           </Link>

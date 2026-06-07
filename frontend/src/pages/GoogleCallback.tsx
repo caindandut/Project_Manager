@@ -14,6 +14,7 @@ interface MeResponse {
   name?: string | null;
   avatar?: string | null;
   bio?: string | null;
+  systemRole?: 'OWNER' | 'USER';
   requireOnboarding?: boolean;
 }
 
@@ -70,10 +71,12 @@ export default function GoogleCallbackPage() {
       // Get requireOnboarding from URL params
       const requireOnboardingParam = searchParams.get('requireOnboarding') === 'true';
 
+      let callbackUser: AuthUser | null = null;
       const rawUser = searchParams.get('user');
       if (rawUser) {
         try {
           const parsedUser = JSON.parse(rawUser) as AuthUser;
+          callbackUser = parsedUser;
           setUser(parsedUser);
           setRequireOnboarding(requireOnboardingParam);
         } catch {
@@ -100,7 +103,10 @@ export default function GoogleCallbackPage() {
           return;
         }
 
-        if (needsOnboarding) {
+        if (userData.systemRole === 'OWNER') {
+          toast.success('Đăng nhập Owner thành công.');
+          navigate('/owner', { replace: true });
+        } else if (needsOnboarding) {
           toast.success('Chào mừng bạn đến với Project Manager!');
           navigate('/onboarding/profile', { replace: true });
         } else {
@@ -136,7 +142,9 @@ export default function GoogleCallbackPage() {
           return;
         }
 
-        if (requireOnboardingParam) {
+        if (callbackUser?.systemRole === 'OWNER') {
+          navigate('/owner', { replace: true });
+        } else if (requireOnboardingParam) {
           navigate('/onboarding/profile', { replace: true });
         } else {
           const lastSlug = getLastWorkspaceSlug();

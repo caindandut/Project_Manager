@@ -11,7 +11,7 @@ export default function AdminProtectedRoute() {
       <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
         <div className="flex items-center gap-3 rounded-md border bg-card px-4 py-3 text-sm text-card-foreground shadow-sm">
           <LoaderCircle className="h-4 w-4 animate-spin" />
-          <span>Đang kiểm tra quyền...</span>
+          <span>Đang kiểm tra quyền Owner...</span>
         </div>
       </div>
     )
@@ -24,17 +24,17 @@ export default function AdminProtectedRoute() {
   if (user?.systemRole !== 'OWNER') {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted/30 p-6">
-        <div className="flex flex-col items-center gap-4 rounded-lg border bg-card p-8 text-center shadow-md">
+        <div className="flex max-w-md flex-col items-center gap-4 rounded-lg border bg-card p-8 text-center shadow-md">
           <ShieldAlert className="h-12 w-12 text-destructive" />
-          <h2 className="text-lg font-semibold text-foreground">Truy cập bị từ chối</h2>
+          <h2 className="text-lg font-semibold text-foreground">Chỉ System Owner được truy cập</h2>
           <p className="text-sm text-muted-foreground">
-            Bạn không có quyền truy cập khu vực quản trị hệ thống.
+            Workspace admin hoặc project admin không có quyền vào Owner Console.
           </p>
           <a
             href="/"
             className="text-sm font-medium text-primary underline-offset-4 hover:underline"
           >
-            Quay về trang chính
+            Quay về ứng dụng
           </a>
         </div>
       </div>

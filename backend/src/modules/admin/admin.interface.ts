@@ -8,6 +8,9 @@ export interface DashboardStats {
   totalProjects: number;
   totalTasks: number;
   blockedUsers: number;
+  overdueTasks: number;
+  emailConfigured: boolean;
+  gmailApiConfigured: boolean;
 }
 
 export interface TrendItem {
@@ -56,6 +59,82 @@ export interface AdminUserDetail {
   createdAt: Date;
   updatedAt: Date;
   workspaces: { id: number; name: string; role: string }[];
+  projects: { id: number; name: string; key: string; role: string; workspaceName: string }[];
+}
+
+export interface OwnerWorkspaceItem {
+  id: number;
+  name: string;
+  slug: string;
+  createdAt: Date;
+  updatedAt: Date;
+  memberCount: number;
+  adminCount: number;
+  projectCount: number;
+  taskCount: number;
+}
+
+export interface OwnerProjectItem {
+  id: number;
+  name: string;
+  key: string;
+  color: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  workspace: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  owner: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  memberCount: number;
+  taskCount: number;
+  overdueTaskCount: number;
+}
+
+export interface OwnerOversightListOptions {
+  page: number;
+  limit: number;
+  search?: string;
+}
+
+export interface OwnerSystemHealth {
+  generatedAt: Date;
+  database: {
+    status: 'ok' | 'error';
+    message: string;
+  };
+  email: {
+    smtpConfigured: boolean;
+    gmailApiConfigured: boolean;
+    fromConfigured: boolean;
+    source: 'database' | 'environment' | 'missing';
+  };
+  oauth: {
+    googleConfigured: boolean;
+    source: 'database' | 'environment' | 'missing';
+  };
+  sessions: {
+    activeRefreshTokens: number;
+    expiredRefreshTokens: number;
+  };
+  cleanup: {
+    expiredOtpCodes: number;
+  };
+  riskSignals: {
+    blockedUsers: number;
+    overdueTasks: number;
+    pendingInvitations: number;
+    owners: number;
+  };
+}
+
+export interface MaintenanceResult {
+  deleted: number;
 }
 
 export interface AdminSettingItem {
@@ -113,6 +192,11 @@ export interface IAdminRepository {
   getUserDetail(userId: number): Promise<AdminUserDetail | null>;
   updateUserStatus(userId: number, isBlocked: boolean): Promise<void>;
   updateUserSystemRole(userId: number, role: string): Promise<void>;
+  getWorkspaces(options: OwnerOversightListOptions): Promise<{ data: OwnerWorkspaceItem[]; total: number }>;
+  getProjects(options: OwnerOversightListOptions): Promise<{ data: OwnerProjectItem[]; total: number }>;
+  getSystemHealth(): Promise<OwnerSystemHealth>;
+  cleanupExpiredRefreshTokens(): Promise<MaintenanceResult>;
+  cleanupExpiredOtpCodes(): Promise<MaintenanceResult>;
   getSettings(category?: string): Promise<AdminSettingItem[]>;
   upsertSetting(input: UpsertSettingInput): Promise<AdminSettingItem>;
   getAuditLogs(options: AuditLogListOptions): Promise<{ data: AuditLogItem[]; total: number }>;
@@ -127,6 +211,11 @@ export interface IAdminService {
   getUserDetail(userId: number): Promise<AdminUserDetail>;
   updateUserStatus(userId: number, isBlocked: boolean, performedById: number): Promise<void>;
   updateUserSystemRole(userId: number, role: string, performedById: number): Promise<void>;
+  getWorkspaces(options: OwnerOversightListOptions): Promise<{ data: OwnerWorkspaceItem[]; total: number; meta: { page: number; limit: number; total: number; totalPages: number } }>;
+  getProjects(options: OwnerOversightListOptions): Promise<{ data: OwnerProjectItem[]; total: number; meta: { page: number; limit: number; total: number; totalPages: number } }>;
+  getSystemHealth(): Promise<OwnerSystemHealth>;
+  cleanupExpiredRefreshTokens(performedById: number): Promise<MaintenanceResult>;
+  cleanupExpiredOtpCodes(performedById: number): Promise<MaintenanceResult>;
   getSettings(category?: string): Promise<AdminSettingItem[]>;
   updateSettings(settings: UpsertSettingInput[], performedById: number): Promise<AdminSettingItem[]>;
   getAuditLogs(options: AuditLogListOptions): Promise<{ data: AuditLogItem[]; total: number; meta: { page: number; limit: number; total: number; totalPages: number } }>;

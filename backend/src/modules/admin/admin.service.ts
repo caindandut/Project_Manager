@@ -14,6 +14,11 @@ import {
   UpsertSettingInput,
   AuditLogListOptions,
   AuditLogItem,
+  OwnerOversightListOptions,
+  OwnerProjectItem,
+  OwnerWorkspaceItem,
+  OwnerSystemHealth,
+  MaintenanceResult,
 } from './admin.interface';
 
 export class AdminService implements IAdminService {
@@ -127,6 +132,80 @@ export class AdminService implements IAdminService {
     logger.info(
       `Admin ${performedById} changed role of user ${userId} from ${oldRole} to ${role}`,
     );
+  }
+
+  // -------------------------------------------------------------------------
+  // Owner Oversight
+  // -------------------------------------------------------------------------
+
+  async getWorkspaces(options: OwnerOversightListOptions): Promise<{
+    data: OwnerWorkspaceItem[];
+    total: number;
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const { data, total } = await adminRepository.getWorkspaces(options);
+    return {
+      data,
+      total,
+      meta: {
+        page: options.page,
+        limit: options.limit,
+        total,
+        totalPages: Math.ceil(total / options.limit),
+      },
+    };
+  }
+
+  async getProjects(options: OwnerOversightListOptions): Promise<{
+    data: OwnerProjectItem[];
+    total: number;
+    meta: { page: number; limit: number; total: number; totalPages: number };
+  }> {
+    const { data, total } = await adminRepository.getProjects(options);
+    return {
+      data,
+      total,
+      meta: {
+        page: options.page,
+        limit: options.limit,
+        total,
+        totalPages: Math.ceil(total / options.limit),
+      },
+    };
+  }
+
+  async getSystemHealth(): Promise<OwnerSystemHealth> {
+    return adminRepository.getSystemHealth();
+  }
+
+  async cleanupExpiredRefreshTokens(performedById: number): Promise<MaintenanceResult> {
+    const result = await adminRepository.cleanupExpiredRefreshTokens();
+
+    await adminRepository.createAuditLog({
+      action: 'MAINTENANCE_REFRESH_TOKENS_CLEANED',
+      targetType: 'SYSTEM',
+      description: `Cleaned ${result.deleted} expired refresh tokens`,
+      metadata: { deleted: result.deleted },
+      performedById,
+    });
+
+    logger.info(`Owner ${performedById} cleaned ${result.deleted} expired refresh tokens`);
+    return result;
+  }
+
+  async cleanupExpiredOtpCodes(performedById: number): Promise<MaintenanceResult> {
+    const result = await adminRepository.cleanupExpiredOtpCodes();
+
+    await adminRepository.createAuditLog({
+      action: 'MAINTENANCE_OTP_CODES_CLEANED',
+      targetType: 'SYSTEM',
+      description: `Cleaned ${result.deleted} expired OTP codes`,
+      metadata: { deleted: result.deleted },
+      performedById,
+    });
+
+    logger.info(`Owner ${performedById} cleaned ${result.deleted} expired OTP codes`);
+    return result;
   }
 
   // -------------------------------------------------------------------------

@@ -10,8 +10,13 @@ import {
   getAdminSettings,
   updateAdminSettings,
   getAdminAuditLogs,
+  getOwnerProjects,
+  getOwnerWorkspaces,
+  getOwnerSystemHealth,
+  cleanupExpiredRefreshTokens,
+  cleanupExpiredOtpCodes,
 } from '@/lib/admin-api'
-import type { AdminUsersParams, AuditLogParams, UpsertSettingInput } from '@/types/admin'
+import type { AdminUsersParams, AuditLogParams, OwnerOversightParams, UpsertSettingInput } from '@/types/admin'
 
 // ============================================================
 // Query Keys
@@ -23,6 +28,9 @@ export const adminQueryKeys = {
   recentActivity: (limit: number) => ['admin', 'recent-activity', limit] as const,
   users: (params: AdminUsersParams) => ['admin', 'users', params] as const,
   userDetail: (userId: number) => ['admin', 'user', userId] as const,
+  workspaces: (params: OwnerOversightParams) => ['admin', 'workspaces', params] as const,
+  projects: (params: OwnerOversightParams) => ['admin', 'projects', params] as const,
+  systemHealth: ['admin', 'system-health'] as const,
   settings: (category?: string) => ['admin', 'settings', category ?? 'all'] as const,
   auditLogs: (params: AuditLogParams) => ['admin', 'audit-logs', params] as const,
 }
@@ -88,6 +96,52 @@ export const useUpdateUserRoleMutation = () => {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       await queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] })
+    },
+  })
+}
+
+// ============================================================
+// Owner Oversight Hooks
+// ============================================================
+
+export const useOwnerWorkspaces = (params: OwnerOversightParams) =>
+  useQuery({
+    queryKey: adminQueryKeys.workspaces(params),
+    queryFn: () => getOwnerWorkspaces(params),
+  })
+
+export const useOwnerProjects = (params: OwnerOversightParams) =>
+  useQuery({
+    queryKey: adminQueryKeys.projects(params),
+    queryFn: () => getOwnerProjects(params),
+  })
+
+export const useOwnerSystemHealth = () =>
+  useQuery({
+    queryKey: adminQueryKeys.systemHealth,
+    queryFn: getOwnerSystemHealth,
+  })
+
+export const useCleanupExpiredRefreshTokensMutation = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: cleanupExpiredRefreshTokens,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.systemHealth })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] })
+    },
+  })
+}
+
+export const useCleanupExpiredOtpCodesMutation = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: cleanupExpiredOtpCodes,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: adminQueryKeys.systemHealth })
+      await queryClient.invalidateQueries({ queryKey: ['admin', 'audit-logs'] })
     },
   })
 }

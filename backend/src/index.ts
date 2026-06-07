@@ -7,6 +7,7 @@ import routes from './routes';
 import { errorMiddleware, notFoundMiddleware } from './common/middlewares/error.middleware';
 import { logger } from './common/utils/logger';
 import { verifyEmailTransport } from './common/utils/email.service';
+import { seedOwnerAccounts } from './common/utils/seed-owner';
 import { prisma } from './config';
 
 const app = express();
@@ -83,6 +84,9 @@ app.listen(PORT, () => {
   logger.info(`API: http://localhost:${PORT}/api/v1`);
   verifyEmailTransport().catch((error) => {
     logger.error('Email transport startup verification failed', error);
+  });
+  seedOwnerAccounts().catch((error) => {
+    logger.error('Owner account seeding failed', error);
   });
 });
 

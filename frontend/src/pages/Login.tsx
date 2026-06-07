@@ -17,7 +17,7 @@ type LoginStep = 'email' | 'password'
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, googleAuth, isAuthenticated } = useAuth()
+  const { user, login, googleAuth, isAuthenticated } = useAuth()
   const [step, setStep] = useState<LoginStep>('email')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -32,7 +32,7 @@ export default function LoginPage() {
   }, [])
 
   if (isAuthenticated) {
-    return <Navigate to={redirectTo} replace />
+    return <Navigate to={user?.systemRole === 'OWNER' ? '/owner' : redirectTo} replace />
   }
 
   const handleEmailSubmit = (e: React.FormEvent) => {
@@ -49,10 +49,10 @@ export default function LoginPage() {
     setIsSubmitting(true)
 
     try {
-      await login({ email, password })
+      const data = await login({ email, password })
       setLoginSuccessShown(true)
       toast.success('Đăng nhập thành công.')
-      navigate(redirectTo, { replace: true })
+      navigate(data.user.systemRole === 'OWNER' ? '/owner' : redirectTo, { replace: true })
     } catch (error) {
       toast.error(
         toVietnameseErrorMessage(error, 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.')

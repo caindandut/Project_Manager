@@ -25,17 +25,18 @@ import WorkspaceSettingsPage from '@/pages/WorkspaceSettings';
 import WorkspacesPage from '@/pages/Workspaces';
 import MyTasksPage from '@/pages/MyTasks';
 import CreateProjectPage from '@/pages/CreateProjectPage';
-import AdminDashboard from '@/pages/admin/AdminDashboard';
-import AdminUsers from '@/pages/admin/AdminUsers';
-import AdminSettings from '@/pages/admin/AdminSettings';
-import AdminAuditLog from '@/pages/admin/AdminAuditLog';
-import AdminLayout from '@/components/admin/AdminLayout';
+import OwnerOverview from '@/pages/owner/OwnerOverview';
+import OwnerUsers from '@/pages/owner/OwnerUsers';
+import OwnerSettings from '@/pages/owner/OwnerSettings';
+import OwnerAuditLog from '@/pages/owner/OwnerAuditLog';
+import OwnerOversight from '@/pages/owner/OwnerOversight';
+import OwnerLayout from '@/components/owner/OwnerLayout';
 import AdminProtectedRoute from '@/components/AdminProtectedRoute';
 import NotificationsPage from '@/pages/NotificationsPage';
 import { getLastWorkspaceSlug } from '@/stores/authStore';
 
 function RootRedirect() {
-  const { isAuthenticated, isBootstrappingAuth } = useAuth();
+  const { user, isAuthenticated, isBootstrappingAuth } = useAuth();
   const lastSlug = getLastWorkspaceSlug();
   // Only fetch workspaces if no saved slug (fallback)
   const workspacesQuery = useWorkspacesQuery(1, 1, { enabled: !lastSlug });
@@ -53,6 +54,10 @@ function RootRedirect() {
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (user?.systemRole === 'OWNER') {
+    return <Navigate to="/owner" replace />;
   }
 
   // If we have a saved last workspace, redirect there directly
@@ -160,15 +165,20 @@ function App() {
           </Route>
         </Route>
 
-        {/* Admin routes - require OWNER role */}
+        {/* Owner Console routes - require system OWNER role */}
         <Route element={<AdminProtectedRoute />}>
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
-            <Route path="/admin/audit-logs" element={<AdminAuditLog />} />
+          <Route element={<OwnerLayout />}>
+            <Route path="/owner" element={<OwnerOverview />} />
+            <Route path="/owner/users" element={<OwnerUsers />} />
+            <Route path="/owner/oversight" element={<OwnerOversight />} />
+            <Route path="/owner/settings" element={<OwnerSettings />} />
+            <Route path="/owner/audit-logs" element={<OwnerAuditLog />} />
           </Route>
         </Route>
+        <Route path="/admin" element={<Navigate to="/owner" replace />} />
+        <Route path="/admin/users" element={<Navigate to="/owner/users" replace />} />
+        <Route path="/admin/settings" element={<Navigate to="/owner/settings" replace />} />
+        <Route path="/admin/audit-logs" element={<Navigate to="/owner/audit-logs" replace />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

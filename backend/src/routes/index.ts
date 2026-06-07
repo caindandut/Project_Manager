@@ -49,5 +49,6 @@ router.use('/workspaces', myTasksRoutes);
 
 // Admin routes (system owner only)
 router.use('/admin', adminRoutes);
+router.use('/owner', adminRoutes);
 
 export default router;

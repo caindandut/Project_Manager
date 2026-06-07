@@ -12,6 +12,11 @@ import {
   AuditLogListOptions,
   AuditLogItem,
   CreateAuditLogInput,
+  OwnerOversightListOptions,
+  OwnerProjectItem,
+  OwnerSystemHealth,
+  OwnerWorkspaceItem,
+  MaintenanceResult,
 } from './admin.interface';
 
 export class AdminRepository implements IAdminRepository {
@@ -20,16 +25,67 @@ export class AdminRepository implements IAdminRepository {
   // -------------------------------------------------------------------------
 
   async getDashboardStats(): Promise<DashboardStats> {
-    const [totalUsers, totalWorkspaces, totalProjects, totalTasks, blockedUsers] =
+    const [
+      totalUsers,
+      totalWorkspaces,
+      totalProjects,
+      totalTasks,
+      blockedUsers,
+      overdueTasks,
+      emailSettings,
+    ] =
       await Promise.all([
         prisma.user.count({ where: { deletedAt: null } }),
         prisma.workspace.count({ where: { deletedAt: null } }),
         prisma.project.count({ where: { deletedAt: null } }),
         prisma.task.count({ where: { deletedAt: null } }),
         prisma.user.count({ where: { isBlocked: true, deletedAt: null } }),
+        prisma.task.count({
+          where: {
+            deletedAt: null,
+            dueDate: { lt: new Date() },
+            status: { not: 'DONE' },
+          },
+        }),
+        prisma.systemSetting.findMany({
+          where: {
+            key: {
+              in: [
+                'smtp_user',
+                'smtp_pass',
+                'smtp_from',
+                'google_client_id',
+                'google_client_secret',
+                'gmail_refresh_token',
+              ],
+            },
+          },
+          select: { key: true, value: true },
+        }),
       ]);
 
-    return { totalUsers, totalWorkspaces, totalProjects, totalTasks, blockedUsers };
+    const settingMap = new Map(emailSettings.map((setting) => [setting.key, setting.value.trim()]));
+    const emailConfigured = Boolean(
+      (settingMap.get('smtp_user') || process.env.EMAIL_USER) &&
+      (settingMap.get('smtp_pass') || process.env.EMAIL_PASS) &&
+      (settingMap.get('smtp_from') || process.env.EMAIL_FROM || settingMap.get('smtp_user') || process.env.EMAIL_USER),
+    );
+    const gmailApiConfigured = Boolean(
+      (settingMap.get('google_client_id') || process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID) &&
+      (settingMap.get('google_client_secret') || process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET) &&
+      (settingMap.get('gmail_refresh_token') || process.env.GMAIL_REFRESH_TOKEN),
+    );
+
+    return {
+      totalUsers,
+      totalWorkspaces,
+      totalProjects,
+      totalTasks,
+      blockedUsers,
+      overdueTasks,
+      emailConfigured,
+      gmailApiConfigured,
+    };
   }
 
   async getRegistrationTrend(months: number): Promise<TrendItem[]> {
@@ -190,6 +246,20 @@ export class AdminRepository implements IAdminRepository {
             },
           },
         },
+        projectMembers: {
+          where: { deletedAt: null },
+          select: {
+            role: true,
+            project: {
+              select: {
+                id: true,
+                name: true,
+                key: true,
+                workspace: { select: { name: true } },
+              },
+            },
+          },
+        },
       },
     });
 
@@ -210,6 +280,13 @@ export class AdminRepository implements IAdminRepository {
         name: m.workspace.name,
         role: m.role,
       })),
+      projects: user.projectMembers.map((m) => ({
+        id: m.project.id,
+        name: m.project.name,
+        key: m.project.key,
+        role: m.role,
+        workspaceName: m.project.workspace.name,
+      })),
     };
   }
 
@@ -225,6 +302,262 @@ export class AdminRepository implements IAdminRepository {
       where: { id: userId },
       data: { systemRole: role as never },
     });
+  }
+
+  // -------------------------------------------------------------------------
+  // Owner Oversight
+  // -------------------------------------------------------------------------
+
+  async getWorkspaces(
+    options: OwnerOversightListOptions,
+  ): Promise<{ data: OwnerWorkspaceItem[]; total: number }> {
+    const where = {
+      deletedAt: null,
+      ...(options.search
+        ? {
+            OR: [
+              { name: { contains: options.search } },
+              { slug: { contains: options.search } },
+            ],
+          }
+        : {}),
+    };
+
+    const [workspaces, total] = await Promise.all([
+      prisma.workspace.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (options.page - 1) * options.limit,
+        take: options.limit,
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          createdAt: true,
+          updatedAt: true,
+          members: {
+            where: { deletedAt: null },
+            select: { role: true },
+          },
+          projects: {
+            where: { deletedAt: null },
+            select: {
+              id: true,
+              tasks: {
+                where: { deletedAt: null },
+                select: { id: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.workspace.count({ where }),
+    ]);
+
+    return {
+      total,
+      data: workspaces.map((workspace) => ({
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+        createdAt: workspace.createdAt,
+        updatedAt: workspace.updatedAt,
+        memberCount: workspace.members.length,
+        adminCount: workspace.members.filter((member) => member.role === 'OWNER' || member.role === 'ADMIN').length,
+        projectCount: workspace.projects.length,
+        taskCount: workspace.projects.reduce((sum, project) => sum + project.tasks.length, 0),
+      })),
+    };
+  }
+
+  async getProjects(
+    options: OwnerOversightListOptions,
+  ): Promise<{ data: OwnerProjectItem[]; total: number }> {
+    const where = {
+      deletedAt: null,
+      ...(options.search
+        ? {
+            OR: [
+              { name: { contains: options.search } },
+              { key: { contains: options.search } },
+              { workspace: { name: { contains: options.search } } },
+            ],
+          }
+        : {}),
+    };
+
+    const [projects, total] = await Promise.all([
+      prisma.project.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (options.page - 1) * options.limit,
+        take: options.limit,
+        select: {
+          id: true,
+          name: true,
+          key: true,
+          color: true,
+          createdAt: true,
+          updatedAt: true,
+          workspace: { select: { id: true, name: true, slug: true } },
+          owner: { select: { id: true, name: true, email: true } },
+          projectMembers: {
+            where: { deletedAt: null },
+            select: { id: true },
+          },
+          tasks: {
+            where: { deletedAt: null },
+            select: { id: true, dueDate: true, status: true },
+          },
+        },
+      }),
+      prisma.project.count({ where }),
+    ]);
+
+    const now = new Date();
+    return {
+      total,
+      data: projects.map((project) => ({
+        id: project.id,
+        name: project.name,
+        key: project.key,
+        color: project.color,
+        createdAt: project.createdAt,
+        updatedAt: project.updatedAt,
+        workspace: project.workspace,
+        owner: project.owner,
+        memberCount: project.projectMembers.length,
+        taskCount: project.tasks.length,
+        overdueTaskCount: project.tasks.filter((task) => task.dueDate && task.dueDate < now && task.status !== 'DONE').length,
+      })),
+    };
+  }
+
+  // -------------------------------------------------------------------------
+  // System Health & Maintenance
+  // -------------------------------------------------------------------------
+
+  async getSystemHealth(): Promise<OwnerSystemHealth> {
+    const now = new Date();
+    let database: OwnerSystemHealth['database'] = {
+      status: 'ok',
+      message: 'Database is reachable',
+    };
+
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (error) {
+      database = {
+        status: 'error',
+        message: error instanceof Error ? error.message : 'Database check failed',
+      };
+    }
+
+    const [
+      settings,
+      activeRefreshTokens,
+      expiredRefreshTokens,
+      expiredOtpCodes,
+      blockedUsers,
+      overdueTasks,
+      pendingInvitations,
+      owners,
+    ] = await Promise.all([
+      prisma.systemSetting.findMany({
+        where: {
+          key: {
+            in: [
+              'smtp_user',
+              'smtp_pass',
+              'smtp_from',
+              'google_client_id',
+              'google_client_secret',
+              'gmail_refresh_token',
+            ],
+          },
+        },
+        select: { key: true, value: true },
+      }),
+      prisma.refreshToken.count({ where: { expiresAt: { gte: now } } }),
+      prisma.refreshToken.count({ where: { expiresAt: { lt: now } } }),
+      prisma.otpCode.count({ where: { expiresAt: { lt: now } } }),
+      prisma.user.count({ where: { deletedAt: null, isBlocked: true } }),
+      prisma.task.count({
+        where: {
+          deletedAt: null,
+          dueDate: { lt: now },
+          status: { not: 'DONE' },
+        },
+      }),
+      prisma.invitation.count({
+        where: {
+          deletedAt: null,
+          status: 'PENDING',
+          expiresAt: { gte: now },
+        },
+      }),
+      prisma.user.count({ where: { deletedAt: null, systemRole: 'OWNER' } }),
+    ]);
+
+    const settingMap = new Map(settings.map((setting) => [setting.key, setting.value.trim()]));
+    const hasDbEmailConfig = Boolean(settingMap.get('smtp_user') || settingMap.get('smtp_pass') || settingMap.get('smtp_from'));
+    const hasEnvEmailConfig = Boolean(process.env.EMAIL_USER || process.env.EMAIL_PASS || process.env.EMAIL_FROM);
+    const hasDbOauthConfig = Boolean(settingMap.get('google_client_id') || settingMap.get('google_client_secret'));
+    const hasEnvOauthConfig = Boolean(process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET);
+
+    return {
+      generatedAt: now,
+      database,
+      email: {
+        smtpConfigured: Boolean(
+          (settingMap.get('smtp_user') || process.env.EMAIL_USER) &&
+          (settingMap.get('smtp_pass') || process.env.EMAIL_PASS),
+        ),
+        gmailApiConfigured: Boolean(
+          (settingMap.get('google_client_id') || process.env.GMAIL_CLIENT_ID || process.env.GOOGLE_CLIENT_ID) &&
+          (settingMap.get('google_client_secret') || process.env.GMAIL_CLIENT_SECRET || process.env.GOOGLE_CLIENT_SECRET) &&
+          (settingMap.get('gmail_refresh_token') || process.env.GMAIL_REFRESH_TOKEN),
+        ),
+        fromConfigured: Boolean(settingMap.get('smtp_from') || process.env.EMAIL_FROM || settingMap.get('smtp_user') || process.env.EMAIL_USER),
+        source: hasDbEmailConfig ? 'database' : hasEnvEmailConfig ? 'environment' : 'missing',
+      },
+      oauth: {
+        googleConfigured: Boolean(
+          (settingMap.get('google_client_id') || process.env.GOOGLE_CLIENT_ID) &&
+          (settingMap.get('google_client_secret') || process.env.GOOGLE_CLIENT_SECRET),
+        ),
+        source: hasDbOauthConfig ? 'database' : hasEnvOauthConfig ? 'environment' : 'missing',
+      },
+      sessions: {
+        activeRefreshTokens,
+        expiredRefreshTokens,
+      },
+      cleanup: {
+        expiredOtpCodes,
+      },
+      riskSignals: {
+        blockedUsers,
+        overdueTasks,
+        pendingInvitations,
+        owners,
+      },
+    };
+  }
+
+  async cleanupExpiredRefreshTokens(): Promise<MaintenanceResult> {
+    const result = await prisma.refreshToken.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+
+    return { deleted: result.count };
+  }
+
+  async cleanupExpiredOtpCodes(): Promise<MaintenanceResult> {
+    const result = await prisma.otpCode.deleteMany({
+      where: { expiresAt: { lt: new Date() } },
+    });
+
+    return { deleted: result.count };
   }
 
   // -------------------------------------------------------------------------

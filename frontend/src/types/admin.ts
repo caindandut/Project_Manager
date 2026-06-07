@@ -8,6 +8,9 @@ export interface DashboardStats {
   totalProjects: number
   totalTasks: number
   blockedUsers: number
+  overdueTasks: number
+  emailConfigured: boolean
+  gmailApiConfigured: boolean
 }
 
 export interface TrendItem {
@@ -47,6 +50,82 @@ export interface AdminUserDetail {
   createdAt: string
   updatedAt: string
   workspaces: { id: number; name: string; role: string }[]
+  projects: { id: number; name: string; key: string; role: string; workspaceName: string }[]
+}
+
+export interface OwnerWorkspaceItem {
+  id: number
+  name: string
+  slug: string
+  createdAt: string
+  updatedAt: string
+  memberCount: number
+  adminCount: number
+  projectCount: number
+  taskCount: number
+}
+
+export interface OwnerProjectItem {
+  id: number
+  name: string
+  key: string
+  color: string | null
+  createdAt: string
+  updatedAt: string
+  workspace: {
+    id: number
+    name: string
+    slug: string
+  }
+  owner: {
+    id: number
+    name: string
+    email: string
+  }
+  memberCount: number
+  taskCount: number
+  overdueTaskCount: number
+}
+
+export interface OwnerOversightParams {
+  page: number
+  limit: number
+  search?: string
+}
+
+export interface OwnerSystemHealth {
+  generatedAt: string
+  database: {
+    status: 'ok' | 'error'
+    message: string
+  }
+  email: {
+    smtpConfigured: boolean
+    gmailApiConfigured: boolean
+    fromConfigured: boolean
+    source: 'database' | 'environment' | 'missing'
+  }
+  oauth: {
+    googleConfigured: boolean
+    source: 'database' | 'environment' | 'missing'
+  }
+  sessions: {
+    activeRefreshTokens: number
+    expiredRefreshTokens: number
+  }
+  cleanup: {
+    expiredOtpCodes: number
+  }
+  riskSignals: {
+    blockedUsers: number
+    overdueTasks: number
+    pendingInvitations: number
+    owners: number
+  }
+}
+
+export interface MaintenanceResult {
+  deleted: number
 }
 
 export interface AdminSettingItem {

@@ -104,6 +104,59 @@ export class AdminController extends BaseController {
   };
 
   // -------------------------------------------------------------------------
+  // Owner Oversight
+  // -------------------------------------------------------------------------
+
+  getWorkspaces = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const page = parseInt(req.query.page as string, 10) || 1;
+      const limit = parseInt(req.query.limit as string, 10) || 20;
+      const search = req.query.search as string | undefined;
+
+      const result = await adminService.getWorkspaces({ page, limit, search });
+      res.json(success(result.data, result.meta));
+    });
+  };
+
+  getProjects = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const page = parseInt(req.query.page as string, 10) || 1;
+      const limit = parseInt(req.query.limit as string, 10) || 20;
+      const search = req.query.search as string | undefined;
+
+      const result = await adminService.getProjects({ page, limit, search });
+      res.json(success(result.data, result.meta));
+    });
+  };
+
+  // -------------------------------------------------------------------------
+  // System Health & Maintenance
+  // -------------------------------------------------------------------------
+
+  getSystemHealth = async (_req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const health = await adminService.getSystemHealth();
+      res.json(success(health));
+    });
+  };
+
+  cleanupExpiredRefreshTokens = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = req as AuthenticatedRequest;
+      const result = await adminService.cleanupExpiredRefreshTokens(authReq.user!.id);
+      res.json(success(result));
+    });
+  };
+
+  cleanupExpiredOtpCodes = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = req as AuthenticatedRequest;
+      const result = await adminService.cleanupExpiredOtpCodes(authReq.user!.id);
+      res.json(success(result));
+    });
+  };
+
+  // -------------------------------------------------------------------------
   // Settings
   // -------------------------------------------------------------------------
 
