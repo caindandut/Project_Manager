@@ -7,12 +7,23 @@ export function toVietnameseErrorMessage(error: unknown, fallback: string): stri
     details && typeof details === "object" && "activeTaskCount" in details
       ? Number((details as { activeTaskCount?: unknown }).activeTaskCount)
       : 0
+  const blockingTasks =
+    details && typeof details === "object" && "tasks" in details && Array.isArray((details as { tasks?: unknown }).tasks)
+      ? (details as { tasks: Array<{ title?: unknown }> }).tasks
+      : []
   const code = error && typeof error === "object" && "code" in error
     ? String((error as { code?: unknown }).code ?? "")
     : ""
 
   if (code === "PROJECT_MEMBER_HAS_ACTIVE_TASKS" && activeTaskCount > 0) {
-    return `Không thể xóa thành viên khỏi dự án vì còn ${activeTaskCount} công việc chưa hoàn thành.`
+    const taskNames = blockingTasks
+      .map((task) => typeof task.title === "string" ? task.title : "")
+      .filter(Boolean)
+      .slice(0, 3)
+
+    return taskNames.length > 0
+      ? `Không thể xóa thành viên khỏi dự án vì còn ${activeTaskCount} công việc chưa hoàn thành: ${taskNames.join(", ")}.`
+      : `Không thể xóa thành viên khỏi dự án vì còn ${activeTaskCount} công việc chưa hoàn thành.`
   }
 
   if (code === "MEMBER_HAS_ACTIVE_TASKS" && activeTaskCount > 0) {

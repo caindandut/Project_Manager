@@ -7,6 +7,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton"
 import type { ProjectStats } from "@/lib/project-api"
 
+type OverviewTooltipPayload = {
+  color?: string
+  name?: string | number
+  payload?: { name?: string }
+  value?: number | string
+}
+
 const STATUS_COLORS: Record<string, string> = {
   "Cần làm": "#94a3b8",
   "Đang làm": "#3b82f6",
@@ -20,12 +27,39 @@ const PRIORITY_COLORS: Record<string, string> = {
   "Thấp": "#60a5fa",
   "Trung bình": "#fbbf24",
   "Cao": "#f97316",
-  "Rất cao": "#ef4444",
+  "Cao nhất": "#ef4444",
 }
 
 interface OverviewChartsProps {
   stats: ProjectStats | undefined
   isLoading: boolean
+}
+
+function OverviewTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean
+  payload?: readonly OverviewTooltipPayload[]
+}) {
+  const item = payload?.find((entry) => Number(entry.value) > 0)
+
+  if (!active || !item) return null
+
+  const label = String(item.payload?.name ?? item.name ?? "")
+
+  return (
+    <div className="min-w-32 rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg">
+      {label && <p className="mb-1.5 font-semibold">{label}</p>}
+      <div className="flex items-center gap-1.5 font-medium">
+        <span
+          className="h-2.5 w-2.5 rounded-sm"
+          style={{ backgroundColor: item.color }}
+        />
+        {Number(item.value)} nhiệm vụ
+      </div>
+    </div>
+  )
 }
 
 export default function OverviewCharts({ stats, isLoading }: OverviewChartsProps) {
@@ -52,23 +86,14 @@ export default function OverviewCharts({ stats, isLoading }: OverviewChartsProps
 
   // Priority data for horizontal bar chart
   const priorityData = stats ? [
-    { name: "Rất cao", value: stats.highestPriorityTasks || 0, color: PRIORITY_COLORS["Rất cao"] },
-    { name: "Cao", value: stats.highPriorityTasks || 0, color: PRIORITY_COLORS["Cao"] },
-    { name: "Trung bình", value: stats.mediumPriorityTasks || 0, color: PRIORITY_COLORS["Trung bình"] },
-    { name: "Thấp", value: stats.lowPriorityTasks || 0, color: PRIORITY_COLORS["Thấp"] },
     { name: "Thấp nhất", value: stats.lowestPriorityTasks || 0, color: PRIORITY_COLORS["Thấp nhất"] },
+    { name: "Thấp", value: stats.lowPriorityTasks || 0, color: PRIORITY_COLORS["Thấp"] },
+    { name: "Trung bình", value: stats.mediumPriorityTasks || 0, color: PRIORITY_COLORS["Trung bình"] },
+    { name: "Cao", value: stats.highPriorityTasks || 0, color: PRIORITY_COLORS["Cao"] },
+    { name: "Cao nhất", value: stats.highestPriorityTasks || 0, color: PRIORITY_COLORS["Cao nhất"] },
   ] : []
 
   const hasPriorityData = priorityData.some(d => d.value > 0)
-
-  // Tooltip styles matching the app theme
-  const tooltipStyle = {
-    backgroundColor: "hsl(var(--card))",
-    border: "1px solid hsl(var(--border))",
-    borderRadius: "8px",
-    color: "hsl(var(--foreground))",
-    fontSize: "12px",
-  }
 
   const chartTextColor = "hsl(var(--muted-foreground))"
 
@@ -104,7 +129,15 @@ export default function OverviewCharts({ stats, isLoading }: OverviewChartsProps
                     <Cell key={`cell-${i}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip
+                  cursor={false}
+                  content={(props) => (
+                    <OverviewTooltip
+                      active={props.active}
+                      payload={props.payload as unknown as readonly OverviewTooltipPayload[]}
+                    />
+                  )}
+                />
                 <Legend
                   iconType="circle"
                   iconSize={8}
@@ -136,7 +169,16 @@ export default function OverviewCharts({ stats, isLoading }: OverviewChartsProps
               >
                 <XAxis type="number" tick={{ fill: chartTextColor, fontSize: 11 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fill: chartTextColor, fontSize: 11 }} width={72} />
-                <Tooltip contentStyle={tooltipStyle} />
+                <Tooltip
+                  cursor={false}
+                  shared={false}
+                  content={(props) => (
+                    <OverviewTooltip
+                      active={props.active}
+                      payload={props.payload as unknown as readonly OverviewTooltipPayload[]}
+                    />
+                  )}
+                />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
                   {priorityData.filter(d => d.value > 0).map((entry, i) => (
                     <Cell key={`bar-${i}`} fill={entry.color} />

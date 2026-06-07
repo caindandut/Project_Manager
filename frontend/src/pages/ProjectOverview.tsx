@@ -1,5 +1,5 @@
-import { useEffect } from "react"
-import { useParams, useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { useParams, useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -16,13 +16,16 @@ import StatsRow from "@/components/project/OverviewStats"
 import RecentTasksCard from "@/components/project/RecentTasksCard"
 import ActivityTimeline from "@/components/project/ActivityTimeline"
 import OverviewCharts from "@/components/project/OverviewCharts"
+import TaskDetailPanel from "@/components/tasks/TaskDetailPanel"
 
 export default function ProjectOverview() {
   const params = useParams<{ workspaceId: string; projectId: string }>()
   const workspaceSlug = params.workspaceId || ""
   const projectId = Number(params.projectId || "0")
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { user } = useAuth()
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null)
 
   const workspaceQuery = useWorkspaceDetailQuery(workspaceSlug)
   const projectQuery = useProjectDetailQuery(workspaceSlug, projectId)
@@ -35,6 +38,36 @@ export default function ProjectOverview() {
       ? `${project.name} | Tổng quan`
       : "Tổng quan dự án | Project Manager"
   }, [project])
+
+  useEffect(() => {
+    const taskIdParam = searchParams.get("task")
+    if (taskIdParam) {
+      const nextTaskId = Number(taskIdParam)
+      if (!Number.isNaN(nextTaskId)) {
+        setSelectedTaskId((currentTaskId) =>
+          currentTaskId === nextTaskId ? currentTaskId : nextTaskId,
+        )
+      }
+    } else {
+      setSelectedTaskId((currentTaskId) => (currentTaskId === null ? currentTaskId : null))
+    }
+  }, [searchParams])
+
+  useEffect(() => {
+    const handleOpenTaskDetail = (event: Event) => {
+      const customEvent = event as CustomEvent<{ taskId: number }>
+      const nextTaskId = customEvent.detail.taskId
+      setSelectedTaskId(nextTaskId)
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev)
+        next.set("task", String(nextTaskId))
+        return next
+      })
+    }
+
+    window.addEventListener("openTaskDetail", handleOpenTaskDetail)
+    return () => window.removeEventListener("openTaskDetail", handleOpenTaskDetail)
+  }, [setSearchParams])
 
   const workspaceId = workspaceQuery.data?.id
 
@@ -54,6 +87,24 @@ export default function ProjectOverview() {
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, "Không thể xóa dự án."))
     }
+  }
+
+  const handleOpenTask = (taskId: number) => {
+    setSelectedTaskId(taskId)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.set("task", String(taskId))
+      return next
+    })
+  }
+
+  const handleCloseTask = () => {
+    setSelectedTaskId(null)
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete("task")
+      return next
+    })
   }
 
   // ─── Invalid params ────────────────────────────────────────
@@ -176,6 +227,7 @@ export default function ProjectOverview() {
           <RecentTasksCard
             tasks={project?.recentTasks}
             isLoading={false}
+            onTaskClick={handleOpenTask}
           />
           <ActivityTimeline activities={project?.recentActivities} isLoading={false} />
         </div>
@@ -185,6 +237,15 @@ export default function ProjectOverview() {
           <OverviewCharts stats={project?.stats} isLoading={false} />
         </div>
       </div>
+
+      <TaskDetailPanel
+        taskId={selectedTaskId}
+        projectId={projectId}
+        projectKey={project?.key ?? "PRJ"}
+        open={selectedTaskId !== null}
+        onClose={handleCloseTask}
+        projectMembers={(projectMembersQuery.data?.data ?? []).map((member) => member.user)}
+      />
     </div>
   )
 }

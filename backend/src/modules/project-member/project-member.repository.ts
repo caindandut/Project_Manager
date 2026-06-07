@@ -56,6 +56,18 @@ export class ProjectMemberRepository extends BaseRepository<
   }
 
   /**
+   * Find a project member by project + user combination, including soft-deleted records.
+   */
+  async findAnyByProjectAndUser(
+    projectId: number,
+    userId: number,
+  ): Promise<ProjectMember | null> {
+    return prisma.projectMember.findFirst({
+      where: { projectId, userId },
+    });
+  }
+
+  /**
    * Find a member by id within a specific project (ensures membership belongs to the project).
    */
   async findMemberById(
@@ -81,6 +93,20 @@ export class ProjectMemberRepository extends BaseRepository<
     role: ProjectRole = 'MEMBER',
     status: import('@prisma/client').InvitationStatus = 'PENDING',
   ): Promise<ProjectMember> {
+    const existing = await this.findAnyByProjectAndUser(projectId, userId);
+
+    if (existing) {
+      return prisma.projectMember.update({
+        where: { id: existing.id },
+        data: {
+          role,
+          status,
+          deletedAt: null,
+          joinedAt: new Date(),
+        },
+      });
+    }
+
     return prisma.projectMember.create({
       data: {
         project: { connect: { id: projectId } },

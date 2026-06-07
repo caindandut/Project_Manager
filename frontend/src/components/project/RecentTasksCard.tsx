@@ -35,9 +35,10 @@ const PRIORITY_CONFIG: Record<string, { color: string; label: string }> = {
 interface RecentTasksCardProps {
   tasks: RecentTask[] | undefined
   isLoading: boolean
+  onTaskClick?: (taskId: number) => void
 }
 
-export default function RecentTasksCard({ tasks, isLoading }: RecentTasksCardProps) {
+export default function RecentTasksCard({ tasks, isLoading, onTaskClick }: RecentTasksCardProps) {
   if (isLoading) {
     return (
       <Card>
@@ -83,9 +84,11 @@ export default function RecentTasksCard({ tasks, isLoading }: RecentTasksCardPro
               const StatusIcon = statusCfg.icon
               const priorityCfg = PRIORITY_CONFIG[task.priority || "MEDIUM"]
               return (
-                <div
+                <button
                   key={task.id}
-                  className="flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors hover:bg-muted/50"
+                  type="button"
+                  className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => onTaskClick?.(task.id)}
                 >
                   <StatusIcon className={cn("h-4 w-4 shrink-0", statusCfg.color)} />
 
@@ -116,7 +119,7 @@ export default function RecentTasksCard({ tasks, isLoading }: RecentTasksCardPro
                     fallbackClassName="bg-primary/10 text-[10px] text-primary"
                     emptyClassName="hidden"
                   />
-                </div>
+                </button>
               )
             })}
           </div>

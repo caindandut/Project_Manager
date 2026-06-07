@@ -34,6 +34,7 @@ import {
 import { useProjectDetailQuery } from "@/hooks/useProject"
 import { useWorkspaceDetailQuery } from "@/hooks/useWorkspaces"
 import { useAuth } from "@/hooks/useAuth"
+import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import type { ProjectMember, ProjectRole } from "@/lib/project-member-api"
 
 // ============================================================
@@ -90,8 +91,8 @@ export default function ProjectMembersPage() {
         setRemovingMember(null)
         toast.success("Đã xóa thành viên khỏi dự án")
       },
-      onError: (err: any) => {
-        toast.error(err.message || "Không thể xóa thành viên")
+      onError: (error: unknown) => {
+        toast.error(toVietnameseErrorMessage(error, "Không thể xóa thành viên khỏi dự án."))
         setRemovingMember(null)
       }
     })

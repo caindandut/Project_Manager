@@ -82,8 +82,8 @@ interface TaskToolbarProps {
   canCreate?: boolean
   columns: TaskColumn[]
   onColumnsChange: (columns: TaskColumn[]) => void
-  viewMode: "flat" | "grouped" | "kanban" | "calendar" | "gantt"
-  onViewModeChange: (mode: "flat" | "grouped" | "kanban" | "calendar" | "gantt") => void
+  viewMode: "flat" | "grouped" | "kanban" | "calendar" | "gantt" | "charts"
+  onViewModeChange: (mode: "flat" | "grouped" | "kanban" | "calendar" | "gantt" | "charts") => void
   totalTasks: number
 }
 
@@ -267,6 +267,17 @@ export function TaskToolbar({
               )}
             >
               Gantt
+            </button>
+            <button
+              onClick={() => onViewModeChange("charts")}
+              className={cn(
+                "px-3 h-9 text-xs font-medium transition-colors",
+                viewMode === "charts"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-background text-muted-foreground hover:bg-muted",
+              )}
+            >
+              Biểu đồ
             </button>
           </div>
 

@@ -8,6 +8,7 @@ import { TaskTable } from "@/components/tasks/TaskTable"
 import { TaskToolbar, DEFAULT_COLUMNS } from "@/components/tasks/TaskToolbar"
 import { CalendarView } from "@/components/calendar/CalendarView"
 import { GanttView } from "@/components/gantt/GanttView"
+import TaskChartsView from "@/components/tasks/TaskChartsView"
 import type { TaskFilter } from "@/components/tasks/task.types"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useProjectDetailQuery } from "@/hooks/useProject"
@@ -20,7 +21,7 @@ import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import type { Task } from "@/types/task"
 import { TASK_STATUS_LABELS } from "@/types/task"
 
-type ViewMode = "flat" | "grouped" | "kanban" | "calendar" | "gantt"
+type ViewMode = "flat" | "grouped" | "kanban" | "calendar" | "gantt" | "charts"
 
 interface ProjectTaskListPageProps {
   initialViewMode?: ViewMode
@@ -172,7 +173,7 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
           columns={columns}
           onColumnsChange={setColumns}
           viewMode={viewMode}
-          onViewModeChange={setViewMode as (mode: "flat" | "grouped" | "kanban" | "calendar" | "gantt") => void}
+          onViewModeChange={setViewMode}
           totalTasks={totalTasks}
           canCreate={canEditTasks}
         />
@@ -184,6 +185,8 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
           <CalendarView />
         ) : viewMode === "gantt" ? (
           <GanttView />
+        ) : viewMode === "charts" ? (
+          <TaskChartsView tasks={tasks} isLoading={tasksQuery.isLoading} />
         ) : (
           <TaskTable
             tasks={tasks}

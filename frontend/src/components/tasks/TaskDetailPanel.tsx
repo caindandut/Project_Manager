@@ -10,7 +10,8 @@ import {
   Upload,
   X,
 } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { createPortal } from "react-dom"
 import { toast } from "sonner"
 import { formatDistanceToNow, parseISO } from "date-fns"
 import { vi } from "date-fns/locale"
@@ -45,6 +46,7 @@ import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import { TaskDateTimePicker } from "@/components/tasks/TaskDateTimePicker"
 import { formatTaskDateTime, fromDateTimeLocalValue } from "@/lib/date-time"
 import { cn } from "@/lib/utils"
+import { useAuthStore } from "@/stores/authStore"
 import type { CreateTaskPayload, TaskPriority, TaskStatus, TaskUser } from "@/types/task"
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "@/types/task"
 
@@ -96,6 +98,37 @@ function StatusBadge({ status }: { status: string }) {
 
 const STATUS_OPTIONS: TaskStatus[] = ["TODO", "IN_PROGRESS", "REVIEW", "DONE", "CANCELLED"]
 
+interface MentionState {
+  start: number
+  end: number
+  query: string
+}
+
+const getMemberDisplayName = (member: TaskUser): string =>
+  member.name?.trim() || member.email
+
+const normalizeMentionSearch = (value: string): string =>
+  value
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("vi")
+
+const getMentionState = (value: string, cursor: number): MentionState | null => {
+  const beforeCursor = value.slice(0, cursor)
+  const atIndex = beforeCursor.lastIndexOf("@")
+
+  if (atIndex < 0) return null
+
+  const charBeforeAt = atIndex > 0 ? beforeCursor[atIndex - 1] : ""
+  if (charBeforeAt && !/\s/.test(charBeforeAt)) return null
+
+  const query = beforeCursor.slice(atIndex + 1)
+  if (/\s/.test(query)) return null
+
+  return { start: atIndex, end: cursor, query }
+}
+
 export default function TaskDetailPanel({
   taskId,
   projectId,
@@ -113,12 +146,16 @@ export default function TaskDetailPanel({
   const deleteCommentMutation = useDeleteCommentMutation(taskId ?? 0)
   const uploadAttachmentMutation = useUploadAttachmentMutation(taskId ?? 0)
   const deleteAttachmentMutation = useDeleteAttachmentMutation(taskId ?? 0)
+  const currentUser = useAuthStore((state) => state.user)
 
   const [editingTitle, setEditingTitle] = useState(false)
   const [title, setTitle] = useState("")
   const [editingDesc, setEditingDesc] = useState(false)
   const [description, setDescription] = useState("")
   const [comment, setComment] = useState("")
+  const [mentionState, setMentionState] = useState<MentionState | null>(null)
+  const [activeMentionIndex, setActiveMentionIndex] = useState(0)
+  const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null)
   const [fileInput, setFileInput] = useState<HTMLInputElement | null>(null)
 
   // Subtask dialog state
@@ -174,7 +211,23 @@ export default function TaskDetailPanel({
     return () => window.removeEventListener("keydown", handleKey)
   }, [open, onClose])
 
-  if (!open) return null
+  useEffect(() => {
+    if (!open) return
+
+    const previousOverflow = document.body.style.overflow
+    const previousPaddingRight = document.body.style.paddingRight
+    const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth
+
+    document.body.style.overflow = "hidden"
+    if (scrollbarWidth > 0) {
+      document.body.style.paddingRight = `${scrollbarWidth}px`
+    }
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.body.style.paddingRight = previousPaddingRight
+    }
+  }, [open])
 
   const handleStatusChange = (status: TaskStatus) => {
     if (!task) return
@@ -280,6 +333,62 @@ export default function TaskDetailPanel({
     }
   }
 
+  const mentionableMembers = useMemo(() => {
+    const uniqueMembers = new Map<number, TaskUser>()
+    for (const member of projectMembers) {
+      if (member.id === currentUser?.id) continue
+      uniqueMembers.set(member.id, member)
+    }
+    return Array.from(uniqueMembers.values()).sort((a, b) =>
+      getMemberDisplayName(a).localeCompare(getMemberDisplayName(b), "vi"),
+    )
+  }, [currentUser?.id, projectMembers])
+
+  const mentionSuggestions = useMemo(() => {
+    if (!mentionState) return []
+
+    const query = normalizeMentionSearch(mentionState.query)
+    if (!query) return mentionableMembers
+
+    return mentionableMembers.filter((member) => {
+      const name = normalizeMentionSearch(getMemberDisplayName(member))
+      const email = normalizeMentionSearch(member.email)
+      return name.includes(query) || email.includes(query)
+    })
+  }, [mentionState, mentionableMembers])
+
+  const updateMentionState = (value: string, cursor: number) => {
+    const nextMentionState = getMentionState(value, cursor)
+    setMentionState(nextMentionState)
+    setActiveMentionIndex(0)
+  }
+
+  const handleCommentChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const nextComment = event.target.value
+    setComment(nextComment)
+    updateMentionState(nextComment, event.target.selectionStart)
+  }
+
+  const insertMention = (member: TaskUser) => {
+    if (!mentionState) return
+
+    const mentionText = `@${getMemberDisplayName(member)} `
+    const nextComment =
+      comment.slice(0, mentionState.start) +
+      mentionText +
+      comment.slice(mentionState.end)
+    const nextCursor = mentionState.start + mentionText.length
+
+    setComment(nextComment)
+    setMentionState(null)
+    setActiveMentionIndex(0)
+
+    window.requestAnimationFrame(() => {
+      commentTextareaRef.current?.focus()
+      commentTextareaRef.current?.setSelectionRange(nextCursor, nextCursor)
+    })
+  }
+
   const handleDeleteComment = async (commentId: number) => {
     try {
       await deleteCommentMutation.mutateAsync(commentId)
@@ -328,13 +437,15 @@ export default function TaskDetailPanel({
     return `${projectKey}-${id}`
   }
 
-  return (
+  if (!open) return null
+
+  return createPortal(
     <>
       {/* Backdrop */}
-      <div className="fixed inset-0 z-[80] bg-black/30 dark:bg-black/70" onClick={onClose} />
+      <div className="fixed inset-0 z-[1000] bg-black/30 dark:bg-black/70" onClick={onClose} />
 
       {/* Panel */}
-      <div className="fixed right-0 top-0 z-[90] h-full w-full bg-card border-l border-border shadow-xl flex flex-col overflow-hidden animate-slide-in-from-right duration-300 lg:w-1/2">
+      <div className="fixed right-0 top-0 z-[1010] h-dvh w-full max-w-[calc(100vw-1rem)] bg-card border-l border-border shadow-xl flex flex-col overflow-hidden animate-slide-in-from-right duration-300 sm:w-[720px] lg:w-[760px]">
         {isLoading || !task ? (
           <div className="flex-1 flex items-center justify-center">
             <LoaderCircle className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -699,19 +810,89 @@ export default function TaskDetailPanel({
                 </div>
 
                 {/* Add comment */}
-                <div className="flex gap-2">
+                <div className="relative flex gap-2">
                   <Textarea
+                    ref={commentTextareaRef}
                     value={comment}
-                    onChange={(e) => setComment(e.target.value)}
+                    onChange={handleCommentChange}
+                    onClick={(e) => updateMentionState(comment, e.currentTarget.selectionStart)}
+                    onBlur={() => {
+                      window.setTimeout(() => setMentionState(null), 120)
+                    }}
                     placeholder="Viết bình luận..."
                     className="min-h-[60px] resize-none text-sm"
                     onKeyDown={(e) => {
+                      if (mentionState && mentionSuggestions.length > 0) {
+                        if (e.key === "ArrowDown") {
+                          e.preventDefault()
+                          setActiveMentionIndex((index) => (index + 1) % mentionSuggestions.length)
+                          return
+                        }
+
+                        if (e.key === "ArrowUp") {
+                          e.preventDefault()
+                          setActiveMentionIndex((index) =>
+                            index === 0 ? mentionSuggestions.length - 1 : index - 1,
+                          )
+                          return
+                        }
+
+                        if (e.key === "Enter") {
+                          e.preventDefault()
+                          insertMention(mentionSuggestions[activeMentionIndex])
+                          return
+                        }
+
+                        if (e.key === "Escape") {
+                          e.preventDefault()
+                          setMentionState(null)
+                          return
+                        }
+                      }
+
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault()
                         handleAddComment()
                       }
                     }}
                   />
+                  {mentionState && mentionSuggestions.length > 0 && (
+                    <div className="absolute bottom-full left-0 z-50 mb-2 max-h-56 w-full overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-lg">
+                      {mentionSuggestions.map((member, index) => (
+                        <button
+                          key={member.id}
+                          type="button"
+                          className={cn(
+                            "flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm transition-colors",
+                            index === activeMentionIndex
+                              ? "bg-accent text-accent-foreground"
+                              : "hover:bg-accent hover:text-accent-foreground",
+                          )}
+                          onMouseDown={(event) => {
+                            event.preventDefault()
+                            insertMention(member)
+                          }}
+                        >
+                          <Avatar className="h-7 w-7">
+                            <AvatarImage src={member.avatar ?? undefined} />
+                            <AvatarFallback className="text-[10px]">
+                              {getMemberDisplayName(member)[0]?.toUpperCase() ?? "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">
+                              {getMemberDisplayName(member)}
+                            </span>
+                            {!member.name?.trim() && (
+                              <span className="block truncate text-xs text-muted-foreground">
+                                {member.email}
+                              </span>
+                            )}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <Button
                   size="sm"
@@ -859,7 +1040,8 @@ export default function TaskDetailPanel({
         onSubmit={handleCreateSubTask}
         projectMembers={projectMembers}
       />
-    </>
+    </>,
+    document.body,
   )
 }
 

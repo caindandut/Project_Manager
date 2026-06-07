@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { Search, UserPlus } from "lucide-react"
+import { toast } from "sonner"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -22,6 +23,7 @@ import {
 import { useDebounce } from "@/hooks/useDebounce"
 import { useWorkspaceMembersQuery } from "@/hooks/useWorkspaces"
 import { useProjectMembersQuery, useAddProjectMemberMutation } from "@/hooks/useProjectMembers"
+import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import type { WorkspaceMember } from "@/types/workspace"
 
 // ============================================================
@@ -77,10 +79,12 @@ export default function InviteProjectMemberDialog({
       {
         onSuccess: () => {
           setInvitingUserId(null)
+          toast.success("Đã gửi lời mời tham gia dự án.")
           // Don't close dialog so user can invite more
         },
-        onError: () => {
+        onError: (error) => {
           setInvitingUserId(null)
+          toast.error(toVietnameseErrorMessage(error, "Không thể mời thành viên vào dự án."))
         },
       },
     )

@@ -1,8 +1,13 @@
+import { useEffect, useMemo, useState } from "react"
+
+import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Activity,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Edit,
   FileUp,
   MessageSquare,
@@ -130,7 +135,24 @@ interface ActivityTimelineProps {
   isLoading: boolean
 }
 
+const ACTIVITIES_PER_PAGE = 5
+
 export default function ActivityTimeline({ activities, isLoading }: ActivityTimelineProps) {
+  const [page, setPage] = useState(1)
+  const items = useMemo(() => activities ?? [], [activities])
+  const totalPages = Math.max(1, Math.ceil(items.length / ACTIVITIES_PER_PAGE))
+  const visibleItems = items.slice((page - 1) * ACTIVITIES_PER_PAGE, page * ACTIVITIES_PER_PAGE)
+
+  useEffect(() => {
+    setPage(1)
+  }, [items])
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [page, totalPages])
+
   if (isLoading) {
     return (
       <Card>
@@ -151,8 +173,6 @@ export default function ActivityTimeline({ activities, isLoading }: ActivityTime
       </Card>
     )
   }
-
-  const items = activities ?? []
 
   return (
     <Card>
@@ -177,7 +197,7 @@ export default function ActivityTimeline({ activities, isLoading }: ActivityTime
             {/* Timeline line */}
             <div className="absolute left-4 top-2 bottom-2 w-px bg-border" />
 
-            {items.map((item) => {
+            {visibleItems.map((item) => {
               const type = resolveActivityType(item)
               const cfg = ACTIVITY_ICON_CONFIG[type]
               const Icon = cfg.icon
@@ -201,6 +221,36 @@ export default function ActivityTimeline({ activities, isLoading }: ActivityTime
                 </div>
               )
             })}
+
+            {totalPages > 1 && (
+              <div className="relative z-10 mt-3 flex items-center justify-between border-t pt-3">
+                <p className="text-xs text-muted-foreground">
+                  Trang {page} / {totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2"
+                    disabled={page <= 1}
+                    onClick={() => setPage((current) => Math.max(1, current - 1))}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-2"
+                    disabled={page >= totalPages}
+                    onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

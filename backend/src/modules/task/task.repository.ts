@@ -48,6 +48,13 @@ export interface TaskCursorListOptions {
 export interface ActiveAssignedTaskSummary {
   activeTaskCount: number;
   taskIds: number[];
+  tasks: Array<{
+    id: number;
+    title: string;
+    status: TaskStatus;
+    parentId: number | null;
+    parentStatus: TaskStatus | null;
+  }>;
 }
 
 export class TaskRepository extends BaseRepository<
@@ -332,19 +339,30 @@ export class TaskRepository extends BaseRepository<
     userId: number,
     options: { projectId?: number; workspaceId?: number; limit?: number },
   ): Promise<ActiveAssignedTaskSummary> {
-    await this.ensureTaskAssigneesTable();
-
     const scopeFilter = options.projectId
       ? Prisma.sql`AND t.project_id = ${options.projectId}`
       : options.workspaceId
         ? Prisma.sql`AND p.workspace_id = ${options.workspaceId}`
         : Prisma.empty;
 
+    const hasTaskAssignees = await this.hasTaskAssigneesTable();
+    const assignmentFilter = hasTaskAssignees
+      ? Prisma.sql`AND (t.assignee_id = ${userId} OR ta.user_id IS NOT NULL)`
+      : Prisma.sql`AND t.assignee_id = ${userId}`;
+    const assigneeJoin = hasTaskAssignees
+      ? Prisma.sql`
+          LEFT JOIN task_assignees ta
+            ON ta.task_id = t.id
+            AND ta.user_id = ${userId}
+        `
+      : Prisma.empty;
+
     const baseWhere = Prisma.sql`
       t.deleted_at IS NULL
       AND p.deleted_at IS NULL
       AND t.status NOT IN ('DONE', 'CANCELLED')
-      AND (t.assignee_id = ${userId} OR ta.user_id IS NOT NULL)
+      AND (parent.id IS NULL OR parent.status NOT IN ('DONE', 'CANCELLED'))
+      ${assignmentFilter}
       ${scopeFilter}
     `;
 
@@ -352,19 +370,32 @@ export class TaskRepository extends BaseRepository<
       SELECT COUNT(DISTINCT t.id) AS activeTaskCount
       FROM tasks t
       INNER JOIN projects p ON p.id = t.project_id
-      LEFT JOIN task_assignees ta
-        ON ta.task_id = t.id
-        AND ta.user_id = ${userId}
+      LEFT JOIN tasks parent
+        ON parent.id = t.parent_id
+        AND parent.deleted_at IS NULL
+      ${assigneeJoin}
       WHERE ${baseWhere}
     `;
 
-    const taskIdRows = await prisma.$queryRaw<Array<{ taskId: number }>>`
-      SELECT DISTINCT t.id AS taskId
+    const taskRows = await prisma.$queryRaw<Array<{
+      id: number;
+      title: string;
+      status: TaskStatus;
+      parentId: number | null;
+      parentStatus: TaskStatus | null;
+    }>>`
+      SELECT
+        t.id AS id,
+        t.title AS title,
+        t.status AS status,
+        t.parent_id AS parentId,
+        parent.status AS parentStatus
       FROM tasks t
       INNER JOIN projects p ON p.id = t.project_id
-      LEFT JOIN task_assignees ta
-        ON ta.task_id = t.id
-        AND ta.user_id = ${userId}
+      LEFT JOIN tasks parent
+        ON parent.id = t.parent_id
+        AND parent.deleted_at IS NULL
+      ${assigneeJoin}
       WHERE ${baseWhere}
       ORDER BY t.updated_at DESC, t.id DESC
       LIMIT ${options.limit ?? 5}
@@ -372,7 +403,8 @@ export class TaskRepository extends BaseRepository<
 
     return {
       activeTaskCount: Number(countRows[0]?.activeTaskCount ?? 0),
-      taskIds: taskIdRows.map((row) => row.taskId),
+      taskIds: taskRows.map((row) => row.id),
+      tasks: taskRows,
     };
   }
 
