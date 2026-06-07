@@ -48,6 +48,7 @@ const settingGroups: { title: string; description: string; category: string; fie
       { key: 'smtp_user', label: 'SMTP User', placeholder: '(đang dùng giá trị mặc định từ .env)', category: 'smtp' },
       { key: 'smtp_pass', label: 'SMTP Password', placeholder: '(đang dùng giá trị mặc định từ .env)', type: 'password', category: 'smtp' },
       { key: 'smtp_from', label: 'SMTP From', placeholder: '(nếu trống sẽ dùng SMTP User)', category: 'smtp' },
+      { key: 'gmail_refresh_token', label: 'Gmail API Refresh Token', placeholder: '(dùng cho Render khi SMTP bị chặn)', type: 'password', category: 'smtp' },
     ],
   },
 ]

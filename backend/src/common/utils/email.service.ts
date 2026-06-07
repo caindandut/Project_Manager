@@ -15,9 +15,14 @@ interface EmailTransportConfig {
   user: string;
   pass: string;
   from: string;
+  googleClientId: string;
+  googleClientSecret: string;
+  gmailRefreshToken: string;
 }
 
 const SMTP_SETTING_KEYS = ['smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass', 'smtp_from'] as const;
+const GOOGLE_MAIL_SETTING_KEYS = ['google_client_id', 'google_client_secret', 'gmail_refresh_token'] as const;
+const EMAIL_SETTING_KEYS = [...SMTP_SETTING_KEYS, ...GOOGLE_MAIL_SETTING_KEYS] as const;
 
 let missingEmailConfigWarningKey: string | null = null;
 
@@ -33,24 +38,24 @@ const parsePort = (value: string | undefined, fallback: number): number => {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-const getDbSmtpSettings = async (): Promise<Partial<Record<(typeof SMTP_SETTING_KEYS)[number], string>>> => {
+const getDbEmailSettings = async (): Promise<Partial<Record<(typeof EMAIL_SETTING_KEYS)[number], string>>> => {
   try {
     const settings = await prisma.systemSetting.findMany({
-      where: { key: { in: [...SMTP_SETTING_KEYS] } },
+      where: { key: { in: [...EMAIL_SETTING_KEYS] } },
       select: { key: true, value: true },
     });
 
-    return settings.reduce<Partial<Record<(typeof SMTP_SETTING_KEYS)[number], string>>>(
+    return settings.reduce<Partial<Record<(typeof EMAIL_SETTING_KEYS)[number], string>>>(
       (acc, setting) => {
-        if (SMTP_SETTING_KEYS.includes(setting.key as (typeof SMTP_SETTING_KEYS)[number])) {
-          acc[setting.key as (typeof SMTP_SETTING_KEYS)[number]] = setting.value;
+        if (EMAIL_SETTING_KEYS.includes(setting.key as (typeof EMAIL_SETTING_KEYS)[number])) {
+          acc[setting.key as (typeof EMAIL_SETTING_KEYS)[number]] = setting.value;
         }
         return acc;
       },
       {},
     );
   } catch (error) {
-    logger.warn('Could not load SMTP settings from database; falling back to environment variables.', {
+    logger.warn('Could not load email settings from database; falling back to environment variables.', {
       error: error instanceof Error ? error.message : String(error),
     });
     return {};
@@ -58,25 +63,48 @@ const getDbSmtpSettings = async (): Promise<Partial<Record<(typeof SMTP_SETTING_
 };
 
 const resolveEmailTransportConfig = async (): Promise<EmailTransportConfig> => {
-  const dbSettings = await getDbSmtpSettings();
+  const dbSettings = await getDbEmailSettings();
   const user = trimValue(dbSettings.smtp_user) || trimValue(process.env.EMAIL_USER) || '';
   const pass = trimValue(dbSettings.smtp_pass) || trimValue(process.env.EMAIL_PASS) || '';
   const from =
     trimValue(dbSettings.smtp_from) ||
     trimValue(process.env.EMAIL_FROM) ||
     user;
+  const port = parsePort(trimValue(dbSettings.smtp_port), config.EMAIL_PORT || 587);
 
   return {
     host: trimValue(dbSettings.smtp_host) || config.EMAIL_HOST || 'smtp.gmail.com',
-    port: parsePort(trimValue(dbSettings.smtp_port), config.EMAIL_PORT || 587),
-    secure: parsePort(trimValue(dbSettings.smtp_port), config.EMAIL_PORT || 587) === 465,
+    port,
+    secure: port === 465,
     user,
     pass,
     from,
+    googleClientId:
+      trimValue(dbSettings.google_client_id) ||
+      trimValue(process.env.GMAIL_CLIENT_ID) ||
+      trimValue(process.env.GOOGLE_CLIENT_ID) ||
+      '',
+    googleClientSecret:
+      trimValue(dbSettings.google_client_secret) ||
+      trimValue(process.env.GMAIL_CLIENT_SECRET) ||
+      trimValue(process.env.GOOGLE_CLIENT_SECRET) ||
+      '',
+    gmailRefreshToken:
+      trimValue(dbSettings.gmail_refresh_token) ||
+      trimValue(process.env.GMAIL_REFRESH_TOKEN) ||
+      '',
   };
 };
 
-const validateEmailTransportConfig = (emailConfig: EmailTransportConfig): void => {
+const canUseGmailApi = (emailConfig: EmailTransportConfig): boolean => {
+  return Boolean(
+    emailConfig.googleClientId &&
+    emailConfig.googleClientSecret &&
+    emailConfig.gmailRefreshToken,
+  );
+};
+
+const validateSmtpConfig = (emailConfig: EmailTransportConfig): void => {
   const missingKeys = [
     !emailConfig.user ? 'smtp_user/EMAIL_USER' : null,
     !emailConfig.pass ? 'smtp_pass/EMAIL_PASS' : null,
@@ -98,6 +126,19 @@ const validateEmailTransportConfig = (emailConfig: EmailTransportConfig): void =
   throw new Error(`Email SMTP is not configured. Missing: ${missingKeys.join(', ')}`);
 };
 
+const validateGmailApiConfig = (emailConfig: EmailTransportConfig): void => {
+  const missingKeys = [
+    !emailConfig.googleClientId ? 'google_client_id/GMAIL_CLIENT_ID/GOOGLE_CLIENT_ID' : null,
+    !emailConfig.googleClientSecret ? 'google_client_secret/GMAIL_CLIENT_SECRET/GOOGLE_CLIENT_SECRET' : null,
+    !emailConfig.gmailRefreshToken ? 'gmail_refresh_token/GMAIL_REFRESH_TOKEN' : null,
+    !emailConfig.from ? 'smtp_from/EMAIL_FROM/smtp_user/EMAIL_USER' : null,
+  ].filter((key): key is string => Boolean(key));
+
+  if (missingKeys.length === 0) return;
+
+  throw new Error(`Gmail API is not configured. Missing: ${missingKeys.join(', ')}`);
+};
+
 const createSmtpTransport = (emailConfig: EmailTransportConfig) => {
   return nodemailer.createTransport({
     pool: true,
@@ -112,6 +153,89 @@ const createSmtpTransport = (emailConfig: EmailTransportConfig) => {
       rejectUnauthorized: false,
     },
   });
+};
+
+const encodeMimeHeader = (value: string): string => {
+  return /[^\x20-\x7e]/.test(value)
+    ? `=?UTF-8?B?${Buffer.from(value, 'utf8').toString('base64')}?=`
+    : value;
+};
+
+const encodeBase64Url = (value: string): string => {
+  return Buffer.from(value, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/g, '');
+};
+
+const buildRawEmail = (options: SendEmailOptions, from: string): string => {
+  const raw = [
+    `From: ${from}`,
+    `To: ${options.to}`,
+    `Subject: ${encodeMimeHeader(options.subject)}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=UTF-8',
+    'Content-Transfer-Encoding: 8bit',
+    '',
+    options.html,
+  ].join('\r\n');
+
+  return encodeBase64Url(raw);
+};
+
+const getGmailAccessToken = async (emailConfig: EmailTransportConfig): Promise<string> => {
+  validateGmailApiConfig(emailConfig);
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      client_id: emailConfig.googleClientId,
+      client_secret: emailConfig.googleClientSecret,
+      refresh_token: emailConfig.gmailRefreshToken,
+      grant_type: 'refresh_token',
+    }),
+  });
+
+  const data = await response.json() as { access_token?: string; error?: string; error_description?: string };
+  if (!response.ok || !data.access_token) {
+    throw new Error(data.error_description || data.error || `Google OAuth token request failed with ${response.status}`);
+  }
+
+  return data.access_token;
+};
+
+const sendEmailViaGmailApi = async (
+  options: SendEmailOptions,
+  emailConfig: EmailTransportConfig,
+): Promise<void> => {
+  const accessToken = await getGmailAccessToken(emailConfig);
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ raw: buildRawEmail(options, emailConfig.from) }),
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    throw new Error(`Gmail API send failed with ${response.status}: ${responseText}`);
+  }
+};
+
+const verifyGmailApi = async (emailConfig: EmailTransportConfig): Promise<void> => {
+  const accessToken = await getGmailAccessToken(emailConfig);
+  const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text();
+    throw new Error(`Gmail API profile check failed with ${response.status}: ${responseText}`);
+  }
 };
 
 export async function sendWorkspaceInvitationEmail(options: {
@@ -254,7 +378,24 @@ export async function sendNotificationEmail(options: {
 
 export async function sendEmail(options: SendEmailOptions): Promise<void> {
   const emailConfig = await resolveEmailTransportConfig();
-  validateEmailTransportConfig(emailConfig);
+
+  if (canUseGmailApi(emailConfig)) {
+    try {
+      await sendEmailViaGmailApi(options, emailConfig);
+      logger.info(`Email sent via Gmail API to ${options.to}`, {
+        from: emailConfig.from,
+      });
+      return;
+    } catch (error) {
+      logger.error(`Failed to send email via Gmail API to ${options.to}`, {
+        from: emailConfig.from,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  validateSmtpConfig(emailConfig);
 
   try {
     const transporter = createSmtpTransport(emailConfig);
@@ -283,8 +424,24 @@ export async function sendEmail(options: SendEmailOptions): Promise<void> {
 
 export async function verifyEmailTransport(): Promise<void> {
   const emailConfig = await resolveEmailTransportConfig();
+
+  if (canUseGmailApi(emailConfig)) {
+    try {
+      await verifyGmailApi(emailConfig);
+      logger.info('Email transport verified successfully via Gmail API.', {
+        from: emailConfig.from,
+      });
+    } catch (error) {
+      logger.error('Email transport verification failed via Gmail API.', {
+        from: emailConfig.from,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return;
+  }
+
   try {
-    validateEmailTransportConfig(emailConfig);
+    validateSmtpConfig(emailConfig);
   } catch (error) {
     logger.warn('Email transport verification skipped because SMTP configuration is incomplete.', {
       error: error instanceof Error ? error.message : String(error),
