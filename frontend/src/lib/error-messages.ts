@@ -26,6 +26,8 @@ export function toVietnameseErrorMessage(error: unknown, fallback: string): stri
     ["Cannot remove yourself from workspace", "Bạn không thể tự xóa chính mình khỏi workspace này."],
     ["Member not found", "Không tìm thấy thành viên."],
     ["A pending invitation already exists for this email", "Đã có lời mời đang chờ xử lý cho email này."],
+    ["Your account has been blocked. Please contact the administrator.", "Tài khoản của bạn đã bị khóa do vi phạm điều khoản hệ thống. Vui lòng liên hệ quản trị viên để biết thêm chi tiết."],
+    ["This account has been deactivated", "Tài khoản của bạn đã bị vô hiệu hóa."],
   ]
 
   const matched = mappings.find(([source]) => message.includes(source))

@@ -35,7 +35,8 @@ export default function GoogleCallbackPage() {
       const isLinkingGoogle = window.localStorage.getItem('isLinkingGoogle') === 'true';
 
       if (errorParam) {
-        toast.error(decodeURIComponent(errorParam));
+        const decodedError = decodeURIComponent(errorParam);
+        toast.error(toVietnameseErrorMessage(new Error(decodedError), decodedError));
         if (isLinkingGoogle) {
           window.localStorage.removeItem('isLinkingGoogle');
           const lastSlug = getLastWorkspaceSlug();
