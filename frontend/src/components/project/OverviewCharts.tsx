@@ -163,7 +163,7 @@ export default function OverviewCharts({ stats, isLoading }: OverviewChartsProps
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart
-                data={priorityData.filter(d => d.value > 0)}
+                data={priorityData}
                 layout="vertical"
                 margin={{ left: 0, right: 16 }}
               >
@@ -180,7 +180,7 @@ export default function OverviewCharts({ stats, isLoading }: OverviewChartsProps
                   )}
                 />
                 <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={20}>
-                  {priorityData.filter(d => d.value > 0).map((entry, i) => (
+                  {priorityData.map((entry, i) => (
                     <Cell key={`bar-${i}`} fill={entry.color} />
                   ))}
                 </Bar>

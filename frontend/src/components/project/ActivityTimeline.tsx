@@ -64,7 +64,7 @@ const PRIORITY_LABELS: Record<string, string> = {
   LOW: "Thấp",
   MEDIUM: "Trung bình",
   HIGH: "Cao",
-  HIGHEST: "Rất cao",
+  HIGHEST: "Cao nhất",
 }
 
 function humanizeValue(field: string | undefined, value: string | null | undefined): string {

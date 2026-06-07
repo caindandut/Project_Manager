@@ -27,9 +27,9 @@ const STATUS_CONFIG: Record<string, { icon: typeof Circle; color: string; label:
 const PRIORITY_CONFIG: Record<string, { color: string; label: string }> = {
   LOWEST: { color: "bg-slate-100 text-slate-600", label: "Thấp nhất" },
   LOW: { color: "bg-blue-50 text-blue-600", label: "Thấp" },
-  MEDIUM: { color: "bg-yellow-50 text-yellow-700", label: "TB" },
+  MEDIUM: { color: "bg-yellow-50 text-yellow-700", label: "Trung bình" },
   HIGH: { color: "bg-orange-50 text-orange-600", label: "Cao" },
-  HIGHEST: { color: "bg-red-50 text-red-600", label: "Rất cao" },
+  HIGHEST: { color: "bg-red-50 text-red-600", label: "Cao nhất" },
 }
 
 interface RecentTasksCardProps {

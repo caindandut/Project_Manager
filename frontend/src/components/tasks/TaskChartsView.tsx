@@ -34,11 +34,27 @@ interface TaskChartsViewProps {
 }
 
 const STATUS_META: Record<ChartStatusKey, { label: string; color: string }> = {
-  TODO: { label: "Chưa bắt đầu", color: "#B9A7FF" },
+  TODO: { label: "Việc cần làm", color: "#B9A7FF" },
   IN_PROGRESS: { label: "Đang diễn ra", color: "#4F46E5" },
   REVIEW: { label: "Xem xét", color: "#F59E0B" },
   OVERDUE: { label: "Trễ", color: "#E0445A" },
   DONE: { label: "Đã hoàn thành", color: "#45C4B0" },
+  CANCELLED: { label: "Đã hủy", color: "#8B8B98" },
+}
+
+const PRIORITY_META: Record<TaskPriority, { label: string; color: string }> = {
+  LOWEST: { label: "Thấp nhất", color: "#cbd5e1" },
+  LOW: { label: "Thấp", color: "#60a5fa" },
+  MEDIUM: { label: "Trung bình", color: "#fbbf24" },
+  HIGH: { label: "Cao", color: "#f97316" },
+  HIGHEST: { label: "Cao nhất", color: "#ef4444" },
+}
+
+const KANBAN_META: Record<TaskStatus, { label: string; color: string }> = {
+  TODO: { label: "Việc cần làm", color: "#B9A7FF" },
+  IN_PROGRESS: { label: "Đang diễn ra", color: "#4F46E5" },
+  REVIEW: { label: "Xem xét", color: "#F59E0B" },
+  DONE: { label: "Hoàn thành", color: "#45C4B0" },
   CANCELLED: { label: "Đã hủy", color: "#8B8B98" },
 }
 
@@ -66,7 +82,7 @@ const KANBAN_BUCKETS: Array<{
   name: string
   statuses: TaskStatus[]
 }> = [
-  { name: "Chưa bắt đầu", statuses: ["TODO"] },
+  { name: "Việc cần làm", statuses: ["TODO"] },
   { name: "Đang diễn ra", statuses: ["IN_PROGRESS"] },
   { name: "Xem xét", statuses: ["REVIEW"] },
   { name: "Hoàn thành", statuses: ["DONE"] },
@@ -195,6 +211,69 @@ function StatusLegend() {
   )
 }
 
+function PriorityLegend() {
+  const priorities: TaskPriority[] = ["LOWEST", "LOW", "MEDIUM", "HIGH", "HIGHEST"]
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 px-2 text-xs text-muted-foreground">
+      {priorities.map((p) => (
+        <span key={p} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span
+            className="h-2.5 w-2.5 rounded-sm"
+            style={{ backgroundColor: PRIORITY_META[p].color }}
+          />
+          {PRIORITY_META[p].label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function BucketLegend() {
+  const statuses: TaskStatus[] = ["TODO", "IN_PROGRESS", "REVIEW", "DONE", "CANCELLED"]
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 px-2 text-xs text-muted-foreground">
+      {statuses.map((s) => (
+        <span key={s} className="inline-flex items-center gap-1.5 whitespace-nowrap">
+          <span
+            className="h-2.5 w-2.5 rounded-sm"
+            style={{ backgroundColor: KANBAN_META[s].color }}
+          />
+          {KANBAN_META[s].label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function SimpleChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean
+  payload?: readonly ChartTooltipPayload[]
+  label?: string | number
+}) {
+  const item = payload?.find((entry) => Number(entry.value) > 0)
+
+  if (!active || !item) return null
+
+  const title = String(label ?? item.payload?.name ?? "")
+
+  return (
+    <div className="min-w-32 rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg">
+      {title && <p className="mb-1.5 font-semibold">{title}</p>}
+      <div className="flex items-center gap-1.5 font-medium">
+        <span
+          className="h-2.5 w-2.5 rounded-sm"
+          style={{ backgroundColor: item.color }}
+        />
+        {Number(item.value)} nhiệm vụ
+      </div>
+    </div>
+  )
+}
+
 export default function TaskChartsView({ tasks, isLoading }: TaskChartsViewProps) {
   if (isLoading) {
     return (
@@ -225,19 +304,23 @@ export default function TaskChartsView({ tasks, isLoading }: TaskChartsViewProps
   const remainingTasks = tasks.filter((task) => !isTaskComplete(task)).length
 
   const priorityData = PRIORITY_BUCKETS.map((bucket) => {
-    const row = createStackRow(bucket.name)
-    tasks
-      .filter((task) => bucket.priorities.includes(task.priority))
-      .forEach((task) => incrementStack(row, task))
-    return row
+    const priorityKey = bucket.priorities[0]!
+    const value = tasks.filter((task) => task.priority === priorityKey).length
+    return {
+      name: bucket.name,
+      value,
+      fill: PRIORITY_META[priorityKey].color,
+    }
   })
 
   const bucketData = KANBAN_BUCKETS.map((bucket) => {
-    const row = createStackRow(bucket.name)
-    tasks
-      .filter((task) => bucket.statuses.includes(task.status))
-      .forEach((task) => incrementStack(row, task))
-    return row
+    const statusKey = bucket.statuses[0]!
+    const value = tasks.filter((task) => task.status === statusKey).length
+    return {
+      name: bucket.name,
+      value,
+      fill: KANBAN_META[statusKey].color,
+    }
   })
 
   const memberRows = new Map<string, StackRow>()
@@ -327,17 +410,21 @@ export default function TaskChartsView({ tasks, isLoading }: TaskChartsViewProps
                 <Tooltip
                   cursor={false}
                   content={(props) => (
-                    <ChartTooltip
+                    <SimpleChartTooltip
                       active={props.active}
                       label={props.label}
                       payload={props.payload as unknown as readonly ChartTooltipPayload[]}
                     />
                   )}
                 />
-                {stackedBars}
+                <Bar dataKey="value" maxBarSize={48}>
+                  {priorityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
-            <StatusLegend />
+            <PriorityLegend />
           </div>
         </ChartPanel>
 
@@ -351,17 +438,21 @@ export default function TaskChartsView({ tasks, isLoading }: TaskChartsViewProps
                 <Tooltip
                   cursor={false}
                   content={(props) => (
-                    <ChartTooltip
+                    <SimpleChartTooltip
                       active={props.active}
                       label={props.label}
                       payload={props.payload as unknown as readonly ChartTooltipPayload[]}
                     />
                   )}
                 />
-                {stackedBars}
+                <Bar dataKey="value" maxBarSize={48}>
+                  {bucketData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
-            <StatusLegend />
+            <BucketLegend />
           </div>
         </ChartPanel>
       </div>
