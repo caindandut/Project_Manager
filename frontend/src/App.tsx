@@ -65,6 +65,17 @@ function RootRedirect() {
     return <Navigate to={`/workspaces/${lastSlug}`} replace />;
   }
 
+  if (workspacesQuery.isPending) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6 text-foreground">
+        <div className="flex items-center gap-3 rounded-md border bg-card px-4 py-3 text-sm shadow-sm">
+          <LoaderCircle className="h-4 w-4 animate-spin" />
+          <span>Đang tải không gian làm việc...</span>
+        </div>
+      </div>
+    );
+  }
+
   // Fallback: redirect to first workspace from API
   if (workspacesQuery.isSuccess && workspacesQuery.data?.data.length) {
     return <Navigate to={`/workspaces/${workspacesQuery.data.data[0].slug}`} replace />;
