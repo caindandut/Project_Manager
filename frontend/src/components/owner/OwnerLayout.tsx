@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import {
   Activity,
   Building2,
@@ -7,7 +7,10 @@ import {
   Settings,
   ShieldCheck,
   Users,
+  LogOut,
 } from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 const navItems = [
   { to: '/owner', label: 'Tổng quan', icon: LayoutDashboard, end: true },
@@ -18,6 +21,16 @@ const navItems = [
 ]
 
 export default function OwnerLayout() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+
+  const initials = (user?.name || user?.email || "O").slice(0, 2).toUpperCase()
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <aside className="hidden w-72 flex-col border-r bg-card lg:flex">
@@ -51,13 +64,53 @@ export default function OwnerLayout() {
           ))}
         </nav>
 
-
+        <div className="border-t p-4 flex items-center justify-between gap-3 bg-muted/10">
+          <div className="flex items-center gap-3 min-w-0">
+            <Avatar className="h-9 w-9 ring-1 ring-border">
+              {user?.avatar ? (
+                <AvatarImage src={user.avatar} alt={user.name ?? user.email} />
+              ) : null}
+              <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col min-w-0">
+              <span className="text-sm font-semibold text-foreground truncate leading-tight">
+                {user?.name || "Owner"}
+              </span>
+              <span className="text-xs text-muted-foreground truncate leading-tight mt-0.5">
+                {user?.email}
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={handleLogout}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/15 hover:text-destructive transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            title="Đăng xuất"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex h-14 items-center gap-3 border-b bg-card px-4 lg:hidden">
-          <Activity className="h-5 w-5 text-primary" />
-          <span className="text-sm font-semibold text-foreground">Owner Console</span>
+        <header className="flex h-14 items-center justify-between border-b bg-card px-4 lg:hidden">
+          <div className="flex items-center gap-3">
+            <Activity className="h-5 w-5 text-primary" />
+            <span className="text-sm font-semibold text-foreground">Owner Console</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground max-w-[150px] truncate hidden sm:inline-block">
+              {user?.name || user?.email}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/15 hover:text-destructive transition-colors"
+              title="Đăng xuất"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         </header>
 
         <nav className="flex gap-1 overflow-x-auto border-b bg-card px-3 lg:hidden">

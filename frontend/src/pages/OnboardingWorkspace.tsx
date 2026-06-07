@@ -160,7 +160,7 @@ export default function OnboardingWorkspacePage() {
           <div className="space-y-2">
             <Label htmlFor="workspaceSlug">Địa chỉ URL</Label>
             <div className="flex items-center rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-              <span className="flex-shrink-0">localhost:5173/workspaces/</span>
+              <span className="flex-shrink-0">{window.location.host}/workspaces/</span>
               <input
                 id="workspaceSlug"
                 type="text"
