@@ -84,7 +84,8 @@ export class TaskController extends BaseController {
   delete = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
       const taskId = this.getTaskId(req);
-      const result = await taskService.delete(taskId);
+      const userId = this.getUserId(req);
+      const result = await taskService.delete(taskId, userId);
       res.json(success(result));
     });
   };

@@ -46,6 +46,14 @@ export function toVietnameseErrorMessage(error: unknown, fallback: string): stri
     return `Không thể xóa không gian làm việc vì vẫn còn công việc chưa hoàn thành.`
   }
 
+  if (code === "TASK_DELETE_STATUS_FORBIDDEN") {
+    return "Không thể xóa task vì task chưa hoàn thành hoặc chưa hủy."
+  }
+
+  if (code === "TASK_DELETE_FORBIDDEN") {
+    return "Bạn không phải là người tạo task này không có quyền xóa task"
+  }
+
   const mappings: Array<[string, string]> = [
     ["Invalid email or password", "Email hoặc mật khẩu không đúng."],
     ["Email already registered", "Email này đã được đăng ký."],

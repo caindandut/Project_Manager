@@ -23,6 +23,7 @@ export interface Task {
   order: number
   projectId: number
   assigneeId: number | null
+  createdById: number | null
   parentId: number | null
   createdAt: string
   updatedAt: string

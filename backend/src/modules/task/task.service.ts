@@ -104,6 +104,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       estimatedHours: data.estimatedHours,
       projectId: data.projectId,
       assigneeId: assigneeIds[0],
+      createdById: data.actorId,
       parentId,
     });
     const assignedUsers = await taskRepository.replaceAssignees(task.id, assigneeIds);
@@ -388,8 +389,30 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     };
   }
 
-  async delete(id: number) {
+  async delete(id: number, currentUserId?: number) {
     const task = await this.findTaskOrThrow(id);
+
+    if (task.status !== TaskStatus.DONE && task.status !== TaskStatus.CANCELLED) {
+      throw ApiError.forbidden(
+        ErrorCode.TASK_DELETE_STATUS_FORBIDDEN,
+        'Cannot delete task because it is not done or cancelled',
+      );
+    }
+
+    if (!currentUserId) {
+      throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
+    }
+
+    const isProjectAdmin = await this.isProjectAdmin(task.projectId, currentUserId);
+    const isTaskCreator = task.createdById === currentUserId;
+
+    if (!isProjectAdmin && !isTaskCreator) {
+      throw ApiError.forbidden(
+        ErrorCode.TASK_DELETE_FORBIDDEN,
+        'Bạn không phải là người tạo task này không có quyền xóa task',
+      );
+    }
+
     const deletedSubTaskCount = await taskRepository.deleteWithSubTasks(id);
 
     logger.info(`Task deleted: ${id}`);
@@ -448,6 +471,34 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
     }
 
     return task;
+  }
+
+  private async isProjectAdmin(projectId: number, userId: number): Promise<boolean> {
+    const project = await prisma.project.findFirst({
+      where: { id: projectId, deletedAt: null },
+      select: { ownerId: true },
+    });
+
+    if (!project) {
+      throw ApiError.notFound(ErrorCode.PROJECT_NOT_FOUND, 'Project not found');
+    }
+
+    if (project.ownerId === userId) {
+      return true;
+    }
+
+    const projectMember = await prisma.projectMember.findFirst({
+      where: {
+        projectId,
+        userId,
+        role: 'ADMIN',
+        status: 'ACCEPTED',
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    return projectMember !== null;
   }
 
   private async getValidParentTask(parentId: number, projectId: number): Promise<Task> {
@@ -537,6 +588,7 @@ export class TaskService extends BaseService<unknown, CreateTaskInput, UpdateTas
       order: task.order,
       projectId: task.projectId,
       assigneeId: task.assigneeId,
+      createdById: task.createdById,
       parentId: task.parentId,
       createdAt: task.createdAt,
       updatedAt: task.updatedAt,

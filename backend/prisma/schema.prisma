@@ -87,6 +87,7 @@ model User {
   ownedProjects Project[]         @relation("ProjectOwner")
   projectMembers ProjectMember[]
   assignedTasks Task[]            @relation("TaskAssignee")
+  createdTasks Task[]             @relation("TaskCreator")
   taskAssignments TaskAssignee[]  @relation("TaskAssigneeUser")
   comments      Comment[]
   activities    ActivityLog[]  @relation("ActivityLogUser")
@@ -297,6 +298,9 @@ model Task {
   assignee   User?   @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull, onUpdate: SetNull)
   assignees  TaskAssignee[]
 
+  createdById Int?   @map("created_by_id")
+  createdBy   User?  @relation("TaskCreator", fields: [createdById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+
   parentId Int?   @map("parent_id")
   parent   Task?  @relation("TaskSubTasks", fields: [parentId], references: [id], onDelete: SetNull, onUpdate: SetNull)
   subTasks Task[]  @relation("TaskSubTasks")
@@ -312,6 +316,7 @@ model Task {
 
   @@index([projectId, status], name: "idx_task_project_status")
   @@index([assigneeId], name: "idx_task_assignee")
+  @@index([createdById], name: "idx_task_creator")
   @@index([parentId], name: "idx_task_parent")
   @@index([deletedAt], name: "idx_task_deleted")
   @@index([dueDate], name: "idx_task_due_date")
