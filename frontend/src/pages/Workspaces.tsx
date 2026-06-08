@@ -3,6 +3,7 @@ import { Link, Navigate, useSearchParams } from "react-router-dom"
 import { ArrowRight, Clock3, FolderKanban, LayoutGrid, Users } from "lucide-react"
 
 import CreateWorkspaceDialog from "@/components/workspace/CreateWorkspaceDialog"
+import ArchivedWorkspacesSection from "@/components/workspace/ArchivedWorkspacesSection"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -28,16 +29,21 @@ export default function WorkspacesPage() {
     document.title = "Workspace | Project Manager"
   }, [])
 
-  // Auto-redirect to the last workspace or first available workspace
+  // Auto-redirect to the last workspace or first available workspace unless explicitly viewing the list
+  const isListView = searchParams.get("view") === "list" || searchParams.has("page")
   const lastSlug = getLastWorkspaceSlug(user?.id)
+  
   if (requireOnboarding) {
     return <Navigate to={user?.name ? "/onboarding/workspace" : "/onboarding/profile"} replace />
   }
-  if (lastSlug) {
-    return <Navigate to={`/workspaces/${lastSlug}`} replace />
-  }
-  if (workspacesQuery.isFetched && !workspacesQuery.isLoading && workspaces.length > 0) {
-    return <Navigate to={`/workspaces/${workspaces[0].slug}`} replace />
+
+  if (!isListView) {
+    if (lastSlug) {
+      return <Navigate to={`/workspaces/${lastSlug}`} replace />
+    }
+    if (workspacesQuery.isFetched && !workspacesQuery.isLoading && workspaces.length > 0) {
+      return <Navigate to={`/workspaces/${workspaces[0].slug}`} replace />
+    }
   }
 
   const updatePage = (nextPage: number) => {
@@ -53,34 +59,16 @@ export default function WorkspacesPage() {
   }
 
   return (
-    <section className="space-y-6">
+    <section className="space-y-6 p-4 md:p-6">
       <div className="flex flex-col gap-4 rounded-md border border-border/80 bg-muted/40 p-5 shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
-            <Badge variant="secondary" className="w-fit">
-              Workspace hub
-            </Badge>
             <div>
               <h1 className="text-2xl font-semibold text-foreground">Danh sách workspace</h1>
               <p className="mt-1 max-w-3xl text-sm leading-7 text-muted-foreground">
                 Theo dõi các workspace hiện có, vai trò của bạn, thành viên tham gia và những nơi đội đang vận hành dự án.
               </p>
             </div>
-          </div>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-3">
-          <div className="rounded-md border border-border/70 bg-card px-4 py-3 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Tổng workspace</p>
-            <p className="mt-2 text-2xl font-semibold text-foreground">{meta?.total ?? 0}</p>
-          </div>
-          <div className="rounded-md border border-border/70 bg-card px-4 py-3 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Trang hiện tại</p>
-            <p className="mt-2 text-2xl font-semibold text-foreground">{meta?.page ?? page}</p>
-          </div>
-          <div className="rounded-md border border-border/70 bg-card px-4 py-3 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">Số mục mỗi trang</p>
-            <p className="mt-2 text-2xl font-semibold text-foreground">{meta?.limit ?? WORKSPACES_PER_PAGE}</p>
           </div>
         </div>
       </div>
@@ -240,6 +228,8 @@ export default function WorkspacesPage() {
           </Button>
         </div>
       </div>
+      
+      <ArchivedWorkspacesSection />
     </section>
   )
 }

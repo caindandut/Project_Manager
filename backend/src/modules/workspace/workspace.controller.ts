@@ -30,6 +30,23 @@ export class WorkspaceController extends BaseController {
     });
   };
 
+  getArchived = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const result = await workspaceService.getArchivedWorkspaces(authReq.user.id);
+      res.json(success(result));
+    });
+  };
+
+  restore = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const workspaceId = req.params.workspaceId; // can be string or numeric ID
+      const result = await workspaceService.restoreWorkspace(workspaceId, authReq.user.id);
+      res.json(success(result));
+    });
+  };
+
   getById = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
       const authReq = this.requireAuth(req);

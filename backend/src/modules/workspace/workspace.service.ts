@@ -224,6 +224,46 @@ export class WorkspaceService extends BaseService<
     };
   }
 
+  async getArchivedWorkspaces(userId: number) {
+    const workspaces = await workspaceRepository.findArchivedForUser(userId);
+    return workspaces.map(w => ({
+      id: w.id,
+      name: w.name,
+      slug: w.slug,
+      deletedAt: w.deletedAt,
+      daysRemaining: w.deletedAt 
+        ? Math.max(0, 30 - Math.floor((new Date().getTime() - w.deletedAt.getTime()) / (1000 * 60 * 60 * 24)))
+        : 0
+    }));
+  }
+
+  async restoreWorkspace(workspaceId: string | number, userId: number) {
+    const id = typeof workspaceId === 'string' ? parseInt(workspaceId, 10) : workspaceId;
+    
+    // Validate owner manually because requireOwner middleware ignores deleted workspaces
+    const member = await workspaceRepository.findMemberByUserId(id, userId);
+    if (!member || member.role !== WorkspaceRole.OWNER) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Only the owner can restore an archived workspace');
+    }
+
+    const restored = await workspaceRepository.restore(id);
+    
+    logger.info(`Workspace restored: ${id} by user ${userId}`);
+    realtimeService.emitToWorkspace(id, {
+      type: 'workspace',
+      action: 'restored',
+      entityId: id,
+    });
+    
+    return this.formatWorkspace(restored);
+  }
+
+  async cleanupExpiredWorkspaces() {
+    const result = await workspaceRepository.hardDeleteExpired(30);
+    logger.info(`Cleaned up ${result.count} expired workspaces`);
+    return result;
+  }
+
   async delete(id: string | number) {
     const workspace = await this.findWorkspaceOrThrow(id);
 

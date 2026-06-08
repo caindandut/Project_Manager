@@ -1,4 +1,5 @@
 import { projectService } from '../../modules/project/project.service';
+import { workspaceService } from '../../modules/workspace/workspace.service';
 import { logger } from '../utils/logger';
 
 /**
@@ -11,8 +12,9 @@ export function startCleanupJob(): void {
 
   const runCleanup = async () => {
     try {
-      logger.info('Running scheduled cleanup: expired archived projects...');
+      logger.info('Running scheduled cleanup: expired archived projects and workspaces...');
       await projectService.cleanupExpiredProjects();
+      await workspaceService.cleanupExpiredWorkspaces();
     } catch (err) {
       logger.error('Cleanup job failed:', err);
     }

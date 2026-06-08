@@ -106,6 +106,53 @@ export class WorkspaceRepository extends BaseRepository<
     return { data, total };
   }
 
+  async findArchivedForUser(userId: number) {
+    const data = await prisma.workspace.findMany({
+      where: {
+        deletedAt: { not: null },
+        members: {
+          some: {
+            userId,
+            role: WorkspaceRole.OWNER,
+            deletedAt: null,
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        deletedAt: true,
+      },
+      orderBy: { deletedAt: 'desc' },
+    });
+
+    return data;
+  }
+
+  async restore(workspaceId: number): Promise<Workspace> {
+    return prisma.workspace.update({
+      where: { id: workspaceId },
+      data: { deletedAt: null },
+    });
+  }
+
+  async hardDeleteExpired(days: number = 30): Promise<{ count: number }> {
+    const expiredDate = new Date();
+    expiredDate.setDate(expiredDate.getDate() - days);
+
+    const result = await prisma.workspace.deleteMany({
+      where: {
+        deletedAt: {
+          not: null,
+          lt: expiredDate,
+        },
+      },
+    });
+
+    return { count: result.count };
+  }
+
   async createWithOwner(
     data: { name: string; description?: string; logo?: string; teamSize?: string },
     ownerId: number,

@@ -44,6 +44,13 @@ router.post(
 
 router.get('/', workspaceController.getAll);
 
+router.get('/archived', workspaceController.getArchived);
+
+router.post(
+  '/:workspaceId/restore',
+  workspaceController.restore,
+);
+
 router.get(
   '/:workspaceId',
   requireGuest,

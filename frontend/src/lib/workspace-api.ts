@@ -246,3 +246,29 @@ export const emptyPaginatedMeta = (page = DEFAULT_PAGE, limit = DEFAULT_LIMIT): 
   total: 0,
   totalPages: 0,
 })
+
+export interface ArchivedWorkspace {
+  id: number
+  name: string
+  slug: string
+  deletedAt: string
+  daysRemaining: number
+}
+
+export const getArchivedWorkspaces = async () => {
+  try {
+    const response = await apiClient.get<ApiResponse<ArchivedWorkspace[]>>("/workspaces/archived")
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}
+
+export const restoreWorkspace = async (workspaceId: string | number) => {
+  try {
+    const response = await apiClient.post<ApiResponse<WorkspaceDetail>>(`/workspaces/${workspaceId}/restore`)
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}

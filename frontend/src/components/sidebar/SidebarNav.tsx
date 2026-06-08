@@ -106,7 +106,7 @@ export default function SidebarNav() {
       {/* Header */}
       <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-3">
         {!isCollapsed ? (
-          <Link to="/workspaces" className="flex items-center gap-2">
+          <Link to="/workspaces?view=list" className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
               <FolderKanban className="h-4 w-4" />
             </div>
@@ -114,7 +114,7 @@ export default function SidebarNav() {
           </Link>
         ) : (
           <Link
-            to="/workspaces"
+            to="/workspaces?view=list"
             className="mx-auto flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground"
           >
             <FolderKanban className="h-4 w-4" />
@@ -282,7 +282,7 @@ export default function SidebarNav() {
       {!isCollapsed && (
         <div className="border-t border-sidebar-border p-3">
           <Link
-            to="/workspaces"
+            to="/workspaces?view=list"
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           >
             <Avatar className="h-6 w-6">

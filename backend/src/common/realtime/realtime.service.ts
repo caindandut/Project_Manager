@@ -25,7 +25,8 @@ export type RealtimeAction =
   | 'declined'
   | 'cancelled'
   | 'read'
-  | 'cleared';
+  | 'cleared'
+  | 'restored';
 
 export interface RealtimeEventPayload {
   type: RealtimeEntityType;

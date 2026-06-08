@@ -27,6 +27,7 @@ export const workspaceQueryKeys = {
   members: (workspaceId: string | number, page: number, limit: number, role?: WorkspaceRole) =>
     ["workspace-members", String(workspaceId), page, limit, role ?? "ALL"] as const,
   invitations: (workspaceId: string | number) => ["workspace-invitations", String(workspaceId)] as const,
+  archived: () => ["archived-workspaces"] as const,
 }
 
 export const useWorkspacesQuery = (page: number, limit: number, options?: { enabled?: boolean }) =>
@@ -180,6 +181,27 @@ export const useDeleteWorkspaceMutation = () => {
     mutationFn: (workspaceId: string | number) => deleteWorkspace(workspaceId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["workspaces"] })
+      await queryClient.invalidateQueries({ queryKey: workspaceQueryKeys.archived() })
+    },
+  })
+}
+
+export const useArchivedWorkspacesQuery = () =>
+  useQuery({
+    queryKey: workspaceQueryKeys.archived(),
+    queryFn: () => import("@/lib/workspace-api").then((m) => m.getArchivedWorkspaces()),
+  })
+
+export const useRestoreWorkspaceMutation = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (workspaceId: string | number) => import("@/lib/workspace-api").then((m) => m.restoreWorkspace(workspaceId)),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["workspaces"] }),
+        queryClient.invalidateQueries({ queryKey: workspaceQueryKeys.archived() }),
+      ])
     },
   })
 }
