@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { Link, Navigate, useSearchParams } from "react-router-dom"
-import { ArrowRight, Clock3, FolderKanban, LayoutGrid, Users, Link2 } from "lucide-react"
+import { ArrowRight, Clock3, FolderKanban, LayoutGrid, Users } from "lucide-react"
 
 import CreateWorkspaceDialog from "@/components/workspace/CreateWorkspaceDialog"
 import ArchivedWorkspacesSection from "@/components/workspace/ArchivedWorkspacesSection"
