@@ -23,7 +23,7 @@ import TaskDetailPanel from "@/components/tasks/TaskDetailPanel"
 
 import { useProjectDetailQuery } from "@/hooks/useProject"
 import { useTasksQuery } from "@/hooks/useTasks"
-import { useWorkspaceMembersQuery } from "@/hooks/useWorkspaces"
+import { useProjectMembersQuery } from "@/hooks/useProjectMembers"
 import { createTask as createTaskApi, updateTask as updateTaskApi } from "@/lib/task-api"
 import { queryClient } from "@/lib/query-client"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
@@ -62,8 +62,10 @@ export function CalendarView() {
   const tasksQuery = useTasksQuery(projectId)
   const allTasks: Task[] = tasksQuery.data?.data ?? []
 
-  const membersQuery = useWorkspaceMembersQuery(workspaceId, 1, 50)
-  const projectMembers = (membersQuery.data?.data ?? []).map((m) => m.user)
+  const membersQuery = useProjectMembersQuery(projectId)
+  const projectMembers = (membersQuery.data?.data ?? [])
+    .filter((m) => m.status === "ACCEPTED")
+    .map((m) => m.user)
 
   // Filter tasks
   const filteredTasks = useMemo(() => {

@@ -25,7 +25,7 @@ import {
 
 import { useProjectDetailQuery } from "@/hooks/useProject"
 import { useTasksQuery, useUpdateTaskMutation } from "@/hooks/useTasks"
-import { useWorkspaceMembersQuery } from "@/hooks/useWorkspaces"
+import { useProjectMembersQuery } from "@/hooks/useProjectMembers"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import { cn } from "@/lib/utils"
 import type { Task, TaskStatus as TaskStatusType } from "@/types/task"
@@ -87,8 +87,10 @@ export function GanttView() {
   const tasksQuery = useTasksQuery(projectId)
   const allTasks: Task[] = tasksQuery.data?.data ?? []
 
-  const membersQuery = useWorkspaceMembersQuery(workspaceId, 1, 50)
-  const projectMembers = (membersQuery.data?.data ?? []).map((m) => m.user)
+  const membersQuery = useProjectMembersQuery(projectId)
+  const projectMembers = (membersQuery.data?.data ?? [])
+    .filter((m) => m.status === "ACCEPTED")
+    .map((m) => m.user)
 
   const updateTaskMutation = useUpdateTaskMutation(projectId)
 

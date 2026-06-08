@@ -219,7 +219,9 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
             return prev
           })
         }}
-        projectMembers={(membersQuery.data?.data ?? []).map((m) => m.user)}
+        projectMembers={(membersQuery.data?.data ?? [])
+          .filter((m) => m.status === "ACCEPTED")
+          .map((m) => m.user)}
       />
 
       {/* Create dialog */}
@@ -227,7 +229,9 @@ export default function ProjectTaskListPage({ initialViewMode = "kanban" }: Proj
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSubmit={handleCreateTask}
-        projectMembers={(membersQuery.data?.data ?? []).map((m) => m.user)}
+        projectMembers={(membersQuery.data?.data ?? [])
+          .filter((m) => m.status === "ACCEPTED")
+          .map((m) => m.user)}
       />
     </div>
   )

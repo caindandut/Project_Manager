@@ -244,7 +244,9 @@ export default function ProjectOverview() {
         projectKey={project?.key ?? "PRJ"}
         open={selectedTaskId !== null}
         onClose={handleCloseTask}
-        projectMembers={(projectMembersQuery.data?.data ?? []).map((member) => member.user)}
+        projectMembers={(projectMembersQuery.data?.data ?? [])
+          .filter((member) => member.status === "ACCEPTED")
+          .map((member) => member.user)}
       />
     </div>
   )
