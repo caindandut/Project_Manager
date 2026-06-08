@@ -21,7 +21,14 @@ const invalidatePrefixesByEvent = (event: RealtimeEventPayload): readonly (reado
   }
 
   if (event.type === "invitation") {
-    prefixes.push(["notifications"], ["my-workspace-invitations"], ["my-project-invitations"])
+    prefixes.push(
+      ["notifications"], 
+      ["my-workspace-invitations"], 
+      ["my-project-invitations"],
+      ["workspace-members"],
+      ["workspace-invitations"],
+      ["project-members"]
+    )
   }
 
   if (event.type === "workspace") {
