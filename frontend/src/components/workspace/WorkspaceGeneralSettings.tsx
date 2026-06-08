@@ -116,8 +116,7 @@ export default function WorkspaceGeneralSettings() {
       if (lastSlug === workspaceSlug) {
         window.localStorage.removeItem(LAST_WORKSPACE_SLUG_KEY)
       }
-
-      navigate("/workspaces", { replace: true })
+      navigate("/workspaces?view=list", { replace: true })
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, "Không thể xóa không gian làm việc."))
     } finally {
