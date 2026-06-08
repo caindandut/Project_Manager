@@ -22,6 +22,7 @@ import { taskRepository } from '../task/task.repository';
 export interface CreateWorkspaceInput {
   name: string;
   description?: string;
+  slug?: string;
   logo?: string;
   teamSize?: string;
 }
@@ -74,6 +75,7 @@ export class WorkspaceService extends BaseService<
       {
         name: data.name,
         description: data.description,
+        slug: data.slug,
         logo: data.logo,
         teamSize: data.teamSize,
       },

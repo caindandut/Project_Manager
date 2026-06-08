@@ -159,12 +159,12 @@ export default function OnboardingWorkspacePage() {
           {/* Workspace Slug */}
           <div className="space-y-2">
             <Label htmlFor="workspaceSlug">Địa chỉ URL</Label>
-            <div className="flex items-center rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-              <span className="flex-shrink-0">{window.location.host}/workspaces/</span>
+            <div className="flex items-center overflow-hidden rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+              <span className="truncate text-muted-foreground/70">{window.location.host}/workspaces/</span>
               <input
                 id="workspaceSlug"
                 type="text"
-                className="flex-1 bg-transparent outline-none"
+                className="flex-1 min-w-0 bg-transparent outline-none"
                 value={workspaceSlug}
                 onChange={(e) => {
                   setSlugManuallyEdited(true);

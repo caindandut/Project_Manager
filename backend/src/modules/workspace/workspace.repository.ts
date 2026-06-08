@@ -154,11 +154,11 @@ export class WorkspaceRepository extends BaseRepository<
   }
 
   async createWithOwner(
-    data: { name: string; description?: string; logo?: string; teamSize?: string },
+    data: { name: string; description?: string; slug?: string; logo?: string; teamSize?: string },
     ownerId: number,
   ): Promise<Workspace> {
-    // Generate unique slug from name
-    let baseSlug = this.generateSlug(data.name);
+    // Generate unique slug from provided slug or name
+    let baseSlug = this.generateSlug(data.slug || data.name);
     let slug = baseSlug;
     let counter = 1;
 

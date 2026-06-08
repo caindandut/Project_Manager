@@ -132,6 +132,13 @@ export const validationRules = {
       .trim()
       .isLength({ max: 500 })
       .withMessage('Description must be at most 500 characters'),
+    body('slug')
+      .optional()
+      .trim()
+      .matches(/^[a-z0-9-]+$/)
+      .withMessage('Slug can only contain lowercase letters, numbers, and hyphens')
+      .isLength({ max: 50 })
+      .withMessage('Slug must be at most 50 characters'),
     body('logo')
       .optional()
       .trim()
