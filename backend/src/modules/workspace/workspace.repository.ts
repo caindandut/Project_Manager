@@ -113,7 +113,7 @@ export class WorkspaceRepository extends BaseRepository<
         members: {
           some: {
             userId,
-            role: WorkspaceRole.OWNER,
+            role: { in: [WorkspaceRole.OWNER, WorkspaceRole.ADMIN] },
             deletedAt: null,
           },
         },
