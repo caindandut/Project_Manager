@@ -4,6 +4,7 @@ import { authMiddleware } from '../../common/middlewares/auth.middleware';
 import {
   requireGuest,
   requireMember,
+  requireAdmin,
 } from '../../common/middlewares/rbac.middleware';
 import { requireProjectAdmin } from '../../common/middlewares/project-rbac.middleware';
 import { validate, validationRules } from '../../common/middlewares/validation.middleware';
@@ -23,7 +24,7 @@ router.get(
 // Get archived (soft-deleted) projects in workspace - ADMIN only
 router.get(
   '/:workspaceId/projects/archived',
-  requireMember,
+  requireAdmin,
   projectController.getArchived
 );
 
@@ -42,10 +43,10 @@ router.post(
   projectController.create
 );
 
-// Restore archived project (Workspace Member or above - project-level RBAC skipped since project is deleted)
+// Restore archived project (Workspace Admin only)
 router.post(
   '/:workspaceId/projects/:projectId/restore',
-  requireMember,
+  requireAdmin,
   projectController.restore
 );
 

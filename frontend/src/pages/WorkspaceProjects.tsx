@@ -15,6 +15,7 @@ export default function WorkspaceProjectsPage() {
   const projectsQuery = useProjectsQuery(workspaceId)
   const workspaceQuery = useWorkspaceDetailQuery(workspaceId)
   const projects = projectsQuery.data?.data ?? []
+  const canManage = workspaceQuery.data?.role === "ADMIN"
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "Chưa có cập nhật"
@@ -170,8 +171,8 @@ export default function WorkspaceProjectsPage() {
         </div>
       ) : null}
 
-      {/* Danh sách dự án đã lưu trữ */}
-      <ArchivedProjectsSection />
+      {/* Danh sách dự án đã lưu trữ - chỉ hiện với Admin */}
+      {canManage && <ArchivedProjectsSection />}
     </div>
   )
 }

@@ -111,6 +111,10 @@ export const requireOwner = requireWorkspaceRole({
   requiredRoles: ['OWNER', 'ADMIN'],
 });
 
+export const requireAdmin = requireWorkspaceRole({
+  requiredRoles: ['ADMIN'],
+});
+
 export const requireMember = requireWorkspaceRole({
   requiredRoles: ['MEMBER'],
 });

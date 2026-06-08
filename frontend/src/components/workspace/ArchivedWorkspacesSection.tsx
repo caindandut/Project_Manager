@@ -74,7 +74,19 @@ export default function ArchivedWorkspacesSection() {
   }
 
   if (!archivedWorkspaces || archivedWorkspaces.length === 0) {
-    return null
+    return (
+      <Card className="border-amber-200 dark:border-amber-900 mt-6 border-dashed opacity-70">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base text-amber-700/70 dark:text-amber-400/70">
+            <Trash2 className="h-4 w-4" />
+            Workspace đã lưu trữ (0)
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Chưa có workspace nào được lưu trữ. Các workspace bị xóa sẽ xuất hiện ở đây trong 30 ngày trước khi bị xóa vĩnh viễn.
+          </p>
+        </CardHeader>
+      </Card>
+    )
   }
 
   return (
