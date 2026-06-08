@@ -158,22 +158,21 @@ export default function OnboardingWorkspacePage() {
 
           {/* Workspace Slug */}
           <div className="space-y-2">
-            <Label htmlFor="workspaceSlug">Địa chỉ URL</Label>
-            <div className="flex items-center overflow-hidden rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
-              <span className="truncate text-muted-foreground/70">{window.location.host}/workspaces/</span>
-              <input
-                id="workspaceSlug"
-                type="text"
-                className="flex-1 min-w-0 bg-transparent outline-none"
-                value={workspaceSlug}
-                onChange={(e) => {
-                  setSlugManuallyEdited(true);
-                  setWorkspaceSlug(e.target.value);
-                }}
-                placeholder="ten-khong-gian"
-                maxLength={50}
-              />
-            </div>
+            <Label htmlFor="workspaceSlug">Đường dẫn (URL)</Label>
+            <Input
+              id="workspaceSlug"
+              type="text"
+              value={workspaceSlug}
+              onChange={(e) => {
+                setSlugManuallyEdited(true);
+                setWorkspaceSlug(e.target.value);
+              }}
+              placeholder="ten-khong-gian"
+              maxLength={50}
+            />
+            <p className="text-[0.8rem] text-muted-foreground break-all">
+              Sẽ hiển thị tại: {window.location.host}/workspaces/<span className="font-medium text-foreground">{workspaceSlug || "ten-khong-gian"}</span>
+            </p>
           </div>
 
           {/* Team Size */}

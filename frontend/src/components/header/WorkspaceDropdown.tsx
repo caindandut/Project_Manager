@@ -164,17 +164,19 @@ export default function WorkspaceDropdown() {
                 <span className="text-sm text-foreground">Cài đặt workspace</span>
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link
-                to="/workspaces?view=list"
-                className="flex items-center gap-3 cursor-pointer rounded-md mx-1"
-              >
-                <Archive className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-foreground">Workspace đã lưu trữ</span>
-              </Link>
-            </DropdownMenuItem>
           </>
         )}
+
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link
+            to="/workspaces?view=list"
+            className="flex items-center gap-3 cursor-pointer rounded-md mx-1"
+          >
+            <Archive className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-foreground">Workspace đã lưu trữ</span>
+          </Link>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

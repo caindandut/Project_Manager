@@ -108,23 +108,22 @@ export default function CreateWorkspaceDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="dialog-workspace-slug">Địa chỉ URL</Label>
-            <div className="flex items-center overflow-hidden rounded-md border bg-muted/50 px-3 py-2 text-sm text-muted-foreground focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50">
-              <span className="truncate text-muted-foreground/70">{window.location.host}/workspaces/</span>
-              <input
-                id="dialog-workspace-slug"
-                type="text"
-                className="flex-1 min-w-0 bg-transparent outline-none"
-                value={form.slug}
-                onChange={(e) => {
-                  setSlugManuallyEdited(true)
-                  setForm((current) => ({ ...current, slug: e.target.value }))
-                }}
-                placeholder="ten-khong-gian"
-                maxLength={50}
-                required
-              />
-            </div>
+            <Label htmlFor="dialog-workspace-slug">Đường dẫn (URL)</Label>
+            <Input
+              id="dialog-workspace-slug"
+              type="text"
+              value={form.slug}
+              onChange={(e) => {
+                setSlugManuallyEdited(true)
+                setForm((current) => ({ ...current, slug: e.target.value }))
+              }}
+              placeholder="ten-khong-gian"
+              maxLength={50}
+              required
+            />
+            <p className="text-[0.8rem] text-muted-foreground break-all">
+              Sẽ hiển thị tại: {window.location.host}/workspaces/<span className="font-medium text-foreground">{form.slug || "ten-khong-gian"}</span>
+            </p>
           </div>
 
           <DialogFooter>
