@@ -100,13 +100,24 @@ export class ProjectRepository extends BaseRepository<
     });
   }
 
-  async findDeletedProjectsInWorkspace(workspaceId: number): Promise<Project[]> {
+  async findDeletedProjectsInWorkspace(workspaceId: number, projectAdminUserId?: number): Promise<Project[]> {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const where: Prisma.ProjectWhereInput = {
+      workspaceId,
+      deletedAt: { not: null, gte: thirtyDaysAgo },
+    };
+
+    if (projectAdminUserId) {
+      where.members = {
+        some: {
+          userId: projectAdminUserId,
+          role: ProjectRole.ADMIN,
+        },
+      };
+    }
+
     return prisma.project.findMany({
-      where: {
-        workspaceId,
-        deletedAt: { not: null, gte: thirtyDaysAgo },
-      },
+      where,
       orderBy: { deletedAt: 'desc' },
     });
   }

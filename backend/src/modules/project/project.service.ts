@@ -209,13 +209,24 @@ export class ProjectService extends BaseService<
     return { message: 'Project deleted successfully' };
   }
 
-  async restoreProject(projectId: number, workspaceId: number) {
+  async restoreProject(projectId: number, workspaceId: number, userId: number, isWorkspaceAdmin: boolean) {
     const project = await projectRepository.findDeletedByIdInWorkspace(projectId, workspaceId);
     if (!project) {
       throw ApiError.notFound(
         ErrorCode.PROJECT_NOT_FOUND,
         'Dự án không tồn tại hoặc đã hết thời gian lưu trữ 30 ngày.',
       );
+    }
+
+    if (!isWorkspaceAdmin) {
+      const { PrismaClient } = require('@prisma/client');
+      const prisma = new PrismaClient();
+      const member = await prisma.projectMember.findFirst({
+        where: { projectId: project.id, userId, role: 'ADMIN' }
+      });
+      if (!member) {
+        throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Only workspace admins or project admins can restore this project');
+      }
     }
 
     const restored = await projectRepository.restoreProject(project.id);
@@ -242,8 +253,11 @@ export class ProjectService extends BaseService<
     };
   }
 
-  async getArchivedProjects(workspaceId: number) {
-    const projects = await projectRepository.findDeletedProjectsInWorkspace(workspaceId);
+  async getArchivedProjects(workspaceId: number, userId: number, isWorkspaceAdmin: boolean) {
+    const projects = await projectRepository.findDeletedProjectsInWorkspace(
+      workspaceId,
+      isWorkspaceAdmin ? undefined : userId
+    );
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
 
     return projects.map((project) => {

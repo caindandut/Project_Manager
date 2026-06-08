@@ -21,10 +21,10 @@ router.get(
   projectController.getAll
 );
 
-// Get archived (soft-deleted) projects in workspace - ADMIN only
+// Get archived (soft-deleted) projects in workspace - ADMIN or Project Admin
 router.get(
   '/:workspaceId/projects/archived',
-  requireAdmin,
+  requireMember,
   projectController.getArchived
 );
 
@@ -43,10 +43,10 @@ router.post(
   projectController.create
 );
 
-// Restore archived project (Workspace Admin only)
+// Restore archived project (Workspace Admin or Project Admin)
 router.post(
   '/:workspaceId/projects/:projectId/restore',
-  requireAdmin,
+  requireMember,
   projectController.restore
 );
 

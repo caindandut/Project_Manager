@@ -5,7 +5,6 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useProjectsQuery } from "@/hooks/useProjects"
-import { useWorkspaceDetailQuery } from "@/hooks/useWorkspaces"
 import { cn } from "@/lib/utils"
 import ArchivedProjectsSection from "@/components/project/ArchivedProjectsSection"
 
@@ -13,9 +12,7 @@ export default function WorkspaceProjectsPage() {
   const params = useParams<{ workspaceId: string }>()
   const workspaceId = params.workspaceId || ""
   const projectsQuery = useProjectsQuery(workspaceId)
-  const workspaceQuery = useWorkspaceDetailQuery(workspaceId)
   const projects = projectsQuery.data?.data ?? []
-  const canManage = workspaceQuery.data?.role === "ADMIN"
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "Chưa có cập nhật"
@@ -171,8 +168,8 @@ export default function WorkspaceProjectsPage() {
         </div>
       ) : null}
 
-      {/* Danh sách dự án đã lưu trữ - chỉ hiện với Admin */}
-      {canManage && <ArchivedProjectsSection />}
+      {/* Danh sách dự án đã lưu trữ */}
+      <ArchivedProjectsSection />
     </div>
   )
 }

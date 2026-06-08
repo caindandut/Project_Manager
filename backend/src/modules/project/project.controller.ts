@@ -77,17 +77,21 @@ export class ProjectController extends BaseController {
 
   getArchived = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
       const workspaceId = this.getWorkspaceId(req);
-      const result = await projectService.getArchivedProjects(workspaceId);
+      const isWorkspaceAdmin = (req as any).workspaceRole === WorkspaceRole.ADMIN;
+      const result = await projectService.getArchivedProjects(workspaceId, authReq.user.id, isWorkspaceAdmin);
       res.json(success(result));
     });
   };
 
   restore = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
       const workspaceId = this.getWorkspaceId(req);
       const projectId = this.getProjectId(req);
-      const result = await projectService.restoreProject(projectId, workspaceId);
+      const isWorkspaceAdmin = (req as any).workspaceRole === WorkspaceRole.ADMIN;
+      const result = await projectService.restoreProject(projectId, workspaceId, authReq.user.id, isWorkspaceAdmin);
       res.json(success(result));
     });
   };
