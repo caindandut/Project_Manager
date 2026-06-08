@@ -280,8 +280,15 @@ export default function TaskDetailPanel({
 
   const handleStartDateChange = (date: string) => {
     if (!task) return
+    const newStartDate = fromDateTimeLocalValue(date) ?? null
+    
+    if (newStartDate && task.dueDate && new Date(newStartDate) > new Date(task.dueDate)) {
+      toast.error("Ngày bắt đầu không được sau ngày hết hạn.")
+      return
+    }
+
     updateMutation.mutate(
-      { taskId: task.id, payload: { startDate: fromDateTimeLocalValue(date) ?? null } },
+      { taskId: task.id, payload: { startDate: newStartDate } },
       {
         onError: (e) => toast.error(toVietnameseErrorMessage(e, "Không thể cập nhật ngày bắt đầu.")),
       },
@@ -290,8 +297,15 @@ export default function TaskDetailPanel({
 
   const handleDueDateChange = (date: string) => {
     if (!task) return
+    const newDueDate = fromDateTimeLocalValue(date) ?? null
+    
+    if (newDueDate && task.startDate && new Date(task.startDate) > new Date(newDueDate)) {
+      toast.error("Ngày hết hạn không được trước ngày bắt đầu.")
+      return
+    }
+
     updateMutation.mutate(
-      { taskId: task.id, payload: { dueDate: fromDateTimeLocalValue(date) ?? null } },
+      { taskId: task.id, payload: { dueDate: newDueDate } },
       {
         onError: (e) => toast.error(toVietnameseErrorMessage(e, "Không thể cập nhật ngày hết hạn.")),
       },
@@ -305,10 +319,8 @@ export default function TaskDetailPanel({
         taskId: task.id,
         payload,
       })
-      toast.success("Đã thêm công việc con.")
-      setCreateSubtaskDialogOpen(false)
     } catch (e) {
-      toast.error(toVietnameseErrorMessage(e, "Không thể thêm công việc con."))
+      throw new Error(toVietnameseErrorMessage(e, "Không thể thêm công việc con."))
     }
   }
 
