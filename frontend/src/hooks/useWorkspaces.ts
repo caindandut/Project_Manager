@@ -12,6 +12,7 @@ import {
   removeWorkspaceMember,
   updateWorkspace,
   updateWorkspaceMemberRole,
+  searchWorkspaceTasks,
 } from "@/lib/workspace-api"
 import type {
   CreateWorkspacePayload,
@@ -28,6 +29,8 @@ export const workspaceQueryKeys = {
     ["workspace-members", String(workspaceId), page, limit, role ?? "ALL"] as const,
   invitations: (workspaceId: string | number) => ["workspace-invitations", String(workspaceId)] as const,
   archived: () => ["archived-workspaces"] as const,
+  searchTasks: (workspaceId: string | number, query: string) => 
+    ["workspace-tasks-search", String(workspaceId), query] as const,
 }
 
 export const useWorkspacesQuery = (page: number, limit: number, options?: { enabled?: boolean }) =>
@@ -190,6 +193,14 @@ export const useArchivedWorkspacesQuery = () =>
   useQuery({
     queryKey: workspaceQueryKeys.archived(),
     queryFn: () => import("@/lib/workspace-api").then((m) => m.getArchivedWorkspaces()),
+  })
+
+export const useSearchWorkspaceTasksQuery = (workspaceId: string | number, query: string) =>
+  useQuery({
+    queryKey: workspaceQueryKeys.searchTasks(workspaceId, query),
+    queryFn: () => searchWorkspaceTasks(workspaceId, query),
+    enabled: Boolean(workspaceId && query.trim().length > 0),
+    staleTime: 1000 * 60, // 1 minute
   })
 
 export const useRestoreWorkspaceMutation = () => {

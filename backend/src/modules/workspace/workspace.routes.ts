@@ -57,6 +57,12 @@ router.get(
   workspaceController.getById,
 );
 
+router.get(
+  '/:workspaceId/tasks/search',
+  requireGuest,
+  workspaceController.searchTasks,
+);
+
 router.patch(
   '/:workspaceId',
   requireOwner,

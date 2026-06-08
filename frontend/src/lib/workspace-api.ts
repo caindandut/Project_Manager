@@ -272,3 +272,14 @@ export const restoreWorkspace = async (workspaceId: string | number) => {
     throw normalizeApiError(error)
   }
 }
+
+export const searchWorkspaceTasks = async (workspaceId: string | number, query: string) => {
+  try {
+    const response = await apiClient.get<ApiResponse<any[]>>(`/workspaces/${workspaceId}/tasks/search`, {
+      params: { q: query },
+    })
+    return unwrapResponse(response)
+  } catch (error) {
+    throw normalizeApiError(error)
+  }
+}

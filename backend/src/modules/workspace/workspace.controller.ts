@@ -84,6 +84,20 @@ export class WorkspaceController extends BaseController {
     });
   };
 
+  searchTasks = async (req: Request, res: Response): Promise<void> => {
+    await this.tryCatch(res, async () => {
+      const authReq = this.requireAuth(req);
+      const workspaceId = this.getWorkspaceId(req);
+      const query = req.query.q as string;
+      if (!query) {
+        res.json(success([]));
+        return;
+      }
+      const result = await workspaceService.searchTasks(workspaceId, query, authReq.user.id);
+      res.json(success(result));
+    });
+  };
+
   inviteMember = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
       const authReq = this.requireAuth(req);

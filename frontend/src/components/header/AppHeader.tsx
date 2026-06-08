@@ -6,9 +6,10 @@ import { useTheme } from "next-themes"
 import NotificationBell from "@/components/NotificationBell"
 import UserDropdown from "./UserDropdown"
 import WorkspaceDropdown from "./WorkspaceDropdown"
+import HeaderSearch from "./HeaderSearch"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { useAuthStore } from "@/stores/authStore"
+import { useLocation } from "react-router-dom"
 
 interface AppHeaderProps {
   onMenuClick?: () => void
@@ -18,6 +19,11 @@ export default function AppHeader({ onMenuClick }: AppHeaderProps) {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const user = useAuthStore((s) => s.user)
   const { theme, setTheme } = useTheme()
+  const location = useLocation()
+
+  // Extract workspaceSlug from URL path (e.g. /workspaces/my-slug/...)
+  const match = location.pathname.match(/^\/workspaces\/([^/]+)/)
+  const workspaceSlug = match ? match[1] : undefined
 
   return (
     <header className="sticky top-0 z-50 flex h-14 w-full items-center gap-4 border-b border-border bg-card px-4 shadow-sm dark:shadow-jira-card-dark">
@@ -40,17 +46,11 @@ export default function AppHeader({ onMenuClick }: AppHeaderProps) {
         "flex-1 mx-4",
         isSearchOpen ? "flex" : "hidden md:flex"
       )}>
-        <div className="relative w-full max-w-xl">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="search"
-            placeholder="Tìm kiếm công việc..."
-            className="h-9 w-full rounded border-border bg-muted/70 pl-10 text-sm focus:bg-background focus:ring-2 focus:ring-primary/20 dark:bg-background dark:focus:bg-card"
-          />
-          <kbd className="absolute right-3 top-1/2 -translate-y-1/2 hidden h-5 items-center gap-1 rounded border border-border bg-muted/70 px-1.5 font-mono text-xs text-muted-foreground sm:inline-flex">
-            <span className="text-xs">/</span>
-          </kbd>
-        </div>
+        {workspaceSlug ? (
+          <HeaderSearch workspaceSlug={workspaceSlug} />
+        ) : (
+          <div className="w-full max-w-xl" /> // Placeholder to keep spacing
+        )}
       </div>
 
       {/* Mobile search toggle */}

@@ -436,6 +436,32 @@ export class TaskRepository extends BaseRepository<
     });
   }
 
+  async searchInWorkspace(workspaceId: number, query: string, userId: number, isWorkspaceAdmin: boolean) {
+    const where: Prisma.TaskWhereInput = {
+      project: {
+        workspaceId,
+        deletedAt: null,
+        ...(!isWorkspaceAdmin ? {
+          OR: [
+            { ownerId: userId },
+            { projectMembers: { some: { userId, status: 'ACCEPTED', deletedAt: null } } }
+          ]
+        } : {})
+      },
+      deletedAt: null,
+      title: { contains: query }
+    };
+
+    return prisma.task.findMany({
+      where,
+      take: 10,
+      orderBy: { updatedAt: 'desc' },
+      include: {
+        project: { select: { id: true, name: true, key: true } },
+      }
+    });
+  }
+
   buildWhereFromFilters(filter: {
     status?: TaskStatus;
     priority?: TaskPriority;

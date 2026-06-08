@@ -226,6 +226,20 @@ export class WorkspaceService extends BaseService<
     };
   }
 
+  async searchTasks(workspaceId: number | string, query: string, userId: number) {
+    const workspace = await this.findWorkspaceOrThrow(workspaceId);
+
+    // Check if user is in workspace and get their role
+    const member = await workspaceRepository.findMemberByUserId(workspace.id, userId);
+    if (!member) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Access denied to this workspace');
+    }
+
+    const isWorkspaceAdmin = member.role === WorkspaceRole.OWNER || member.role === WorkspaceRole.ADMIN;
+    
+    return taskRepository.searchInWorkspace(workspace.id, query, userId, isWorkspaceAdmin);
+  }
+
   async getArchivedWorkspaces(userId: number) {
     const workspaces = await workspaceRepository.findArchivedForUser(userId);
     return workspaces.map(w => ({
