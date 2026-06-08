@@ -256,10 +256,10 @@ export class WorkspaceService extends BaseService<
   async restoreWorkspace(workspaceId: string | number, userId: number) {
     const id = typeof workspaceId === 'string' ? parseInt(workspaceId, 10) : workspaceId;
     
-    // Validate owner manually because requireOwner middleware ignores deleted workspaces
+    // Validate owner/admin manually because requireOwner middleware ignores deleted workspaces
     const member = await workspaceRepository.findMemberByUserId(id, userId);
-    if (!member || member.role !== WorkspaceRole.OWNER) {
-      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Only the owner can restore an archived workspace');
+    if (!member || (member.role !== WorkspaceRole.OWNER && member.role !== WorkspaceRole.ADMIN)) {
+      throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Only the owner or admin can restore an archived workspace');
     }
 
     const restored = await workspaceRepository.restore(id);
