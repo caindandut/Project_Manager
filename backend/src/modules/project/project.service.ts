@@ -178,6 +178,17 @@ export class ProjectService extends BaseService<
 
   async deleteInWorkspace(projectId: number, workspaceId: number) {
     const project = await this.findProjectOrThrow(projectId, workspaceId);
+
+    // Ràng buộc: tất cả task phải là DONE hoặc CANCELLED
+    const activeTaskCount = await projectRepository.countActiveTasksInProject(project.id);
+    if (activeTaskCount > 0) {
+      throw ApiError.conflict(
+        ErrorCode.PROJECT_HAS_ACTIVE_TASKS,
+        `Không thể xóa dự án vì còn ${activeTaskCount} công việc chưa hoàn thành. Hãy chuyển tất cả công việc sang Hoàn thành hoặc Hủy trước.`,
+        { activeTaskCount },
+      );
+    }
+
     await projectRepository.softDelete(project.id);
 
     logger.info(`Project deleted: ${project.id}`);
@@ -196,6 +207,70 @@ export class ProjectService extends BaseService<
     });
 
     return { message: 'Project deleted successfully' };
+  }
+
+  async restoreProject(projectId: number, workspaceId: number) {
+    const project = await projectRepository.findDeletedByIdInWorkspace(projectId, workspaceId);
+    if (!project) {
+      throw ApiError.notFound(
+        ErrorCode.PROJECT_NOT_FOUND,
+        'Dự án không tồn tại hoặc đã hết thời gian lưu trữ 30 ngày.',
+      );
+    }
+
+    const restored = await projectRepository.restoreProject(project.id);
+    logger.info(`Project restored: ${project.id}`);
+    realtimeService.emitToWorkspace(workspaceId, {
+      type: 'project',
+      action: 'created',
+      entityId: project.id,
+      projectId: project.id,
+    });
+    realtimeService.emitToOwners({
+      type: 'project',
+      action: 'created',
+      entityId: project.id,
+      workspaceId,
+      projectId: project.id,
+    });
+
+    return {
+      id: restored.id,
+      name: restored.name,
+      key: restored.key,
+      message: 'Project restored successfully',
+    };
+  }
+
+  async getArchivedProjects(workspaceId: number) {
+    const projects = await projectRepository.findDeletedProjectsInWorkspace(workspaceId);
+    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+    return projects.map((project) => {
+      const deletedAt = project.deletedAt!;
+      const expiresAt = new Date(deletedAt.getTime() + thirtyDaysMs);
+      const daysRemaining = Math.max(
+        0,
+        Math.ceil((expiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)),
+      );
+
+      return {
+        id: project.id,
+        name: project.name,
+        key: project.key,
+        color: project.color,
+        deletedAt,
+        expiresAt,
+        daysRemaining,
+      };
+    });
+  }
+
+  async cleanupExpiredProjects(): Promise<void> {
+    const count = await projectRepository.permanentlyDeleteExpiredProjects();
+    if (count > 0) {
+      logger.info(`Cleanup: Permanently deleted ${count} expired project(s).`);
+    }
   }
 
   async getById(id: number): Promise<unknown> {

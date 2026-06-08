@@ -5,13 +5,17 @@ import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useProjectsQuery } from "@/hooks/useProjects"
+import { useWorkspaceDetailQuery } from "@/hooks/useWorkspaces"
 import { cn } from "@/lib/utils"
+import ArchivedProjectsSection from "@/components/project/ArchivedProjectsSection"
 
 export default function WorkspaceProjectsPage() {
   const params = useParams<{ workspaceId: string }>()
   const workspaceId = params.workspaceId || ""
   const projectsQuery = useProjectsQuery(workspaceId)
+  const workspaceQuery = useWorkspaceDetailQuery(workspaceId)
   const projects = projectsQuery.data?.data ?? []
+  const canManage = workspaceQuery.data?.role === "ADMIN" || workspaceQuery.data?.role === "OWNER"
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "Chưa có cập nhật"
@@ -84,7 +88,7 @@ export default function WorkspaceProjectsPage() {
       {!projectsQuery.isLoading && !projectsQuery.isError && projects.length > 0 ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Card key={project.id} className="group relative overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:border-primary/20 dark:hover:bg-slate-900/40">
+            <Card key={project.id} className="group relative overflow-hidden transition-all duration-300 hover:shadow-md hover:border-primary/40 dark:hover:bg-slate-900/40">
               <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: project.color || "hsl(var(--primary))" }} />
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-4">
@@ -166,6 +170,9 @@ export default function WorkspaceProjectsPage() {
           ))}
         </div>
       ) : null}
+
+      {/* Danh sách dự án đã lưu trữ - chỉ hiện với Admin */}
+      {canManage && <ArchivedProjectsSection />}
     </div>
   )
 }

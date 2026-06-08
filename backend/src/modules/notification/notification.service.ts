@@ -209,10 +209,10 @@ export class NotificationService extends BaseService<
   }
 
   /**
-   * Get unread count — DIRECT only (for badge).
+   * Get unread count by category.
    */
-  async getUnreadDirectCount(userId: number): Promise<number> {
-    return notificationRepository.countUnread(userId, 'DIRECT');
+  async getUnreadCountByCategory(userId: number, category?: string): Promise<number> {
+    return notificationRepository.countUnread(userId, category);
   }
 
   async markAsRead(id: number, userId: number): Promise<NotificationResponse> {

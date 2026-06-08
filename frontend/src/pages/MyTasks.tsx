@@ -37,6 +37,7 @@ import { toast } from "sonner"
 import TaskDetailPanel from "@/components/tasks/TaskDetailPanel"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -105,6 +106,7 @@ interface MyTasksResponse {
     overdue: number
     dueToday: number
     completed: number
+    activityCount: number
     byStatus: Partial<Record<TaskStatus, number>>
   }
   filters: {
@@ -154,6 +156,7 @@ function useMyTasksData(workspaceId: string, filters: {
   due: DueFilter
   role: RoleFilter
   sort: SortField
+  page: number
 }) {
   const isRealtimeConnected = useRealtimeStore((state) => state.isConnected)
 
@@ -172,7 +175,8 @@ function useMyTasksData(workspaceId: string, filters: {
             due: filters.due === "all" ? undefined : filters.due,
             role: filters.role,
             sort: filters.sort,
-            limit: filters.tab === "board" ? 200 : 50,
+            page: filters.page,
+            limit: filters.tab === "board" ? 200 : filters.tab === "activity" ? 10 : 50,
           },
         },
       )
@@ -200,14 +204,21 @@ export default function MyTasksPage() {
   const [due, setDue] = useState<DueFilter>("all")
   const [role, setRole] = useState<RoleFilter>("all")
   const [sort, setSort] = useState<SortField>("dueDate")
+  const [page, setPage] = useState(1)
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(() => {
     const taskId = Number(searchParams.get("task") ?? "0")
     return Number.isFinite(taskId) && taskId > 0 ? taskId : null
   })
 
+  // Reset page to 1 when tab or filters change
+  const handleTabChange = (tab: TabKey) => {
+    setActiveTab(tab)
+    setPage(1)
+  }
+
   const filters = useMemo(
-    () => ({ tab: activeTab, q: search, projectId, status, priority, due, role, sort }),
-    [activeTab, due, priority, projectId, role, search, sort, status],
+    () => ({ tab: activeTab, q: search, projectId, status, priority, due, role, sort, page }),
+    [activeTab, due, priority, projectId, role, search, sort, status, page],
   )
   const myTasksQuery = useMyTasksData(workspaceId, filters)
   const membersQuery = useWorkspaceMembersQuery(workspaceId, 1, 50)
@@ -289,7 +300,7 @@ export default function MyTasksPage() {
               tab={tab}
               active={activeTab === tab.key}
               count={getTabCount(tab.key, data)}
-              onClick={() => setActiveTab(tab.key)}
+              onClick={() => handleTabChange(tab.key)}
             />
           ))}
         </div>
@@ -298,19 +309,19 @@ export default function MyTasksPage() {
       <div className="flex-shrink-0 px-6 py-4">
         <MyTasksToolbar
           search={search}
-          onSearchChange={setSearch}
+          onSearchChange={(v) => { setSearch(v); setPage(1) }}
           projectId={projectId}
-          onProjectChange={setProjectId}
+          onProjectChange={(v) => { setProjectId(v); setPage(1) }}
           status={status}
-          onStatusChange={setStatus}
+          onStatusChange={(v) => { setStatus(v); setPage(1) }}
           priority={priority}
-          onPriorityChange={setPriority}
+          onPriorityChange={(v) => { setPriority(v); setPage(1) }}
           due={due}
-          onDueChange={setDue}
+          onDueChange={(v) => { setDue(v); setPage(1) }}
           role={role}
-          onRoleChange={setRole}
+          onRoleChange={(v) => { setRole(v); setPage(1) }}
           sort={sort}
-          onSortChange={setSort}
+          onSortChange={(v) => { setSort(v); setPage(1) }}
           projects={data?.filters.projects ?? []}
           showRole={activeTab === "list"}
         />
@@ -331,7 +342,12 @@ export default function MyTasksPage() {
         ) : activeTab === "list" ? (
           <ListTab tasks={tasks} onTaskClick={openTask} onStatusChange={changeStatus} />
         ) : (
-          <ActivityTab activities={activities} onTaskOpen={(taskId) => openTask({ id: taskId })} />
+          <ActivityTab 
+            activities={activities} 
+            onTaskOpen={(taskId) => openTask({ id: taskId })} 
+            pagination={data?.pagination}
+            onPageChange={setPage}
+          />
         )}
       </div>
 
@@ -782,19 +798,51 @@ function ListTab({
 function ActivityTab({
   activities,
   onTaskOpen,
+  pagination,
+  onPageChange,
 }: {
   activities: MyActivityItem[]
   onTaskOpen: (taskId: number) => void
+  pagination?: MyTasksResponse["pagination"]
+  onPageChange: (page: number) => void
 }) {
   if (activities.length === 0) {
     return <EmptyState icon={Activity} title="Chưa có hoạt động" description="Các cập nhật của bạn trong workspace sẽ xuất hiện ở đây." />
   }
 
   return (
-    <div className="max-w-4xl divide-y rounded-md border bg-background">
-      {activities.map((activity) => (
-        <ActivityRow key={activity.id} activity={activity} onTaskOpen={onTaskOpen} />
-      ))}
+    <div className="flex flex-col gap-4">
+      <div className="max-w-4xl divide-y rounded-md border bg-background">
+        {activities.map((activity) => (
+          <ActivityRow key={activity.id} activity={activity} onTaskOpen={onTaskOpen} />
+        ))}
+      </div>
+
+      {pagination && pagination.totalPages > 1 && (
+        <div className="max-w-4xl flex items-center justify-between rounded-md border bg-muted/25 px-4 py-3 text-sm text-muted-foreground">
+          <div>
+            Trang {pagination.page} / {pagination.totalPages} (Tổng {pagination.total})
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pagination.page <= 1}
+              onClick={() => onPageChange(pagination.page - 1)}
+            >
+              Trước
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={pagination.page >= pagination.totalPages}
+              onClick={() => onPageChange(pagination.page + 1)}
+            >
+              Sau
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1032,8 +1080,8 @@ function StatusDot({ status }: { status: TaskStatus }) {
 function getTabCount(tab: TabKey, data?: MyTasksResponse) {
   if (!data) return 0
   if (tab === "inbox") return data.stats.inbox
-  if (tab === "activity") return data.activities.length
-  return data.pagination.total
+  if (tab === "activity") return data.stats.activityCount
+  return data.stats.totalRelated
 }
 
 function isTaskOverdue(task: MyTaskItem) {

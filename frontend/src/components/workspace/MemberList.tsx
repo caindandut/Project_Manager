@@ -11,6 +11,17 @@ import { useRemoveWorkspaceMemberMutation } from "@/hooks/useWorkspaces"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import { getWorkspaceRoleLabel, workspaceRoleVariantMap } from "@/lib/workspace-role"
 import type { WorkspaceMember } from "@/types/workspace"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useState } from "react"
 
 interface MemberListProps {
   workspaceId: number
@@ -32,19 +43,15 @@ export default function MemberList({
   membersLimit,
 }: MemberListProps) {
   const removeMemberMutation = useRemoveWorkspaceMemberMutation(workspaceId, membersPage, membersLimit)
+  const [memberToRemove, setMemberToRemove] = useState<WorkspaceMember | null>(null)
 
-  const handleRemoveMember = async (member: WorkspaceMember) => {
-    const confirmed = window.confirm(
-      `Bạn có chắc muốn xóa ${member.user.name || member.user.email} khỏi workspace này không?`,
-    )
-
-    if (!confirmed) {
-      return
-    }
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return
 
     try {
-      await removeMemberMutation.mutateAsync(member.id)
+      await removeMemberMutation.mutateAsync(memberToRemove.id)
       toast.success("Đã xóa thành viên khỏi workspace.")
+      setMemberToRemove(null)
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, "Không thể xóa thành viên này."))
     }
@@ -143,7 +150,7 @@ export default function MemberList({
                         variant="outline"
                         size="sm"
                         disabled={removeMemberMutation.isPending}
-                        onClick={() => void handleRemoveMember(member)}
+                        onClick={() => setMemberToRemove(member)}
                       >
                         {removeMemberMutation.isPending ? (
                           <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -158,6 +165,24 @@ export default function MemberList({
               )
             })
           : null}
+
+        <AlertDialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Xóa thành viên</AlertDialogTitle>
+              <AlertDialogDescription>
+                Bạn có chắc muốn xóa {memberToRemove?.user.name || memberToRemove?.user.email} khỏi workspace này không?
+                Hành động này không thể hoàn tác.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Hủy</AlertDialogCancel>
+              <AlertDialogAction onClick={() => void handleRemoveMember()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Xóa
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </CardContent>
     </Card>
   )

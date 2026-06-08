@@ -113,8 +113,14 @@ export default function GoogleCallbackPage() {
           navigate('/onboarding/profile', { replace: true });
         } else {
           toast.success('Đăng nhập Google thành công.');
-          const lastSlug = getLastWorkspaceSlug(userData.id);
-          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
+          const pendingRedirect = window.localStorage.getItem('redirectAfterLogin');
+          if (pendingRedirect && pendingRedirect.startsWith('/invitations/workspace/')) {
+            window.localStorage.removeItem('redirectAfterLogin');
+            navigate(pendingRedirect, { replace: true });
+          } else {
+            const lastSlug = getLastWorkspaceSlug(userData.id);
+            navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
+          }
         }
       } catch (error) {
         const normalizedError = normalizeApiError(error);
@@ -150,8 +156,14 @@ export default function GoogleCallbackPage() {
         } else if (requireOnboardingParam) {
           navigate('/onboarding/profile', { replace: true });
         } else {
-          const lastSlug = getLastWorkspaceSlug(callbackUser?.id);
-          navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
+          const pendingRedirect = window.localStorage.getItem('redirectAfterLogin');
+          if (pendingRedirect && pendingRedirect.startsWith('/invitations/workspace/')) {
+            window.localStorage.removeItem('redirectAfterLogin');
+            navigate(pendingRedirect, { replace: true });
+          } else {
+            const lastSlug = getLastWorkspaceSlug(callbackUser?.id);
+            navigate(lastSlug ? `/workspaces/${lastSlug}` : '/', { replace: true });
+          }
         }
       }
     };

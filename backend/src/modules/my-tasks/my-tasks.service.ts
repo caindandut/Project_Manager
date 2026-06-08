@@ -49,7 +49,7 @@ export class MyTasksService {
         page: query.page,
         limit: query.limit,
       }),
-      myTasksRepository.findActivities(workspaceId, userId, activityLimit),
+      myTasksRepository.findActivities(workspaceId, userId, query.tab === 'activity' ? query.page : 1, activityLimit),
       myTasksRepository.getStats(workspaceId, userId, createdTaskIds, assignedTaskIds),
       myTasksRepository.findFilterProjects(workspaceId, userId, createdTaskIds),
     ]);
@@ -66,8 +66,8 @@ export class MyTasksService {
       pagination: {
         page: query.page,
         limit: query.limit,
-        total: taskResult.total,
-        totalPages: Math.ceil(taskResult.total / query.limit),
+        total: query.tab === 'activity' ? stats.activityCount : taskResult.total,
+        totalPages: Math.ceil((query.tab === 'activity' ? stats.activityCount : taskResult.total) / query.limit),
       },
     };
   }

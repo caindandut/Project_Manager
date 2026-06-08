@@ -322,6 +322,21 @@ export class ProjectMemberService extends BaseService<
       userId: member.userId,
     });
 
+    const requester = await prisma.user.findUnique({ where: { id: requesterId } });
+    if (requester) {
+      const workspace = await prisma.workspace.findUnique({ where: { id: project.workspaceId } });
+      if (workspace) {
+        const { notificationEmitter } = await import('../notification/notification-emitter');
+        void notificationEmitter.onRemovedFromProject(
+          project.name,
+          workspace.name,
+          requester.name || requester.email,
+          member.userId,
+          requesterId,
+        );
+      }
+    }
+
     return { message: 'Member removed successfully' };
   }
 

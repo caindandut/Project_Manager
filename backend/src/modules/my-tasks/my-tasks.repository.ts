@@ -85,7 +85,8 @@ export class MyTasksRepository {
     };
   }
 
-  async findActivities(workspaceId: number, userId: number, limit: number): Promise<MyTasksActivityRecord[]> {
+  async findActivities(workspaceId: number, userId: number, page: number, limit: number): Promise<MyTasksActivityRecord[]> {
+    const skip = (page - 1) * limit;
     const activities = await prisma.activityLog.findMany({
       where: {
         userId,
@@ -96,6 +97,7 @@ export class MyTasksRepository {
       },
       include: activityInclude,
       orderBy: { createdAt: 'desc' },
+      skip,
       take: limit,
     });
 
@@ -128,7 +130,7 @@ export class MyTasksRepository {
     const relatedWhere = this.buildRelatedWhere(workspaceId, userId, createdTaskIds, assignedTaskIds);
     const today = this.getTodayRange();
 
-    const [totalRelated, assigned, created, inbox, overdue, dueToday, completed, byStatus] = await Promise.all([
+    const [totalRelated, assigned, created, inbox, overdue, dueToday, completed, byStatus, activityCount] = await Promise.all([
       prisma.task.count({ where: relatedWhere }),
       prisma.task.count({
         where: {
@@ -180,6 +182,15 @@ export class MyTasksRepository {
         where: relatedWhere,
         _count: { _all: true },
       }),
+      prisma.activityLog.count({
+        where: {
+          userId,
+          task: {
+            deletedAt: null,
+            project: this.buildAccessibleProjectWhere(workspaceId, userId),
+          },
+        },
+      }),
     ]);
 
     return {
@@ -190,6 +201,7 @@ export class MyTasksRepository {
       overdue,
       dueToday,
       completed,
+      activityCount,
       byStatus: byStatus.reduce<Record<string, number>>((acc, item) => {
         acc[item.status] = item._count._all;
         return acc;

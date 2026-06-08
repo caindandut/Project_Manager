@@ -11,6 +11,7 @@ import { verifyEmailTransport } from './common/utils/email.service';
 import { seedOwnerAccounts } from './common/utils/seed-owner';
 import { prisma } from './config';
 import { realtimeService } from './common/realtime';
+import { startCleanupJob } from './common/jobs/cleanup.job';
 
 const app = express();
 
@@ -45,8 +46,8 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
 app.use('/uploads', express.static(config.UPLOAD_DIR));
@@ -92,6 +93,7 @@ server.listen(PORT, () => {
   seedOwnerAccounts().catch((error) => {
     logger.error('Owner account seeding failed', error);
   });
+  startCleanupJob();
 });
 
 export default app;

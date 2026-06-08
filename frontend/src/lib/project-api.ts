@@ -167,3 +167,30 @@ export async function deleteProject(
   )
   return unwrapResponse(response)
 }
+
+export interface ArchivedProject {
+  id: number
+  name: string
+  key: string
+  color?: string
+  deletedAt: string
+  expiresAt: string
+  daysRemaining: number
+}
+
+export async function getArchivedProjects(workspaceId: string | number): Promise<ArchivedProject[]> {
+  const response = await apiClient.get<ApiResponse<ArchivedProject[]>>(
+    `/workspaces/${workspaceId}/projects/archived`,
+  )
+  return unwrapResponse(response)
+}
+
+export async function restoreProject(
+  workspaceId: string | number,
+  projectId: number,
+): Promise<{ id: number; name: string; key: string; message: string }> {
+  const response = await apiClient.post<ApiResponse<{ id: number; name: string; key: string; message: string }>>(
+    `/workspaces/${workspaceId}/projects/${projectId}/restore`,
+  )
+  return unwrapResponse(response)
+}

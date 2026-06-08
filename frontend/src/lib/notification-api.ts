@@ -56,10 +56,16 @@ export async function getNotifications(
   }
 }
 
-export async function getUnreadCount(): Promise<number> {
+interface UnreadCountResponse {
+  unreadCount: number
+  directCount: number
+  watchingCount: number
+}
+
+export async function getUnreadCount(): Promise<UnreadCountResponse> {
   try {
-    const response = await apiClient.get<ApiResponse<{ unreadCount: number }>>('/notifications/unread-count')
-    return unwrapResponse(response).unreadCount
+    const response = await apiClient.get<ApiResponse<UnreadCountResponse>>('/notifications/unread-count')
+    return unwrapResponse(response)
   } catch (error) {
     throw normalizeApiError(error)
   }

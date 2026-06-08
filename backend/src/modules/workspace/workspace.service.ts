@@ -226,6 +226,17 @@ export class WorkspaceService extends BaseService<
 
   async delete(id: string | number) {
     const workspace = await this.findWorkspaceOrThrow(id);
+
+    // Ràng buộc: tất cả task trong workspace phải là DONE hoặc CANCELLED
+    const activeTaskCount = await workspaceRepository.countActiveTasksInWorkspace(workspace.id);
+    if (activeTaskCount > 0) {
+      throw ApiError.conflict(
+        ErrorCode.WORKSPACE_HAS_ACTIVE_TASKS,
+        `Không thể xóa không gian làm việc vì còn ${activeTaskCount} công việc chưa hoàn thành. Hãy chuyển tất cả công việc sang Hoàn thành hoặc Hủy trước.`,
+        { activeTaskCount },
+      );
+    }
+
     await workspaceRepository.softDelete(workspace.id);
 
     logger.info(`Workspace deleted: ${workspace.id}`);
@@ -405,6 +416,17 @@ export class WorkspaceService extends BaseService<
       actorId: requesterId,
       userId: member.userId,
     });
+
+    const requester = await prisma.user.findUnique({ where: { id: requesterId } });
+    if (requester) {
+      const { notificationEmitter } = await import('../notification/notification-emitter');
+      void notificationEmitter.onRemovedFromWorkspace(
+        workspace.name,
+        requester.name || requester.email,
+        member.userId,
+        requesterId,
+      );
+    }
 
     return { message: 'Member removed successfully' };
   }

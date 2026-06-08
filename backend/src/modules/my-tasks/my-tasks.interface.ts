@@ -1,4 +1,4 @@
-import { ActivityLog, Prisma, Project, Task, User } from '@prisma/client';
+import { ActivityLog, Prisma, Project, Task, TaskStatus, User } from '@prisma/client';
 
 export type MyTasksTab = 'inbox' | 'board' | 'list' | 'activity';
 export type MyTasksDueFilter = 'overdue' | 'today' | 'week' | 'none';
@@ -50,5 +50,6 @@ export interface MyTasksStats {
   overdue: number;
   dueToday: number;
   completed: number;
-  byStatus: Record<string, number>;
+  activityCount: number;
+  byStatus: Partial<Record<TaskStatus, number>>;
 }

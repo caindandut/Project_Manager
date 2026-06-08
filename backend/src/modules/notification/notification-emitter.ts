@@ -264,6 +264,55 @@ export class NotificationEmitter {
     }
   }
 
+  async onRemovedFromWorkspace(
+    workspaceName: string,
+    removerName: string,
+    removedUserId: number,
+    removerId: number,
+  ): Promise<void> {
+    try {
+      const input: CreateNotificationInput = {
+        type: NotificationType.MEMBER_REMOVED,
+        category: NotificationCategory.DIRECT,
+        title: 'Bị xóa khỏi không gian làm việc',
+        message: `${removerName} đã xóa bạn khỏi không gian làm việc "${workspaceName}"`,
+        userId: removedUserId,
+        actorId: removerId,
+        groupKey: `workspace_removed:${Date.now()}`,
+        metadata: { action: 'removed_from_workspace', workspaceName },
+      };
+
+      await notificationService.create(input);
+    } catch (err) {
+      logger.error('NotificationEmitter.onRemovedFromWorkspace failed', err);
+    }
+  }
+
+  async onRemovedFromProject(
+    projectName: string,
+    workspaceName: string,
+    removerName: string,
+    removedUserId: number,
+    removerId: number,
+  ): Promise<void> {
+    try {
+      const input: CreateNotificationInput = {
+        type: NotificationType.MEMBER_REMOVED,
+        category: NotificationCategory.DIRECT,
+        title: 'Bị xóa khỏi dự án',
+        message: `${removerName} đã xóa bạn khỏi dự án "${projectName}" trong không gian làm việc "${workspaceName}"`,
+        userId: removedUserId,
+        actorId: removerId,
+        groupKey: `project_removed:${Date.now()}`,
+        metadata: { action: 'removed_from_project', projectName, workspaceName },
+      };
+
+      await notificationService.create(input);
+    } catch (err) {
+      logger.error('NotificationEmitter.onRemovedFromProject failed', err);
+    }
+  }
+
   private async findTaskForNotification(taskId: number): Promise<TaskNotificationData | null> {
     return prisma.task.findUnique({
       where: { id: taskId },

@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { LoaderCircle, Settings, Upload } from "lucide-react"
+import { LoaderCircle, Settings, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -19,8 +30,9 @@ import {
 import {
   useUpdateWorkspaceMutation,
   useWorkspaceDetailQuery,
+  useDeleteWorkspaceMutation,
 } from "@/hooks/useWorkspaces"
-import { setLastWorkspaceSlug } from "@/stores/authStore"
+import { getLastWorkspaceSlug, LAST_WORKSPACE_SLUG_KEY, setLastWorkspaceSlug } from "@/stores/authStore"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 
 function getInitials(text: string): string {
@@ -48,10 +60,12 @@ export default function WorkspaceGeneralSettings() {
 
   const { data: workspace, isLoading } = useWorkspaceDetailQuery(workspaceSlug)
   const updateMutation = useUpdateWorkspaceMutation(workspaceSlug)
+  const deleteMutation = useDeleteWorkspaceMutation()
 
   const [name, setName] = useState("")
   const [teamSize, setTeamSize] = useState("solo")
   const [isDirty, setIsDirty] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -88,6 +102,26 @@ export default function WorkspaceGeneralSettings() {
       }
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, "Không thể lưu thay đổi."))
+    }
+  }
+
+  const handleDeleteWorkspace = async () => {
+    setIsDeleting(true)
+    try {
+      await deleteMutation.mutateAsync(workspaceSlug)
+      toast.success(`Không gian làm việc "${workspace?.name}" đã bị xóa.`)
+      
+      // Xóa workspace slug hiện tại khỏi local storage để tránh lỗi auto-redirect
+      const lastSlug = getLastWorkspaceSlug()
+      if (lastSlug === workspaceSlug) {
+        window.localStorage.removeItem(LAST_WORKSPACE_SLUG_KEY)
+      }
+
+      navigate("/workspaces", { replace: true })
+    } catch (error) {
+      toast.error(toVietnameseErrorMessage(error, "Không thể xóa không gian làm việc."))
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -253,24 +287,68 @@ export default function WorkspaceGeneralSettings() {
             </Select>
           </div>
 
-          <div className="flex items-center gap-3 border-t pt-4">
-            <Button
-              onClick={handleSave}
-              disabled={!isDirty || !canEdit || isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Đang lưu...
-                </>
-              ) : (
-                "Lưu thay đổi"
+          <div className="flex items-center justify-between border-t pt-4">
+            <div className="flex items-center gap-3">
+              <Button
+                onClick={handleSave}
+                disabled={!isDirty || !canEdit || isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  "Lưu thay đổi"
+                )}
+              </Button>
+              {!canEdit && (
+                <span className="text-xs text-muted-foreground">
+                  Chỉ Admin mới có thể chỉnh sửa
+                </span>
               )}
-            </Button>
-            {!canEdit && (
-              <span className="text-xs text-muted-foreground">
-                Chỉ Admin mới có thể chỉnh sửa
-              </span>
+            </div>
+
+            {/* Nút xóa workspace - chỉ hiện với ADMIN */}
+            {canEdit && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    className="gap-1.5"
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <LoaderCircle className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Xóa không gian làm việc
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Xóa không gian làm việc &quot;{workspace?.name}&quot;?</AlertDialogTitle>
+                    <AlertDialogDescription className="space-y-2">
+                      <span className="block">
+                        Thao tác này không thể hoàn tác. Toàn bộ dữ liệu bao gồm các dự án, công việc và thành viên sẽ bị xóa vĩnh viễn.
+                      </span>
+                      <span className="block text-amber-600 dark:text-amber-400">
+                        ⚠ Lưu ý: Tất cả công việc trong mọi dự án phải ở trạng thái Hoàn thành (Done) hoặc Đã hủy (Cancelled) trước khi xóa.
+                      </span>
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Hủy</AlertDialogCancel>
+                    <AlertDialogAction
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      onClick={handleDeleteWorkspace}
+                    >
+                      Xác nhận xóa
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </div>
         </CardContent>

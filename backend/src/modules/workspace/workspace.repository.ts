@@ -44,6 +44,19 @@ export class WorkspaceRepository extends BaseRepository<
     });
   }
 
+  async countActiveTasksInWorkspace(workspaceId: number): Promise<number> {
+    return prisma.task.count({
+      where: {
+        deletedAt: null,
+        project: {
+          workspaceId,
+          deletedAt: null,
+        },
+        status: { notIn: ['DONE', 'CANCELLED'] },
+      },
+    });
+  }
+
   private async findByIdOrSlug(workspaceId: string): Promise<Workspace | null> {
     const isNumeric = /^\d+$/.test(workspaceId);
     if (isNumeric) {

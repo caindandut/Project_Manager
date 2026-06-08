@@ -97,8 +97,10 @@ export default function NotificationBell() {
     [invitationsQuery.data, invitationIdsWithNotification],
   )
 
-  const unreadCount = (unreadCountQuery.data ?? 0) + pendingInvitationFallbacks.length
-  const badgeLabel = unreadCount > 99 ? "99+" : String(unreadCount)
+  const directUnreadCount = (unreadCountQuery.data?.directCount ?? 0) + pendingInvitationFallbacks.length
+  const watchingUnreadCount = unreadCountQuery.data?.watchingCount ?? 0
+  const totalUnreadCount = directUnreadCount + watchingUnreadCount
+  const badgeLabel = totalUnreadCount > 99 ? "99+" : String(totalUnreadCount)
   const groups = groupedQuery.data?.data ?? []
 
   const handleNotificationClick = useCallback(
@@ -170,12 +172,12 @@ export default function NotificationBell() {
           variant="outline"
           size="icon-sm"
           className="relative border-border/80 bg-background hover:bg-accent"
-          aria-label={`Thông báo${unreadCount ? `, ${badgeLabel} chưa đọc` : ""}`}
+          aria-label={`Thông báo${totalUnreadCount ? `, ${badgeLabel} chưa đọc` : ""}`}
           title="Thông báo"
           id="notification-bell-trigger"
         >
           <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
+          {totalUnreadCount > 0 && (
             <span className="absolute -right-1.5 -top-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-semibold leading-4 text-white shadow-sm animate-in zoom-in-50">
               {badgeLabel}
             </span>
@@ -222,13 +224,14 @@ export default function NotificationBell() {
           <TabButton
             active={activeTab === "DIRECT"}
             onClick={() => { setActiveTab("DIRECT"); setExpandedGroup(null) }}
-            badge={unreadCount}
+            badge={directUnreadCount}
           >
             Dành cho tôi
           </TabButton>
           <TabButton
             active={activeTab === "WATCHING"}
             onClick={() => { setActiveTab("WATCHING"); setExpandedGroup(null) }}
+            badge={watchingUnreadCount}
           >
             Đang theo dõi
           </TabButton>

@@ -10,7 +10,7 @@ import type { ProjectStats } from "@/lib/project-api"
 type OverviewTooltipPayload = {
   color?: string
   name?: string | number
-  payload?: { name?: string }
+  payload?: { name?: string; color?: string }
   value?: number | string
 }
 
@@ -47,6 +47,7 @@ function OverviewTooltip({
   if (!active || !item) return null
 
   const label = String(item.payload?.name ?? item.name ?? "")
+  const color = item.payload?.color ?? item.color ?? "#000"
 
   return (
     <div className="min-w-32 rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-lg">
@@ -54,7 +55,7 @@ function OverviewTooltip({
       <div className="flex items-center gap-1.5 font-medium">
         <span
           className="h-2.5 w-2.5 rounded-sm"
-          style={{ backgroundColor: item.color }}
+          style={{ backgroundColor: color }}
         />
         {Number(item.value)} nhiệm vụ
       </div>
@@ -170,8 +171,7 @@ export default function OverviewCharts({ stats, isLoading }: OverviewChartsProps
                 <XAxis type="number" tick={{ fill: chartTextColor, fontSize: 11 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fill: chartTextColor, fontSize: 11 }} width={72} />
                 <Tooltip
-                  cursor={false}
-                  shared={false}
+                  cursor={{ fill: "transparent" }}
                   content={(props) => (
                     <OverviewTooltip
                       active={props.active}

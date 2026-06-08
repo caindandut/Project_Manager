@@ -58,7 +58,7 @@ export class NotificationController extends BaseController {
 
   /**
    * GET /notifications/unread-count
-   * Returns DIRECT unread count only (for badge).
+   * Returns unread count for badge (total, direct, watching).
    */
   getUnreadCount = async (req: Request, res: Response): Promise<void> => {
     await this.tryCatch(res, async () => {
@@ -67,8 +67,14 @@ export class NotificationController extends BaseController {
         throw ApiError.unauthorized(ErrorCode.AUTH_TOKEN_INVALID, 'Authentication required');
       }
 
-      const count = await notificationService.getUnreadDirectCount(authReq.user.id);
-      res.json(success({ unreadCount: count }));
+      const directCount = await notificationService.getUnreadCountByCategory(authReq.user.id, 'DIRECT');
+      const watchingCount = await notificationService.getUnreadCountByCategory(authReq.user.id, 'WATCHING');
+      
+      res.json(success({ 
+        unreadCount: directCount + watchingCount,
+        directCount,
+        watchingCount
+      }));
     });
   };
 

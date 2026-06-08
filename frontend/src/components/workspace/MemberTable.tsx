@@ -14,6 +14,17 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useState } from "react"
 import { useRemoveWorkspaceMemberMutation, useCancelWorkspaceInvitationMutation } from "@/hooks/useWorkspaces"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import { workspaceRoleVariantMap } from "@/lib/workspace-role"
@@ -68,27 +79,28 @@ export default function MemberTable({
   const removeMemberMutation = useRemoveWorkspaceMemberMutation(workspaceId, membersPage, membersLimit)
   const cancelInvitationMutation = useCancelWorkspaceInvitationMutation(workspaceId)
 
-  const handleRemoveMember = async (member: WorkspaceMember) => {
-    const confirmed = window.confirm(
-      `Bạn có chắc muốn xóa ${member.user.name || member.user.email} khỏi workspace này không?`,
-    )
+  const [memberToRemove, setMemberToRemove] = useState<WorkspaceMember | null>(null)
+  const [invitationToCancel, setInvitationToCancel] = useState<PendingInvitation | null>(null)
 
-    if (!confirmed) {
-      return
-    }
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return
 
     try {
-      await removeMemberMutation.mutateAsync(member.id)
+      await removeMemberMutation.mutateAsync(memberToRemove.id)
       toast.success("Đã xóa thành viên khỏi workspace.")
+      setMemberToRemove(null)
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, "Không thể xóa thành viên này."))
     }
   }
 
-  const handleCancelInvitation = async (invitation: PendingInvitation) => {
+  const handleCancelInvitation = async () => {
+    if (!invitationToCancel) return
+
     try {
-      await cancelInvitationMutation.mutateAsync(invitation.id)
+      await cancelInvitationMutation.mutateAsync(invitationToCancel.id)
       toast.success("Đã thu hồi lời mời.")
+      setInvitationToCancel(null)
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, "Không thể thu hồi lời mời."))
     }
@@ -229,7 +241,7 @@ export default function MemberTable({
                               size="sm"
                               className="text-destructive hover:text-destructive"
                               disabled={removeMemberMutation.isPending}
-                              onClick={() => void handleRemoveMember(member)}
+                              onClick={() => setMemberToRemove(member)}
                             >
                               {removeMemberMutation.isPending ? (
                                 <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -332,7 +344,7 @@ export default function MemberTable({
                           size="sm"
                           className="text-destructive hover:text-destructive"
                           disabled={cancelInvitationMutation.isPending}
-                          onClick={() => void handleCancelInvitation(invitation)}
+                          onClick={() => setInvitationToCancel(invitation)}
                           title="Thu hồi lời mời"
                         >
                           {cancelInvitationMutation.isPending ? (
@@ -347,6 +359,41 @@ export default function MemberTable({
                 </TableRow>
               )
             })}
+          {/* Dialogs */}
+          <AlertDialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Xóa thành viên</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Bạn có chắc muốn xóa {memberToRemove?.user.name || memberToRemove?.user.email} khỏi workspace này không?
+                  Hành động này không thể hoàn tác.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Hủy</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void handleRemoveMember()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Xóa
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog open={!!invitationToCancel} onOpenChange={(open) => !open && setInvitationToCancel(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Hủy lời mời</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Hủy lời mời gửi đến {invitationToCancel?.email}? Lời mời sẽ không còn giá trị sử dụng.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Đóng</AlertDialogCancel>
+                <AlertDialogAction onClick={() => void handleCancelInvitation()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Hủy lời mời
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TableBody>
       </Table>
     </div>

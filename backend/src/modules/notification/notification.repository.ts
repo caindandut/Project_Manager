@@ -216,9 +216,14 @@ export class NotificationRepository extends BaseRepository<
     );
     const total = Number(totalResult[0]?.cnt ?? 0);
 
-    // Unread count — DIRECT only (for badge)
+    // Unread count for the given category
     const unreadCount = await prisma.notification.count({
-      where: { userId, isRead: false, deletedAt: null, category: 'DIRECT' },
+      where: { 
+        userId, 
+        isRead: false, 
+        deletedAt: null, 
+        ...(options?.category ? { category: options.category } : {}) 
+      },
     });
 
     return { data, total, unreadCount };

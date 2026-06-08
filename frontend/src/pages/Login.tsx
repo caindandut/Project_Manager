@@ -25,7 +25,8 @@ export default function LoginPage() {
   const [loginSuccessShown, setLoginSuccessShown] = useState(false)
   const lastSlug = getLastWorkspaceSlug(user?.id)
   const defaultRedirect = lastSlug ? `/workspaces/${lastSlug}` : '/'
-  const redirectTo = (location.state as { from?: string } | null)?.from || defaultRedirect
+  const pendingRedirect = typeof window !== 'undefined' ? window.localStorage.getItem('redirectAfterLogin') : null
+  const redirectTo = (location.state as { from?: string } | null)?.from || pendingRedirect || defaultRedirect
   const shownErrorRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -90,8 +91,14 @@ export default function LoginPage() {
       } else {
         const nextLastSlug = getLastWorkspaceSlug(data.user.id)
         const nextDefaultRedirect = nextLastSlug ? `/workspaces/${nextLastSlug}` : '/'
-        const nextRedirectTo = (location.state as { from?: string } | null)?.from || nextDefaultRedirect
-        navigate(nextRedirectTo, { replace: true })
+        const pendingRedirect = typeof window !== 'undefined' ? window.localStorage.getItem('redirectAfterLogin') : null
+        if (pendingRedirect && pendingRedirect.startsWith('/invitations/workspace/')) {
+          window.localStorage.removeItem('redirectAfterLogin');
+          navigate(pendingRedirect, { replace: true });
+        } else {
+          const nextRedirectTo = (location.state as { from?: string } | null)?.from || pendingRedirect || nextDefaultRedirect
+          navigate(nextRedirectTo, { replace: true })
+        }
       }
     } catch (error) {
       toast.error(

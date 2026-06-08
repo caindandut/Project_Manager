@@ -9,6 +9,17 @@ import { useCancelWorkspaceInvitationMutation } from "@/hooks/useWorkspaces"
 import { toVietnameseErrorMessage } from "@/lib/error-messages"
 import { getWorkspaceRoleLabel } from "@/lib/workspace-role"
 import type { PendingInvitation } from "@/types/workspace"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useState } from "react"
 
 interface InvitationListProps {
   workspaceId: string | number
@@ -38,17 +49,15 @@ export default function InvitationList({
   canManage,
 }: InvitationListProps) {
   const cancelMutation = useCancelWorkspaceInvitationMutation(workspaceId)
+  const [invitationToCancel, setInvitationToCancel] = useState<PendingInvitation | null>(null)
 
-  const handleCancelInvitation = async (invitation: PendingInvitation) => {
-    const confirmed = window.confirm(`Hủy lời mời gửi đến ${invitation.email}?`)
-
-    if (!confirmed) {
-      return
-    }
+  const handleCancelInvitation = async () => {
+    if (!invitationToCancel) return
 
     try {
-      await cancelMutation.mutateAsync(invitation.id)
+      await cancelMutation.mutateAsync(invitationToCancel.id)
       toast.success("Đã hủy lời mời.")
+      setInvitationToCancel(null)
     } catch (error) {
       toast.error(toVietnameseErrorMessage(error, "Không thể hủy lời mời."))
     }
@@ -131,7 +140,7 @@ export default function InvitationList({
                 size="sm"
                 className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                 disabled={cancelMutation.isPending}
-                onClick={() => void handleCancelInvitation(invitation)}
+                onClick={() => setInvitationToCancel(invitation)}
               >
                 {cancelMutation.isPending ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -144,6 +153,23 @@ export default function InvitationList({
           </div>
         ))}
       </div>
+
+      <AlertDialog open={!!invitationToCancel} onOpenChange={(open) => !open && setInvitationToCancel(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hủy lời mời</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hủy lời mời gửi đến {invitationToCancel?.email}? Lời mời sẽ không còn giá trị sử dụng.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Đóng</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleCancelInvitation()} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Hủy lời mời
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

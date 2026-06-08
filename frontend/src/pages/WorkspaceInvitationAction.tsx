@@ -42,13 +42,16 @@ export default function WorkspaceInvitationActionPage() {
 
       try {
         const invitation = await getWorkspaceInvitationByToken(token)
+        if (cancelled) return
 
         if (action === "accept") {
           if (!isAuthenticated) {
             if (invitation.isExistingUser) {
+              const redirectUrl = `${location.pathname}${location.search}`
+              window.localStorage.setItem("redirectAfterLogin", redirectUrl)
               navigate("/login", {
                 replace: true,
-                state: { from: `${location.pathname}${location.search}` },
+                state: { from: redirectUrl },
               })
               return
             }
@@ -57,11 +60,14 @@ export default function WorkspaceInvitationActionPage() {
               invitation: token,
               email: invitation.email,
             })
-            navigate(`/register?${params.toString()}`, { replace: true })
+            const redirectUrl = `${location.pathname}${location.search}`
+            window.localStorage.setItem("redirectAfterLogin", redirectUrl)
+            navigate(`/register?${params.toString()}`, { replace: true, state: { from: redirectUrl } })
             return
           }
 
           const acceptedInvitation = await acceptWorkspaceInvitation(token)
+          if (cancelled) return
           setRequireOnboarding(false)
 
           if (acceptedInvitation.workspace?.slug) {

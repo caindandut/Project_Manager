@@ -68,7 +68,7 @@ export default function NotificationsPage() {
   const markAsReadMutation = useMarkAsReadMutation()
   const markAllAsReadMutation = useMarkAllAsReadMutation()
 
-  const unreadCount = unreadCountQuery.data ?? 0
+  const unreadCount = unreadCountQuery.data?.unreadCount ?? 0
   const filteredNotifications = notificationsQuery.data?.data ?? []
   const totalPages = notificationsQuery.data?.meta?.totalPages ?? 1
 

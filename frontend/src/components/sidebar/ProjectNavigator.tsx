@@ -334,7 +334,6 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
 
   return (
     <nav className="space-y-1">
-      <SectionTitle>Dự án</SectionTitle>
       <SidebarItem
         icon={Home}
         label="Tổng quan"

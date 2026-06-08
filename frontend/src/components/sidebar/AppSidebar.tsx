@@ -1,9 +1,10 @@
 import {
   PanelLeftClose,
   PanelLeftOpen,
+  Layers,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useParams, Link } from "react-router-dom"
 
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -64,11 +65,18 @@ export default function AppSidebar({ isOpen = true, onClose }: AppSidebarProps) 
         )}
       >
         <nav className="flex-1 overflow-y-auto p-2">
-          <div className="mb-1 flex items-center justify-end">
+          <div className={cn("mb-4 flex items-center", isCollapsed ? "flex-col gap-4 justify-center pt-2" : "justify-between px-2 pt-1")}>
+            <Link to="/" className={cn("flex items-center gap-2 text-sidebar-foreground transition-opacity hover:opacity-80", isCollapsed && "justify-center")}>
+              <Layers className="h-6 w-6 text-primary shrink-0" />
+              {!isCollapsed && (
+                <span className="text-lg font-bold tracking-tight">Project Manager</span>
+              )}
+            </Link>
+            
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              className="h-8 w-8 p-0 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground shrink-0"
               onClick={() => setIsCollapsed((prev) => !prev)}
               title={isCollapsed ? "Mở rộng" : "Thu nhỏ"}
             >

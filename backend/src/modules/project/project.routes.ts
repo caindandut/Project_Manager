@@ -20,6 +20,13 @@ router.get(
   projectController.getAll
 );
 
+// Get archived (soft-deleted) projects in workspace - ADMIN only
+router.get(
+  '/:workspaceId/projects/archived',
+  requireMember,
+  projectController.getArchived
+);
+
 // Get project by ID
 router.get(
   '/:workspaceId/projects/:projectId',
@@ -35,6 +42,13 @@ router.post(
   projectController.create
 );
 
+// Restore archived project (Workspace Member or above - project-level RBAC skipped since project is deleted)
+router.post(
+  '/:workspaceId/projects/:projectId/restore',
+  requireMember,
+  projectController.restore
+);
+
 // Update project (Owner or Member)
 router.patch(
   '/:workspaceId/projects/:projectId',
@@ -44,7 +58,7 @@ router.patch(
   projectController.update
 );
 
-// Delete project (Owner only)
+// Delete project (Project Admin only)
 router.delete(
   '/:workspaceId/projects/:projectId',
   requireGuest,

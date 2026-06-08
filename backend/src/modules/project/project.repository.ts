@@ -69,6 +69,58 @@ export class ProjectRepository extends BaseRepository<
     });
   }
 
+  async countActiveTasksInProject(projectId: number): Promise<number> {
+    return prisma.task.count({
+      where: {
+        projectId,
+        deletedAt: null,
+        status: { notIn: [TaskStatus.DONE, TaskStatus.CANCELLED] },
+      },
+    });
+  }
+
+  async findDeletedByIdInWorkspace(
+    projectId: number,
+    workspaceId: number,
+  ): Promise<Project | null> {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    return prisma.project.findFirst({
+      where: {
+        id: projectId,
+        workspaceId,
+        deletedAt: { not: null, gte: thirtyDaysAgo },
+      },
+    });
+  }
+
+  async restoreProject(projectId: number): Promise<Project> {
+    return prisma.project.update({
+      where: { id: projectId },
+      data: { deletedAt: null },
+    });
+  }
+
+  async findDeletedProjectsInWorkspace(workspaceId: number): Promise<Project[]> {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    return prisma.project.findMany({
+      where: {
+        workspaceId,
+        deletedAt: { not: null, gte: thirtyDaysAgo },
+      },
+      orderBy: { deletedAt: 'desc' },
+    });
+  }
+
+  async permanentlyDeleteExpiredProjects(): Promise<number> {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const result = await prisma.project.deleteMany({
+      where: {
+        deletedAt: { not: null, lt: thirtyDaysAgo },
+      },
+    });
+    return result.count;
+  }
+
   async findByIdInWorkspace(
     projectId: number,
     workspaceId: number,

@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { getProjectDetail, updateProject, deleteProject, type UpdateProjectPayload } from "@/lib/project-api"
+import { getProjectDetail, updateProject, deleteProject, getArchivedProjects, restoreProject, type UpdateProjectPayload } from "@/lib/project-api"
 
 export const projectQueryKeys = {
   detail: (workspaceId: string | number, projectId: number) =>
     ["project", String(workspaceId), projectId] as const,
+  archived: (workspaceId: string | number) =>
+    ["projects-archived", String(workspaceId)] as const,
 }
 
 export const useProjectDetailQuery = (workspaceId: string | number, projectId: number) =>
@@ -39,9 +41,39 @@ export const useDeleteProjectMutation = (workspaceId: string | number) => {
   return useMutation({
     mutationFn: (projectId: number) => deleteProject(workspaceId, projectId),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["projects", String(workspaceId)],
-      })
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["projects", String(workspaceId)],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: projectQueryKeys.archived(workspaceId),
+        }),
+      ])
+    },
+  })
+}
+
+export const useArchivedProjectsQuery = (workspaceId: string | number) =>
+  useQuery({
+    queryKey: projectQueryKeys.archived(workspaceId),
+    queryFn: () => getArchivedProjects(workspaceId),
+    enabled: Boolean(workspaceId),
+  })
+
+export const useRestoreProjectMutation = (workspaceId: string | number) => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (projectId: number) => restoreProject(workspaceId, projectId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["projects", String(workspaceId)],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: projectQueryKeys.archived(workspaceId),
+        }),
+      ])
     },
   })
 }

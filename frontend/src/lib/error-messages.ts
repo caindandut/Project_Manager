@@ -30,6 +30,22 @@ export function toVietnameseErrorMessage(error: unknown, fallback: string): stri
     return `Không thể xóa thành viên khỏi workspace vì còn ${activeTaskCount} công việc chưa hoàn thành.`
   }
 
+  if (code === "PROJECT_HAS_ACTIVE_TASKS" && activeTaskCount > 0) {
+    return `Không thể xóa dự án vì còn ${activeTaskCount} công việc chưa hoàn thành. Hãy chuyển tất cả công việc sang Hoàn thành hoặc Hủy trước.`
+  }
+
+  if (code === "PROJECT_HAS_ACTIVE_TASKS") {
+    return `Không thể xóa dự án vì vẫn còn công việc chưa hoàn thành. Hãy chuyển tất cả công việc sang Hoàn thành hoặc Hủy trước.`
+  }
+
+  if (code === "WORKSPACE_HAS_ACTIVE_TASKS" && activeTaskCount > 0) {
+    return `Không thể xóa không gian làm việc vì còn ${activeTaskCount} công việc chưa hoàn thành. Hãy hoàn thành hoặc hủy tất cả công việc trước.`
+  }
+
+  if (code === "WORKSPACE_HAS_ACTIVE_TASKS") {
+    return `Không thể xóa không gian làm việc vì vẫn còn công việc chưa hoàn thành.`
+  }
+
   const mappings: Array<[string, string]> = [
     ["Invalid email or password", "Email hoặc mật khẩu không đúng."],
     ["Email already registered", "Email này đã được đăng ký."],
