@@ -278,7 +278,7 @@ export class WorkspaceRepository extends BaseRepository<
 
   async updateMemberRole(
     memberId: number,
-    role: WorkspaceRole.ADMIN | WorkspaceRole.MEMBER | WorkspaceRole.GUEST,
+    role: WorkspaceRole,
   ): Promise<WorkspaceMember> {
     return prisma.workspaceMember.update({
       where: { id: memberId },
