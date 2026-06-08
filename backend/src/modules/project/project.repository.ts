@@ -1,6 +1,6 @@
 import { BaseRepository } from '../../common/base/BaseRepository';
 import { prisma } from '../../config';
-import { Prisma, Project, TaskPriority, TaskStatus, TaskType, User } from '@prisma/client';
+import { Prisma, Project, ProjectRole, TaskPriority, TaskStatus, TaskType, User } from '@prisma/client';
 
 export type ProjectWithOwner = Project & {
   owner: Pick<User, 'id' | 'name' | 'email' | 'avatar'>;
@@ -108,7 +108,7 @@ export class ProjectRepository extends BaseRepository<
     };
 
     if (projectAdminUserId) {
-      where.members = {
+      where.projectMembers = {
         some: {
           userId: projectAdminUserId,
           role: ProjectRole.ADMIN,

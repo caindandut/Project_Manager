@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Prisma } from '@prisma/client';
+import { Prisma, WorkspaceRole } from '@prisma/client';
 import { projectService } from './project.service';
 import { BaseController } from '../../common/base/BaseController';
 import { AuthenticatedRequest } from '../../types/interfaces';
