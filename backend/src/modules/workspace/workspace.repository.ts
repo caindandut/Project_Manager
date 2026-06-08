@@ -178,7 +178,7 @@ export class WorkspaceRepository extends BaseRepository<
         members: {
           create: {
             userId: ownerId,
-            role: WorkspaceRole.OWNER,
+            role: WorkspaceRole.ADMIN,
           },
         },
       },
