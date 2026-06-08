@@ -235,7 +235,7 @@ export class WorkspaceService extends BaseService<
       throw ApiError.forbidden(ErrorCode.FORBIDDEN_ACCESS, 'Access denied to this workspace');
     }
 
-    const isWorkspaceAdmin = member.role === WorkspaceRole.OWNER || member.role === WorkspaceRole.ADMIN;
+    const isWorkspaceAdmin = member.role === WorkspaceRole.ADMIN;
     
     return taskRepository.searchInWorkspace(workspace.id, query, userId, isWorkspaceAdmin);
   }
@@ -326,12 +326,6 @@ export class WorkspaceService extends BaseService<
 
     const email = data.email.trim().toLowerCase();
     const role = data.role || WorkspaceRole.MEMBER;
-    if (role === WorkspaceRole.OWNER) {
-      throw ApiError.badRequest(
-        ErrorCode.VALIDATION_ERROR,
-        'Cannot invite a member as OWNER',
-      );
-    }
 
     const [user, inviter] = await Promise.all([
       workspaceRepository.findUserByEmail(email),
@@ -412,12 +406,7 @@ export class WorkspaceService extends BaseService<
     const workspace = await this.findWorkspaceOrThrow(id);
     const member = await this.findMemberOrThrow(workspace.id, memberId);
 
-    if (data.role === WorkspaceRole.OWNER) {
-      throw ApiError.badRequest(
-        ErrorCode.MEMBER_CANNOT_CHANGE_OWNER_ROLE,
-        'Cannot assign OWNER role from this endpoint',
-      );
-    }
+    // No OWNER check needed anymore since OWNER is deprecated.
 
     if (member.userId === requesterId) {
       throw ApiError.badRequest(
