@@ -78,7 +78,19 @@ export default function ArchivedProjectsSection() {
   }
 
   if (!archivedProjects || archivedProjects.length === 0) {
-    return null
+    return (
+      <Card className="border-amber-200 dark:border-amber-900 border-dashed opacity-70">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base text-amber-700/70 dark:text-amber-400/70">
+            <Trash2 className="h-4 w-4" />
+            Dự án đã lưu trữ (0)
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
+            Chưa có dự án nào được lưu trữ. Các dự án bị xóa sẽ xuất hiện ở đây trong 30 ngày trước khi bị xóa vĩnh viễn.
+          </p>
+        </CardHeader>
+      </Card>
+    )
   }
 
   return (

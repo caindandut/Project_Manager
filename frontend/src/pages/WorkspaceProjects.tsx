@@ -171,8 +171,8 @@ export default function WorkspaceProjectsPage() {
         </div>
       ) : null}
 
-      {/* Danh sách dự án đã lưu trữ - chỉ hiện với Admin */}
-      {canManage && <ArchivedProjectsSection />}
+      {/* Danh sách dự án đã lưu trữ */}
+      <ArchivedProjectsSection />
     </div>
   )
 }
