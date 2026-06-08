@@ -15,7 +15,6 @@ export default function WorkspaceProjectsPage() {
   const projectsQuery = useProjectsQuery(workspaceId)
   const workspaceQuery = useWorkspaceDetailQuery(workspaceId)
   const projects = projectsQuery.data?.data ?? []
-  const canManage = workspaceQuery.data?.role === "ADMIN" || workspaceQuery.data?.role === "OWNER"
 
   const formatDate = (dateStr?: string) => {
     if (!dateStr) return "Chưa có cập nhật"
