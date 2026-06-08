@@ -24,6 +24,7 @@ export type RealtimeAction =
   | "cancelled"
   | "read"
   | "cleared"
+  | "restored"
 
 export interface RealtimeEventPayload {
   type: RealtimeEntityType

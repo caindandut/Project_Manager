@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import { getProjectDetail, updateProject, deleteProject, getArchivedProjects, restoreProject, type UpdateProjectPayload } from "@/lib/project-api"
+import { useRealtimeStore } from "@/lib/realtime"
 
 export const projectQueryKeys = {
   detail: (workspaceId: string | number, projectId: number) =>
@@ -9,12 +10,18 @@ export const projectQueryKeys = {
     ["projects-archived", String(workspaceId)] as const,
 }
 
-export const useProjectDetailQuery = (workspaceId: string | number, projectId: number) =>
-  useQuery({
+export const useProjectDetailQuery = (workspaceId: string | number, projectId: number) => {
+  const isRealtimeConnected = useRealtimeStore((state) => state.isConnected)
+
+  return useQuery({
     queryKey: projectQueryKeys.detail(workspaceId, projectId),
     queryFn: () => getProjectDetail(workspaceId, projectId),
     enabled: Boolean(workspaceId) && projectId > 0,
+    refetchInterval: !isRealtimeConnected && Boolean(workspaceId) && projectId > 0 ? 3_000 : false,
+    refetchIntervalInBackground: true,
+    refetchOnWindowFocus: true,
   })
+}
 
 export const useUpdateProjectMutation = (workspaceId: string | number, projectId: number) => {
   const queryClient = useQueryClient()

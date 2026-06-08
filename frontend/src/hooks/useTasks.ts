@@ -23,6 +23,10 @@ import type {
 } from "@/types/task"
 import { useRealtimeStore } from "@/lib/realtime"
 
+const invalidateProjectOverviewQueries = (queryClient: ReturnType<typeof useQueryClient>) => {
+  queryClient.invalidateQueries({ queryKey: ["project"] })
+}
+
 export const useTasksQuery = (projectId: number, filters?: TaskFilter) =>
   useQuery({
     queryKey: taskQueryKeys.list(projectId, filters as Record<string, unknown> | undefined),
@@ -47,6 +51,7 @@ export const useCreateTaskMutation = (projectId: number) => {
   return useMutation({
     mutationFn: (payload: CreateTaskPayload) => createTask(projectId, payload),
     onSuccess: () => {
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
@@ -67,6 +72,7 @@ export const useUpdateTaskMutation = (projectId: number) => {
       queryClient.setQueryData<TaskDetail>(taskQueryKeys.detail(taskId), (current) =>
         current ? { ...current, ...data } : current,
       )
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
@@ -79,6 +85,7 @@ export const useDeleteTaskMutation = (projectId: number) => {
   return useMutation({
     mutationFn: (taskId: number) => deleteTask(taskId),
     onSuccess: () => {
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
@@ -91,6 +98,7 @@ export const useUpdateTaskStatusMutation = (projectId: number) => {
     mutationFn: ({ taskId, status }: { taskId: number; status: string }) =>
       updateTaskStatus(taskId, status),
     onSuccess: (_data, { taskId }) => {
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
@@ -109,6 +117,7 @@ export const useCreateSubTaskMutation = (projectId: number) => {
       payload: CreateTaskPayload
     }) => createSubTask(taskId, payload),
     onSuccess: (_data, { taskId }) => {
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
@@ -122,6 +131,7 @@ export const useToggleSubTaskMutation = (projectId: number) => {
     mutationFn: ({ taskId, completed }: { taskId: number; completed: boolean }) =>
       toggleSubTask(taskId, completed),
     onSuccess: (_data, { taskId }) => {
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: ["tasks", projectId] })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
@@ -134,6 +144,7 @@ export const useCreateCommentMutation = (taskId: number) => {
   return useMutation({
     mutationFn: (content: string) => createComment(taskId, content),
     onSuccess: () => {
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
@@ -145,6 +156,7 @@ export const useDeleteCommentMutation = (taskId: number) => {
   return useMutation({
     mutationFn: (commentId: number) => deleteComment(commentId),
     onSuccess: () => {
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
@@ -156,6 +168,7 @@ export const useUploadAttachmentMutation = (taskId: number) => {
   return useMutation({
     mutationFn: (file: File) => uploadAttachment(taskId, file),
     onSuccess: () => {
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
@@ -167,6 +180,7 @@ export const useDeleteAttachmentMutation = (taskId: number) => {
   return useMutation({
     mutationFn: (attachmentId: number) => deleteAttachment(attachmentId),
     onSuccess: () => {
+      invalidateProjectOverviewQueries(queryClient)
       queryClient.invalidateQueries({ queryKey: taskQueryKeys.detail(taskId) })
       queryClient.invalidateQueries({ queryKey: myTasksQueryKeys.all })
     },
