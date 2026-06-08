@@ -123,7 +123,14 @@ export default function WorkspaceDetailPage() {
               Workspace có thể không tồn tại hoặc bạn không có quyền truy cập vào không gian này.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex gap-3">
+            <Link 
+              to="/workspaces" 
+              className={cn(buttonVariants({ variant: "default" }))}
+              onClick={() => window.localStorage.removeItem("lastWorkspaceSlug")}
+            >
+              Quay lại danh sách
+            </Link>
             <Button variant="outline" onClick={() => void workspaceQuery.refetch()}>
               Thử tải lại
             </Button>

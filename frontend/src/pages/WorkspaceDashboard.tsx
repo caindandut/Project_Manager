@@ -176,7 +176,14 @@ export default function WorkspaceDashboard() {
             <CardTitle>Không tải được dữ liệu</CardTitle>
             <CardDescription>Đã xảy ra lỗi khi tải dữ liệu workspace.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex gap-3">
+            <Link 
+              to="/workspaces" 
+              className={cn(buttonVariants({ variant: "default" }))}
+              onClick={() => window.localStorage.removeItem("lastWorkspaceSlug")}
+            >
+              Quay lại danh sách
+            </Link>
             <Button variant="outline" onClick={() => void workspaceQuery.refetch()}>
               Thử tải lại
             </Button>

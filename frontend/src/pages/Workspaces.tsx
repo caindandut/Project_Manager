@@ -38,10 +38,16 @@ export default function WorkspacesPage() {
   }
 
   if (!isListView) {
-    if (lastSlug) {
-      return <Navigate to={`/workspaces/${lastSlug}`} replace />
-    }
-    if (workspacesQuery.isFetched && !workspacesQuery.isLoading && workspaces.length > 0) {
+    if (workspacesQuery.isFetched && !workspacesQuery.isLoading) {
+      if (workspaces.length === 0) {
+        return <Navigate to="/workspaces/create" replace />
+      }
+      
+      const slugExists = lastSlug && workspaces.some((w) => w.slug === lastSlug)
+      if (slugExists) {
+        return <Navigate to={`/workspaces/${lastSlug}`} replace />
+      }
+      
       return <Navigate to={`/workspaces/${workspaces[0].slug}`} replace />
     }
   }

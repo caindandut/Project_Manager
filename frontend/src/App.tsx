@@ -103,10 +103,16 @@ function WorkspaceSlugGuard() {
   const { workspaceId } = useParams<{ workspaceId: string }>();
   const { user, requireOnboarding } = useAuth();
   const lastSlug = getLastWorkspaceSlug(user?.id);
-  const workspacesQuery = useWorkspacesQuery(1, 1, { enabled: !lastSlug && workspaceId === '_' });
+  const workspacesQuery = useWorkspacesQuery(1, 1);
 
   if (requireOnboarding) {
     return <Navigate to={user?.name ? '/onboarding/workspace' : '/onboarding/profile'} replace />;
+  }
+
+  // If we know for sure the user has 0 workspaces, force them to create one
+  // This handles the case where they delete their last workspace and are left on the deleted workspace URL
+  if (workspacesQuery.isSuccess && workspacesQuery.data?.data.length === 0) {
+    return <Navigate to="/workspaces/create" replace />;
   }
 
   // If workspace slug is '_' or empty, redirect to a valid workspace
