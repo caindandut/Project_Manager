@@ -1,6 +1,6 @@
 import { useEffect } from "react"
 import { Link, Navigate, useSearchParams } from "react-router-dom"
-import { ArrowRight, Clock3, FolderKanban, LayoutGrid, Users } from "lucide-react"
+import { ArrowRight, Clock3, FolderKanban, LayoutGrid, Users, Link2 } from "lucide-react"
 
 import CreateWorkspaceDialog from "@/components/workspace/CreateWorkspaceDialog"
 import ArchivedWorkspacesSection from "@/components/workspace/ArchivedWorkspacesSection"
@@ -175,9 +175,10 @@ export default function WorkspacesPage() {
                   </div>
                 </div>
 
-                <CardDescription className="min-h-12 leading-7">
-                  {workspace.description || "Workspace này chưa có mô tả. Bạn có thể cập nhật sau khi đội bắt đầu làm việc."}
-                </CardDescription>
+                <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground bg-muted/40 px-3 py-2 rounded-md border border-border/60">
+                  <Link2 className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+                  <span className="truncate">{window.location.host}/workspaces/{workspace.slug}</span>
+                </div>
               </CardHeader>
 
               <CardContent className="flex h-full flex-col gap-4">
