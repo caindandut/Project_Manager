@@ -112,8 +112,19 @@ export default function OnboardingWorkspacePage() {
 
       const data = unwrapResponse(response);
 
+      // Optimistically update workspaces cache to prevent WorkspaceSlugGuard from redirecting to /workspaces/create
+      // due to stale data with length === 0.
+      queryClient.setQueryData(['workspaces', 1, 1], (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          data: [data.workspace],
+          total: 1,
+        };
+      });
+
       // Invalidate queries so that when we navigate, fresh data is fetched
-      await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
+      queryClient.invalidateQueries({ queryKey: ['workspaces'] });
 
       // Update auth store with new tokens and user
       completeOnboarding({
