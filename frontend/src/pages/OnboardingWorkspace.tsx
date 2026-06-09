@@ -115,7 +115,14 @@ export default function OnboardingWorkspacePage() {
       // Optimistically update workspaces cache to prevent WorkspaceSlugGuard from redirecting to /workspaces/create
       // due to stale data with length === 0.
       queryClient.setQueryData(['workspaces', 1, 1], (oldData: any) => {
-        if (!oldData) return oldData;
+        if (!oldData) {
+          return {
+            data: [data.workspace],
+            total: 1,
+            currentPage: 1,
+            totalPages: 1,
+          };
+        }
         return {
           ...oldData,
           data: [data.workspace],
@@ -135,7 +142,7 @@ export default function OnboardingWorkspacePage() {
       });
 
       toast.success('Tạo không gian làm việc thành công!');
-      navigate(`/workspaces/${data.workspace.slug}`, { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
       const error = normalizeApiError(err);
       const message = error.message || 'Không thể tạo không gian làm việc. Vui lòng thử lại.';
