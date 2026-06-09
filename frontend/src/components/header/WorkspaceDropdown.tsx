@@ -85,7 +85,7 @@ export default function WorkspaceDropdown() {
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-foreground truncate">{currentWorkspace.name}</p>
+                  <p className="font-semibold text-sm text-foreground line-clamp-2 break-words">{currentWorkspace.name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {currentWorkspace.stats?.projectCount || 0} dự án
                   </p>
@@ -125,8 +125,8 @@ export default function WorkspaceDropdown() {
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-foreground truncate">{ws.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="font-medium text-sm text-foreground line-clamp-2 break-words">{ws.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
                         {ws.projectCount} dự án
                       </p>
                     </div>
