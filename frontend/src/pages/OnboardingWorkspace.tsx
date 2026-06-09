@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,6 +61,7 @@ function normalizeSlug(text: string): string {
 export default function OnboardingWorkspacePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { completeOnboarding } = useAuthStore();
 
   const profileState = (location.state as OnboardingProfileState) || {};
@@ -109,6 +111,9 @@ export default function OnboardingWorkspacePage() {
       );
 
       const data = unwrapResponse(response);
+
+      // Invalidate queries so that when we navigate, fresh data is fetched
+      await queryClient.invalidateQueries({ queryKey: ['workspaces'] });
 
       // Update auth store with new tokens and user
       completeOnboarding({

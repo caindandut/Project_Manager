@@ -109,6 +109,7 @@ export class AuthController extends BaseController {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
         expiresIn: result.expiresIn,
+        requireOnboarding: result.requireOnboarding,
       }));
     });
   };
@@ -283,6 +284,7 @@ export class AuthController extends BaseController {
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,
         expiresIn: result.expiresIn,
+        requireOnboarding: result.requireOnboarding,
       }));
     });
   };
