@@ -142,7 +142,12 @@ export default function OnboardingWorkspacePage() {
       });
 
       toast.success('Tạo không gian làm việc thành công!');
-      navigate('/', { replace: true });
+      
+      // Force a full page reload to the new workspace to guarantee redirection
+      // and ensure all states (React Query, Zustand) are cleanly initialized.
+      setTimeout(() => {
+        window.location.href = `/workspaces/${data.workspace.slug}`;
+      }, 300);
     } catch (err) {
       const error = normalizeApiError(err);
       const message = error.message || 'Không thể tạo không gian làm việc. Vui lòng thử lại.';
