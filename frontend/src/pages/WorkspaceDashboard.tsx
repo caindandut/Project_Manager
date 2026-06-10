@@ -141,7 +141,7 @@ export default function WorkspaceDashboard() {
     )
   }
 
-  const displayName = user?.name?.split(" ")[0] || user?.email?.split("@")[0] || "bạn"
+  const displayName = user?.name || user?.email?.split("@")[0] || "bạn"
   const today = format(new Date(), "EEEE, dd/MM/yyyy", { locale: vi })
 
   return (

@@ -74,7 +74,7 @@ export default function OnboardingWorkspacePage() {
 
   // Only auto-generate slug if user hasn't manually edited it
   useEffect(() => {
-    if (workspaceName && !slugManuallyEdited) {
+    if (!slugManuallyEdited) {
       setWorkspaceSlug(normalizeSlug(workspaceName));
     }
   }, [workspaceName, slugManuallyEdited]);

@@ -29,7 +29,7 @@ export default function CreateWorkspacePage() {
 
   // Only auto-generate slug if user hasn't manually edited it
   useEffect(() => {
-    if (form.name && !slugManuallyEdited) {
+    if (!slugManuallyEdited) {
       setForm((prev) => ({ ...prev, slug: normalizeSlug(form.name) }))
     }
   }, [form.name, slugManuallyEdited])

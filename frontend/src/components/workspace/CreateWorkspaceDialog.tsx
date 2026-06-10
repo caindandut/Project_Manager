@@ -48,7 +48,7 @@ export default function CreateWorkspaceDialog({
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false)
 
   useEffect(() => {
-    if (form.name && !slugManuallyEdited) {
+    if (!slugManuallyEdited) {
       setForm((prev) => ({ ...prev, slug: normalizeSlug(form.name) }))
     }
   }, [form.name, slugManuallyEdited])
