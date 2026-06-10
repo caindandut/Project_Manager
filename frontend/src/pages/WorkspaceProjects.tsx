@@ -90,10 +90,11 @@ export default function WorkspaceProjectsPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-4">
                   <div
-                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white shadow-inner transition-transform group-hover:scale-105"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-lg font-bold text-white shadow-inner transition-transform group-hover:scale-105 overflow-hidden"
                     style={{ backgroundColor: project.color || "hsl(var(--primary))" }}
+                    title={project.key}
                   >
-                    {(project.key || project.name.slice(0, 2)).toUpperCase()}
+                    {(project.key?.slice(0, 2) || project.name.slice(0, 2)).toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <CardTitle 
