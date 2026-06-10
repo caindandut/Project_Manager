@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { ArrowLeft, ArrowRight, LoaderCircle, Mail, User, Lock } from 'lucide-react'
+import { ArrowLeft, ArrowRight, LoaderCircle, Mail, User, Lock, Eye, EyeOff, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -35,8 +35,17 @@ export default function RegisterPage() {
   const [otp, setOtp] = useState(['', '', '', '', '', ''])
   const [name, setName] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [resendTimer, setResendTimer] = useState(60)
   const otpRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const passwordChecks = [
+    { label: 'Tối thiểu 8 ký tự', met: password.length >= 8 },
+    { label: 'Chữ cái đầu tiên in hoa', met: /^[A-Z]/.test(password) },
+    { label: 'Có chứa chữ số', met: /[0-9]/.test(password) },
+    { label: 'Có ký tự đặc biệt', met: /[!@#$%^&*(),.?":{}|<>]/.test(password) },
+  ]
+  const isPasswordValid = passwordChecks.every(c => c.met)
 
   useEffect(() => {
     document.title = 'Đăng ký | Project Manager'
@@ -149,8 +158,8 @@ export default function RegisterPage() {
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (password.length < 8) {
-      toast.error('Mật khẩu phải có ít nhất 8 ký tự')
+    if (!isPasswordValid) {
+      toast.error('Vui lòng đảm bảo mật khẩu đáp ứng đủ các yêu cầu')
       return
     }
 
@@ -363,22 +372,49 @@ export default function RegisterPage() {
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Tạo mật khẩu (ít nhất 8 ký tự)"
-                    className="h-10 pl-10"
+                    placeholder="Tạo mật khẩu"
+                    className="h-10 px-10"
                     minLength={8}
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
+                {password.length > 0 && (
+                  <div className="mt-2 space-y-1.5 rounded-md border border-border/50 bg-muted/30 p-2.5">
+                    {passwordChecks.map((check, index) => (
+                      <div
+                        key={index}
+                        className={`flex items-center text-xs transition-colors ${
+                          check.met ? 'text-emerald-500' : 'text-muted-foreground'
+                        }`}
+                      >
+                        {check.met ? (
+                          <Check className="mr-2 h-3.5 w-3.5" />
+                        ) : (
+                          <div className="mr-2 h-3.5 w-3.5 rounded-full border border-current opacity-40" />
+                        )}
+                        {check.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <Button
                 type="submit"
                 className="h-10 w-full"
-                disabled={isRegisterWithOtpPending || !name || password.length < 8}
+                disabled={isRegisterWithOtpPending || !name || !isPasswordValid}
               >
                 {isRegisterWithOtpPending ? (
                   <LoaderCircle className="h-4 w-4 animate-spin" />
