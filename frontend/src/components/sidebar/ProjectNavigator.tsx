@@ -307,7 +307,7 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
         />
         <SidebarItem
           icon={CheckSquare}
-          label="Công việc của tôi"
+          label="Công việc của bạn"
           href={`${basePath}/my-tasks`}
           isActive={location.pathname === `${basePath}/my-tasks`}
           isCollapsed={true}
@@ -342,7 +342,7 @@ export function ProjectNavigator({ workspaceId, isCollapsed }: ProjectNavigatorP
       />
       <SidebarItem
         icon={CheckSquare}
-        label="Công việc của tôi"
+        label="Công việc của bạn"
         href={`${basePath}/my-tasks`}
         isActive={location.pathname === `${basePath}/my-tasks`}
       />
