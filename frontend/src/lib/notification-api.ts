@@ -93,7 +93,7 @@ export async function markAsRead(id: number): Promise<NotificationItem> {
 
 export async function markAllAsRead(category?: string): Promise<{ updatedCount: number }> {
   try {
-    const response = await apiClient.patch<ApiResponse<{ updatedCount: number }>>('/notifications', null, {
+    const response = await apiClient.patch<ApiResponse<{ updatedCount: number }>>('/notifications', {}, {
       params: { category },
     })
     return unwrapResponse(response)

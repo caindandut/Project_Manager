@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react"
+import { toast } from "sonner"
 import { Bell, Check, CheckCheck, ChevronRight, ExternalLink, Loader2, User2, Settings } from "lucide-react"
 import NotificationSettingsDialog from "@/components/NotificationSettingsDialog"
 import { useNavigate } from "react-router-dom"
@@ -147,8 +148,15 @@ export default function NotificationBell() {
   )
 
   const handleMarkAllRead = useCallback(() => {
-    markAllAsReadMutation.mutate(activeTab)
-  }, [markAllAsReadMutation, activeTab])
+    markAllAsReadMutation.mutate(undefined, {
+      onSuccess: () => {
+        toast.success("Đã đánh dấu tất cả là đã đọc.")
+      },
+      onError: () => {
+        toast.error("Không thể đánh dấu đã đọc.")
+      }
+    })
+  }, [markAllAsReadMutation])
 
   const handleOpenChange = useCallback(
     (open: boolean) => {
