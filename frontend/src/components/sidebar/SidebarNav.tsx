@@ -34,7 +34,7 @@ const PERSONAL_ITEMS = [
 
 const WORKSPACE_ITEMS = [
   { key: "overview", label: "Tổng quan", icon: LayoutDashboard, href: "" },
-  { key: "my-tasks", label: "Công việc của tôi", icon: CheckSquare, href: "my-tasks" },
+  { key: "my-tasks", label: "Công việc của bạn", icon: CheckSquare, href: "my-tasks" },
   { key: "projects", label: "Dự án", icon: FolderKanban, href: "projects" },
   { key: "board", label: "Bảng", icon: KanbanSquare, href: "board" },
   { key: "calendar", label: "Lịch", icon: Calendar, href: "calendar" },

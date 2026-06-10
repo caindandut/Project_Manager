@@ -328,7 +328,7 @@ export default function WorkspaceDashboard() {
                   className={cn(buttonVariants({ variant: "outline" }), "w-full justify-start gap-2")}
                 >
                   <ListChecks className="h-4 w-4" />
-                  Công việc của tôi
+                  Công việc của bạn
                   <ArrowUpRight className="ml-auto h-3 w-3" />
                 </Link>
 

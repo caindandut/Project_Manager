@@ -597,7 +597,7 @@ function InboxTab({
         )}
       </TaskSection>
 
-      <TaskSection title="Tiếp theo" count={groupedTasks.next.length}>
+      <TaskSection title="Sắp tới" count={groupedTasks.next.length}>
         {groupedTasks.next.map((task) => (
           <TaskCard key={task.id} task={task} onClick={() => onTaskClick(task)} onStatusChange={onStatusChange} />
         ))}
