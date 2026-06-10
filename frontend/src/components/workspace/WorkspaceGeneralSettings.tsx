@@ -330,7 +330,7 @@ export default function WorkspaceGeneralSettings() {
                     <AlertDialogTitle>Xóa không gian làm việc &quot;{workspace?.name}&quot;?</AlertDialogTitle>
                     <AlertDialogDescription className="space-y-2">
                       <span className="block">
-                        Workspace sẽ được chuyển vào kho lưu trữ trong 30 ngày. Trong thời gian này, bạn (Owner) có thể khôi phục lại toàn bộ dữ liệu, dự án và thành viên. Sau 30 ngày, workspace sẽ bị xóa vĩnh viễn.
+                        Workspace sẽ được chuyển vào kho lưu trữ trong 30 ngày. Trong thời gian này, bạn (Admin) có thể khôi phục lại toàn bộ dữ liệu, dự án và thành viên. Sau 30 ngày, workspace sẽ bị xóa vĩnh viễn.
                       </span>
                       <span className="block text-amber-600 dark:text-amber-400">
                         ⚠ Lưu ý: Tất cả công việc trong mọi dự án phải ở trạng thái Hoàn thành (Done) hoặc Đã hủy (Cancelled) trước khi xóa.

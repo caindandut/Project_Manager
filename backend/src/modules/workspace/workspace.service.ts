@@ -18,6 +18,7 @@ import { sendWorkspaceInvitationEmail } from '../../common/utils/email.service';
 import { notificationEmitter } from '../notification/notification-emitter';
 import { realtimeService } from '../../common/realtime';
 import { taskRepository } from '../task/task.repository';
+import { cloudinaryService } from '../../common/services/cloudinary.service';
 
 export interface CreateWorkspaceInput {
   name: string;
@@ -168,19 +169,13 @@ export class WorkspaceService extends BaseService<
       updateData.slug = slug;
     }
 
-    // Process base64 logo image and save to disk
+    // Process base64 logo image and upload to Cloudinary
     if (data.logo && data.logo.startsWith('data:image/')) {
       try {
         const matches = data.logo.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,(.+)$/);
         if (matches && matches.length === 3) {
-          const mimeType = matches[1];
           const base64Data = matches[2];
           const buffer = Buffer.from(base64Data, 'base64');
-          
-          let ext = '.png';
-          if (mimeType === 'image/jpeg' || mimeType === 'image/jpg') ext = '.jpg';
-          else if (mimeType === 'image/gif') ext = '.gif';
-          else if (mimeType === 'image/webp') ext = '.webp';
           
           // Clean up old logo
           if (workspace.logo && workspace.logo.startsWith('/uploads/logos/')) {
@@ -188,22 +183,22 @@ export class WorkspaceService extends BaseService<
             if (fs.existsSync(oldPath)) {
               fs.unlinkSync(oldPath);
             }
+          } else if (workspace.logo && workspace.logo.includes('cloudinary.com')) {
+            await cloudinaryService.deleteFromUrl(workspace.logo);
           }
 
-          // Create logos folder
-          const logosDir = path.join(process.cwd(), 'uploads', 'logos');
-          if (!fs.existsSync(logosDir)) {
-            fs.mkdirSync(logosDir, { recursive: true });
-          }
+          // Upload to Cloudinary
+          const uploadResult = await cloudinaryService.uploadFromBuffer(
+            buffer,
+            'pm-tool/workspaces',
+            `logo-${workspace.id}`
+          );
 
-          const filename = `logo-${workspace.id}-${Date.now()}${ext}`;
-          const filePath = path.join(logosDir, filename);
-          fs.writeFileSync(filePath, buffer);
-
-          updateData.logo = `/uploads/logos/${filename}`;
+          updateData.logo = uploadResult.secure_url;
         }
       } catch (err) {
         logger.error(`Failed to upload workspace logo: ${err}`);
+        delete updateData.logo;
       }
     }
 
