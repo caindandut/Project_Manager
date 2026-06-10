@@ -181,8 +181,8 @@ export default function MemberTable({
                         </Avatar>
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-medium">{lastName}</span>
                             <span className="font-medium">{firstName}</span>
+                            <span className="font-medium">{lastName}</span>
                             {isSelf ? <Badge variant="outline" className="text-xs">Bạn</Badge> : null}
                           </div>
                           <span className="text-xs text-muted-foreground">{member.user.email}</span>
