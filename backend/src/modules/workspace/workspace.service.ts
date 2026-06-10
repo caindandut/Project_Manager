@@ -198,7 +198,7 @@ export class WorkspaceService extends BaseService<
         }
       } catch (err) {
         logger.error(`Failed to upload workspace logo: ${err}`);
-        delete updateData.logo;
+        throw ApiError.badRequest(ErrorCode.VALIDATION_ERROR, `Lỗi tải ảnh lên Cloudinary: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 
